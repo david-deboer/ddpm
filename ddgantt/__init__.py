@@ -1,1 +1,2 @@
-from . import ddgantt
+from . import gantt
+

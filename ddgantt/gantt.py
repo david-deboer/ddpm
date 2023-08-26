@@ -48,7 +48,7 @@ class Project:
     def add_task(self, task):
         self.tasks.append(task)
 
-    def _sort_taskes(self, sortby):
+    def _sort_tasks(self, sortby):
         self.sorted_tasks = {}
         for this_task in self.tasks:
             key = ''

@@ -12,7 +12,7 @@ setup_args = {
     'license': "BSD",
     'author': "David DeBoer",
     'author_email': "david.r.deboer@gmail.com",
-    'version': '0.8',
+    'version': '0.1',
     'packages': ['ddgantt']
     #'install_requires': ['pyyaml', 'json']
 }
