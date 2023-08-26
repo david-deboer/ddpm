@@ -1,9 +1,12 @@
 import matplotlib.pyplot as plt
 from copy import copy
+from . import plot_gantt
 import datetime
 
 
 DATE_FIELDS = ['date', 'begins', 'ends']
+PAST = datetime.datetime(year=2000, month=1, day=1)
+FUTURE = datetime.datetime(year=2040, month=12, day=31)
 
 
 class _Base:
@@ -49,6 +52,8 @@ class Project:
         self.tasks.append(task)
 
     def _sort_tasks(self, sortby):
+        self.earliest_task = FUTURE
+        self.latest_task = PAST
         self.sorted_tasks = {}
         for this_task in self.tasks:
             key = ''
@@ -58,15 +63,24 @@ class Project:
                 else:
                     upar = par
                 uval = getattr(this_task, upar)
+                if upar == 'ends':
+                    if uval > self.latest_task:
+                        self.latest_task = copy(uval)
+                if upar == 'begins':
+                    if uval < self.earliest_task:
+                        self.earliest_task = copy(uval)
                 if upar in DATE_FIELDS:
                     uval = uval.strftime('%Y%m%dT%H%M')
-                key += uval
+                key += uval + '_'
+            key += '_t'
             self.sorted_tasks[key] = this_task
 
     def add_milestone(self, milestone):
         self.milestones.append(milestone)
 
     def _sort_milestones(self, sortby):
+        self.earliest_milestone = FUTURE
+        self.latest_milestone = PAST
         self.sorted_milestones = {}
         for this_milestone in self.milestones:
             key = ''
@@ -76,10 +90,16 @@ class Project:
                 else:
                     upar = par
                 uval = getattr(this_milestone, upar)
+                if upar == 'date':
+                    if uval > self.latest_milestone:
+                        self.latest_milestone = copy(uval)
+                    if uval < self.earliest_milestone:
+                        self.earliest_milestone = copy(uval)
                 if upar in DATE_FIELDS:
                     uval = uval.strftime('%Y%m%dT%H%M')
-                key += uval
-            self.sorted_tasks[key] = this_milestone
+                key += uval + '_'
+            key += '_m'
+            self.sorted_milestones[key] = this_milestone
 
     def plot(self, sortby=['begins', 'name']):
         """
@@ -92,3 +112,20 @@ class Project:
         """
         self._sort_tasks(sortby)
         self._sort_milestones(sortby)
+        allkeys = sorted(list(self.sorted_milestones.keys()) + list(self.sorted_tasks.keys()))
+        dates = []
+        labels = []
+        plotpars = []
+        extrema = [min(self.earliest_milestone, self.earliest_task), max(self.latest_milestone, self.latest_task)]
+        for key in allkeys:
+            if key.endswith('__m'):
+                this_milestone = self.sorted_milestones[key]
+                dates.append([this_milestone.date, None])
+                labels.append(this_milestone.name)
+                plotpars.append(['k', 'D'])
+            elif key.endswith('__t'):
+                this_task = self.sorted_tasks[key]
+                dates.append([this_task.begins, this_task.ends])
+                labels.append(this_task.name)
+                plotpars.append('b')
+        plot_gantt.plotGantt(dates, labels, plotpars, extrema)
