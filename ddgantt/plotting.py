@@ -8,12 +8,11 @@ Re-adapted 2023 August 26
 """
 import datetime
 import matplotlib.pyplot as plt
-from copy import copy
 import matplotlib.dates
 import numpy as np
 
 
-def plotGantt(dates, labels, plotpars, extrema):
+def gantt_chart(dates, labels, plotpars, extrema):
     """
     This will plot a gantt chart of items (ylabels) and dates.  If included, it will plot percent
     complete for tasks and color code for milestones (note, if included, it must have a status_codes
@@ -75,3 +74,22 @@ def plotGantt(dates, labels, plotpars, extrema):
     ax1.axis(ymin=ymax + (step - 0.01), ymax=ymin - (step - 0.01))
     fig1.autofmt_xdate()
     plt.tight_layout()
+
+def cumulative_graph(dates, values, norm):
+    datemin, datemax = matplotlib.dates.date2num(dates[0]), matplotlib.dates.dat2num(dates[-1])
+    cx_dat = [matplotlib.dates.date2num(_x) for _x in dates]
+    cy_dat = np.array(values) / norm
+    fig2 = plt.figure('cdf')
+    ax2 = fig2.add_subplot(111)
+    ax2.axis(xmin=datemin, xmax=datemax, ymin=0.0, ymax=1.0)
+    plt.plot(cx_dat, cy_dat)
+    plt.ylabel('Fraction Completed')
+    plt.grid()
+    ax2.xaxis_date()  # Tell matplotlib that these are dates...
+    rule = matplotlib.dates.rrulewrapper(matplotlib.dates.MONTHLY, interval=1)
+    loc = matplotlib.dates.RRuleLocator(rule)
+    formatter = matplotlib.dates.DateFormatter("%b '%y")
+    ax2.xaxis.set_major_locator(loc)
+    ax2.xaxis.set_major_formatter(formatter)
+    labelsx = ax2.get_xticklabels()
+    plt.setp(labelsx, rotation=30, fontsize=12)

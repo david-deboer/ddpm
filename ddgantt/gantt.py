@@ -1,6 +1,5 @@
-import matplotlib.pyplot as plt
 from copy import copy
-from . import plot_gantt, plot_cumulative, gantt_util
+from . import plotting, gantt_util
 import datetime
 from argparse import Namespace
 
@@ -95,6 +94,24 @@ class Project:
             key += f"_{entry[0]}"
             getattr(self, dtype)[key] = this
 
+    def make_cumulative(self, dates, status, extrema, step=1.0):
+        """
+        Parameters
+        ----------
+        step : float
+            step in days
+        """
+        self.cdf = Namespace(num=len(dates), dates=[], values=[])
+        this_date = copy(extrema.min)
+        while this_date < extrema.max:
+            self.cdf.dates.append(this_date)
+            ctr = 0.0
+            for i in range(len(status)):
+                if this_date > dates[i][0] and status[i].status == 'complete':
+                    ctr += 1.0
+            self.cdf.values.append(ctr)
+            this_date += datetime.timedelta(days=step)
+
     def plot_gantt(self, sortby=['begins', 'name']):
         """
         Make a gantt chart.
@@ -123,9 +140,9 @@ class Project:
                 dates.append([this_task.begins, this_task.ends])
                 labels.append(this_task.name)
                 plotpars.append(Namespace(color=this_task.color))
-        plot_gantt.plotGantt(dates, labels, plotpars, extrema)
+        plotting.gantt_chart(dates, labels, plotpars, extrema)
 
-    def plot_cumulative(self, sortby=['begins', 'name']):
+    def plot_cumulative(self, sortby=['begins', 'name'], step=1.0):
         """
         Make a cumulative milestone chart.
 
@@ -137,16 +154,15 @@ class Project:
         self._sort_('milestone', sortby)
         allkeys = sorted(self.sorted_milestones.keys())
         dates = []
-        labels = []
-        plotpars = []
+        status = []
         extrema = Namespace(min=self.earliest['milestone'], max=NOW)
         for key in allkeys:
             if key.endswith('__m'):
                 this_milestone = self.sorted_milestones[key]
                 dates.append([this_milestone.date, None])
-                labels.append(this_milestone.name)
-                plotpars.append(Namespace(status=this_milestone.status))
-        self.cdf_info = plot_cumulative.plotCumulative(dates, labels, plotpars, extrema)
+                status.append(Namespace(status=this_milestone.status))
+        self.make_cumulative(dates, status, extrema, step=step)
+        plotting.cumulative_graph(self.cdf.dates, self.cdf.values, self.cdf.num)
 
     def color_bar(self):
         gantt_util.color_bar()
