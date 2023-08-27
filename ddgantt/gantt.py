@@ -92,7 +92,7 @@ class Project:
             key += f"_{entry[0]}"
             getattr(self, dtype)[key] = this
 
-    def plot_gantt(self, sortby=['begins', 'name']):
+    def chart(self, sortby=['begins', 'name']):
         """
         Make a gantt chart.
 
