@@ -146,7 +146,7 @@ class Project:
                 dates.append([this_milestone.date, None])
                 labels.append(this_milestone.name)
                 plotpars.append(Namespace(status=this_milestone.status))
-        plot_cumulative.plotCumulative(dates, labels, plotpars, extrema)
+        self.cdf_info = plot_cumulative.plotCumulative(dates, labels, plotpars, extrema)
 
     def color_bar(self):
         gantt_util.color_bar()
