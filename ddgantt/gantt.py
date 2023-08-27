@@ -110,7 +110,8 @@ class Project:
         dates = []
         labels = []
         plotpars = []
-        extrema = Namespace(min=min(self.earliest_milestone, self.earliest_task), max=max(self.latest_milestone, self.latest_task))
+        extrema = Namespace(min=min(self.earliest['milestone'], self.earliest['task']),
+                            max=max(self.latest['milestone'], self.latest['task']))
         for key in allkeys:
             if key.endswith('__m'):
                 this_milestone = self.sorted_milestones[key]
@@ -138,7 +139,7 @@ class Project:
         dates = []
         labels = []
         plotpars = []
-        extrema = Namespace(min=self.earliest_milestone, max=NO)
+        extrema = Namespace(min=self.earliest['milestone'], max=NOW)
         for key in allkeys:
             if key.endswith('__m'):
                 this_milestone = self.sorted_milestones[key]
@@ -146,3 +147,6 @@ class Project:
                 labels.append(this_milestone.name)
                 plotpars.append(Namespace(status=this_milestone.status))
         plot_cumulative.plotCumulative(dates, labels, plotpars, extrema)
+
+    def color_bar(self):
+        gantt_util.color_bar()

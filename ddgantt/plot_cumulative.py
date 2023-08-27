@@ -5,19 +5,15 @@ import numpy as np
 
 
 def plotCumulative(dates, labels, plotpars, extrema):
-    cx_dat = None
-    cy_dat = None
-    cdf_tot = None
     cdf_tot = len(labels)
     datemin, datemax = matplotlib.dates.date2num(extrema.min), matplotlib.dates.date2num(extrema.max)
-    print(extrema)
     cx_dat = np.arange(datemin, datemax, 1.0)
     cy_dat = []
     for xd in cx_dat:
         ctr = 0.0
         for i in range(len(labels)):
             this_date = matplotlib.dates.date2num(dates[i][0])
-            if xd > this_date and plotpars.status == 'complete':
+            if xd > this_date and plotpars[i].status == 'complete':
                 ctr += 1.0
         cy_dat.append(ctr)  # /len(ylabels))
     cy_dat = np.array(cy_dat)

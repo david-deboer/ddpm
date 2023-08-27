@@ -26,7 +26,7 @@ def lag2rgb(lag):
             c.append(m * (lag - bs[j][0]) + y1)
         return c
 
-def colorBar():
+def color_bar():
     fff = plt.figure('ColorBar')
     ax = fff.add_subplot(111)
     ax.set_yticklabels([])
