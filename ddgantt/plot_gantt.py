@@ -31,25 +31,23 @@ def plotGantt(dates, labels, plotpars, extrema):
     # Initialise plot
     fig1 = plt.figure(figsize=(9, 8), tight_layout=True)
     ax1 = fig1.add_subplot(111)
-    datemin, datemax = matplotlib.dates.date2num(extrema[0]), matplotlib.dates.date2num(extrema[1])
+    datemin, datemax = matplotlib.dates.date2num(extrema.min), matplotlib.dates.date2num(extrema.max)
     deltadate = datemax - datemin
-    ax1.axis(xmin=matplotlib.dates.date2num(extrema[0])-deltadate/10.0, xmax=matplotlib.dates.date2num(extrema[1])+deltadate/10.0)
+    ax1.axis(xmin=matplotlib.dates.date2num(extrema.min)-deltadate/10.0, xmax=matplotlib.dates.date2num(extrema.max)+deltadate/10.0)
     step = 0.5
     ymin = step
     ymax = len(labels) * step
 
     # Plot the data
     for i, dtlim in enumerate(dates):
-        lbl = labels[i]
         pp = plotpars[i]
         start = matplotlib.dates.date2num(dtlim[0])
         if dtlim[1] is None:  # Milestone
-            clr, mkr = pp
-            plt.plot(start, i * step + ymin, mkr, color=clr, markersize=8)
+            plt.plot(start, i * step + ymin, pp.marker, color=pp.color, markersize=8)
         else:
             stop = matplotlib.dates.date2num(dtlim[1])
             plt.barh(i * step + ymin, stop - start, left=start, height=0.3,
-                     align='center', color=pp, alpha=0.75)
+                     align='center', color=pp.color, alpha=0.75)
 
     # Format the y-axis
     pos = np.arange(ymin, ymax + step / 2.0, step)  # add the step/2.0 to get that last value
@@ -59,7 +57,7 @@ def plotGantt(dates, labels, plotpars, extrema):
 
     # Plot current time
     now = datetime.datetime.now()
-    if now >= extrema[0] and now <= extrema[1]:
+    if now >= extrema.min and now <= extrema.max:
         now_date = matplotlib.dates.date2num(now)
         plt.plot([now_date, now_date], [ymin - step, ymax + step], 'k--')
 
