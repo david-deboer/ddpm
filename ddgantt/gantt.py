@@ -124,7 +124,7 @@ class Project:
                 this_task = self.sorted_tasks[key]
                 dates.append([this_task.begins, this_task.ends])
                 labels.append(this_task.name)
-                plotpars.append(Namespace(color=this_task.color, status=self.status, owner=this_task.owner))
+                plotpars.append(Namespace(color=this_task.color, status=this_task.status, owner=this_task.owner))
         plotting.gantt_chart(dates, labels, plotpars, extrema)
 
     def cumulative(self, sortby=['begins', 'name'], step=1.0, show=True):
