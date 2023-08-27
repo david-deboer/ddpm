@@ -2,13 +2,23 @@ from copy import copy
 from . import plotting, gantt_util
 import datetime
 from argparse import Namespace
+import hashlib
 
 
 DATE_FIELDS = ['date', 'begins', 'ends']
 NOW = datetime.datetime.now()
 PAST = datetime.datetime(year=2000, month=1, day=1)
 FUTURE = datetime.datetime(year=2040, month=12, day=31)
-STATUS_COLOR = {'complete': 'g', 'late': 'r', 'other': 'k', 'moved': 'y', 'removed': 'w', 'none': 'k'}
+STATUS_COLOR_B = {'complete': 'g', 'late': 'r', 'other': 'k', 'moved': 'y', 'removed': 'w', 'none': 'k'}
+STATUS_COLOR = {
+    'complete': gantt_util.color_palette[2],
+    'late': 'r',
+    'other': 'k',
+    'none': 'k',
+    'moved': gantt_util.color_palette[1],
+    'removed': gantt_util.color_palette[4]
+}
+
 
 class _Base:
     base_attr_init = ['name', 'owner', 'status']
@@ -45,6 +55,8 @@ class Milestone(_Base):
                 self.color = STATUS_COLOR[self.status]
         else:
             self.color = color
+        hashstr = f"{name}-{self.date.strftime('%Y%m%d')}".encode('ascii')
+        self.key = hashlib.md5(hashstr).hexdigest()[:4]
 
 
 class Task(_Base):
@@ -54,9 +66,11 @@ class Task(_Base):
         self.ends = gantt_util.return_datetime(ends)
         self.label = label
         if color is None:
-            self.color = 'b'
+            self.color = gantt_util.color_palette[0]
         else:
             self.color = color
+        hashstr = f"{name}-{self.begins.strftime('%Y%m%d')}-{self.ends.strftime('%Y%m%d')}".encode('ascii')
+        self.key = hashlib.md5(hashstr).hexdigest()[:4]
 
 class Project:
     _SortInfo = {'milestone': {'begins': 'date', 'ends': 'date'},
@@ -64,21 +78,28 @@ class Project:
     def __init__(self, name, organization=None):
         self.name = name
         self.organization = organization
-        self.milestones = []
-        self.tasks = []
+        self.milestones = {}
+        self.tasks = {}
+        self.all_activity_keys = []
 
     def add_task(self, task):
-        self.tasks.append(task)
+        if task.key in self.all_activity_keys:
+            raise ValueError(f"Key for {task.name} already added.")
+        self.all_activity_keys.append(task.key)
+        self.tasks[task.key] = task
 
     def add_milestone(self, milestone):
-        self.milestones.append(milestone)
+        if milestone.key in self.all_activity_keys:
+            raise ValueError(f"Key for {milestone.name} already added.")
+        self.all_activity_keys.append(milestone.key)
+        self.milestones[milestone.key] = milestone
 
     def _sort_(self, entry, sortby):
         dtype = f"sorted_{entry}s"
         setattr(self, dtype, {})
         SortInfo = self._SortInfo[entry]
-        for this in getattr(self, f"{entry}s"):
-            key = ''
+        for this in getattr(self, f"{entry}s").values():
+            plotkey = ''
             for par in sortby:
                 if par in SortInfo:
                     upar = SortInfo[par]
@@ -93,9 +114,9 @@ class Project:
                         self.earliest[entry] = copy(uval)
                 if upar in DATE_FIELDS:
                     uval = uval.strftime('%Y%m%dT%H%M')
-                key += uval + '_'
-            key += f"_{entry[0]}"
-            getattr(self, dtype)[key] = this
+                plotkey += uval + '_'
+            plotkey += f"_{entry[0]}"
+            getattr(self, dtype)[plotkey] = this.key
 
     def chart(self, sortby=['begins', 'name'], interval=None):
         """
@@ -110,20 +131,20 @@ class Project:
         self.latest = {'milestone': PAST, 'task': PAST}
         self._sort_('task', sortby)
         self._sort_('milestone', sortby)
-        allkeys = sorted(list(self.sorted_milestones.keys()) + list(self.sorted_tasks.keys()))
+        allplotkeys = sorted(list(self.sorted_milestones.keys()) + list(self.sorted_tasks.keys()))
         dates = []
         labels = []
         plotpars = []
         extrema = Namespace(min=min(self.earliest['milestone'], self.earliest['task']),
                             max=max(self.latest['milestone'], self.latest['task']))
-        for key in allkeys:
-            if key.endswith('__m'):
-                this_ms = self.sorted_milestones[key]
+        for plotkey in allplotkeys:
+            if plotkey.endswith('__m'):
+                this_ms = self.milestones[self.sorted_milestones[plotkey]]
                 dates.append([this_ms.date, None])
                 labels.append(this_ms.name)
                 plotpars.append(Namespace(color=this_ms.color, marker=this_ms.marker, owner=this_ms.owner))
-            elif key.endswith('__t'):
-                this_task = self.sorted_tasks[key]
+            elif plotkey.endswith('__t'):
+                this_task = self.tasks[self.sorted_tasks[plotkey]]
                 dates.append([this_task.begins, this_task.ends])
                 labels.append(this_task.name)
                 plotpars.append(Namespace(color=this_task.color, status=this_task.status, owner=this_task.owner))
@@ -141,12 +162,12 @@ class Project:
         self.earliest = {'milestone': FUTURE}
         self.latest = {'milestone': PAST}
         self._sort_('milestone', sortby)
-        allkeys = sorted(self.sorted_milestones.keys())
+        allplotkeys = sorted(self.sorted_milestones.keys())
         dates = []
         status = []
         extrema = Namespace(min=self.earliest['milestone'], max=NOW)
-        for key in allkeys:
-            this_milestone = self.sorted_milestones[key]
+        for plotkey in allplotkeys:
+            this_milestone = self.milestones[self.sorted_milestones[plotkey]]
             dates.append([this_milestone.date, None])
             status.append(Namespace(status=this_milestone.status))
         self.cdf = Namespace(num=len(dates), dates=[], values=[])

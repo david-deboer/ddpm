@@ -10,6 +10,7 @@ import datetime
 import matplotlib.pyplot as plt
 import matplotlib.dates
 import numpy as np
+from ddgantt.gantt_util import color_palette
 
 
 interval_map = {4:3, 5:6, 7:6, 8:6, 9:12, 10:12, 11:12}
@@ -60,13 +61,13 @@ def gantt_chart(dates, labels, plotpars, extrema, **kwargs):
     if 'grid' in kwargs and not kwargs['grid']:
         pass
     else:
-        plt.grid(color='g', linestyle=':')
+        plt.grid(color='0.6', linestyle=':')
 
     # Plot current time
     now = datetime.datetime.now()
     if now >= extrema.min and now <= extrema.max:
         now_date = matplotlib.dates.date2num(now)
-        plt.plot([now_date, now_date], [ymin - step, ymax + step], 'k--')
+        plt.plot([now_date, now_date], [ymin - step, ymax + step], '--', color=color_palette[3])
     deltayr = deltadate / 365.0
     if deltayr > 1.1:  # plot year markers
         yr1 = extrema.min.year
