@@ -12,6 +12,9 @@ import matplotlib.dates
 import numpy as np
 
 
+interval_map = {4:3, 5:6, 7:6, 8:6, 9:12, 10:12, 11:12}
+
+
 def gantt_chart(dates, labels, plotpars, extrema, interval=None):
     """
     This will plot a gantt chart of items (ylabels) and dates.  If included, it will plot percent
@@ -60,11 +63,19 @@ def gantt_chart(dates, labels, plotpars, extrema, interval=None):
     if now >= extrema.min and now <= extrema.max:
         now_date = matplotlib.dates.date2num(now)
         plt.plot([now_date, now_date], [ymin - step, ymax + step], 'k--')
+    deltayr = deltadate / 365.0
+    if deltayr > 1.1:  # plot year markers
+        yr1 = extrema.min.year
+        yr2 = extrema.max.year
+        if deltayr > 2.5 and extrema.max.month > 8:
+            yr2 += 1
+        for yr in range(yr1, yr2+1):
+            this_yr = datetime.datetime(year=yr, month=1, day=1)
+            plt.plot([this_yr, this_yr], [ymin - step, ymax + step], 'k:')
 
     ax1.xaxis_date()  # Tell matplotlib that these are dates...
     if interval is None:
-        deltayr = deltadate / 365.0
-        interval = int(np.ceil(deltayr * deltayr / 6.0))
+        interval = interval_map[int(np.ceil(deltayr * deltayr / 6.0))]
     rule = matplotlib.dates.rrulewrapper(matplotlib.dates.MONTHLY, interval=interval)
     loc = matplotlib.dates.RRuleLocator(rule)
     formatter = matplotlib.dates.DateFormatter("%b '%y")
