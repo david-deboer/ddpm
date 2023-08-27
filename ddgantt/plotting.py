@@ -64,14 +64,7 @@ def gantt_chart(dates, labels, plotpars, extrema, interval=None):
     ax1.xaxis_date()  # Tell matplotlib that these are dates...
     if interval is None:
         deltayr = deltadate / 365.0
-        if deltayr > 6.0:
-            interval = 12
-        elif deltayr > 4.0:
-            interval = 6
-        elif deltayr > 2.0:
-            interval = 3
-        else:
-            interval = 1
+        interval = int(np.ceil(deltayr * deltayr / 6.0))
     rule = matplotlib.dates.rrulewrapper(matplotlib.dates.MONTHLY, interval=interval)
     loc = matplotlib.dates.RRuleLocator(rule)
     formatter = matplotlib.dates.DateFormatter("%b '%y")
