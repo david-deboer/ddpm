@@ -1,6 +1,24 @@
 import matplotlib.pyplot as plt
 import datetime
 
+def quarters(dates):
+    smo = dates[0].month
+    if smo < 4:
+        umo = 1
+    elif smo < 7:
+        umo = 4
+    elif smo < 10:
+        umo = 9
+    else:
+        umo = 10
+    this_date = datetime.datetime(year=dates[0].year, month=umo, day=1)
+    q = [this_date]
+    while this_date < dates[-1]:
+        ndt = this_date + datetime.timedelta(days=95)
+        this_date = datetime.datetime(year=ndt.year, month=ndt.month, day=1)
+        q.append(this_date)
+    return(q)
+
 def return_datetime(date, fmt='%Y-%m-%d'):
     if isinstance(date, datetime.datetime):
         return date

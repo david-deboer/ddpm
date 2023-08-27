@@ -45,8 +45,9 @@ def gantt_chart(dates, labels, plotpars, extrema):
             plt.plot(start, i * step + ymin, pp.marker, color=pp.color, markersize=8)
         else:
             stop = matplotlib.dates.date2num(dtlim[1])
-            plt.barh(i * step + ymin, stop - start, left=start, height=0.3,
-                     align='center', color=pp.color, alpha=0.75)
+            plt.barh(i * step + ymin, stop - start, left=start, height=0.3, align='center', color=pp.color, alpha=0.75)
+            if isinstance(pp.status, (float, int)):
+                plt.barh(i * step + ymin, pp.status*(stop - start)/100.0, left=start, height=0.1, align='center', color='k', alpha=0.75)
 
     # Format the y-axis
     pos = np.arange(ymin, ymax + step / 2.0, step)  # add the step/2.0 to get that last value
@@ -61,7 +62,12 @@ def gantt_chart(dates, labels, plotpars, extrema):
         plt.plot([now_date, now_date], [ymin - step, ymax + step], 'k--')
 
     ax1.xaxis_date()  # Tell matplotlib that these are dates...
-    rule = matplotlib.dates.rrulewrapper(matplotlib.dates.MONTHLY, interval=1)
+    if deltadate > 1000.0:
+        rule = matplotlib.dates.rrulewrapper(matplotlib.dates.YEARLY, interval=1)
+    elif deltadate > 650.0:
+        rule = matplotlib.dates.rrulewrapper(matplotlib.dates.MONTHLY, interval=3)
+    else:
+        rule = matplotlib.dates.rrulewrapper(matplotlib.dates.MONTHLY, interval=1)
     loc = matplotlib.dates.RRuleLocator(rule)
     formatter = matplotlib.dates.DateFormatter("%b '%y")
     ax1.xaxis.set_major_locator(loc)

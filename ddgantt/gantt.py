@@ -37,7 +37,9 @@ class Milestone(_Base):
         if self.status in ['other', 'moved'] and NOW > self.date:
             self.status = 'late'
         if color is None:
-            if status == 'complete' and lag is not None:
+            if status is None:
+                self.color = 'k'
+            elif status == 'complete' and lag is not None:
                 self.color = gantt_util.lag2rgb(lag)
             else:
                 self.color = STATUS_COLOR[self.status]
