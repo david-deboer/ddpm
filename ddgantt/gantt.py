@@ -1,6 +1,6 @@
 import matplotlib.pyplot as plt
 from copy import copy
-from . import plot_gantt, gantt_util
+from . import plot_gantt, plot_cumulative, gantt_util
 import datetime
 from argparse import Namespace
 
@@ -9,7 +9,7 @@ DATE_FIELDS = ['date', 'begins', 'ends']
 NOW = datetime.datetime.now()
 PAST = datetime.datetime(year=2000, month=1, day=1)
 FUTURE = datetime.datetime(year=2040, month=12, day=31)
-STATUS_COLOR = {'complete': 'g', 'late': 'r', 'other': 'k', 'moved': 'y', 'removed': 'w'}
+STATUS_COLOR = {'complete': 'g', 'late': 'r', 'other': 'k', 'moved': 'y', 'removed': 'w', 'none': 'k'}
 
 class _Base:
     base_attr_init = ['name', 'owner', 'status']
@@ -55,8 +55,8 @@ class Task(_Base):
             self.color = color
 
 class Project:
-    _TaskSortInfo = {}
-    _MilestoneSortInfo = {'begins': 'date', 'ends': 'date'}
+    _SortInfo = {'milestone': {'begins': 'date', 'ends': 'date'},
+                 'task': {}}
     def __init__(self, name, organization=None):
         self.name = name
         self.organization = organization
@@ -70,13 +70,12 @@ class Project:
         self.milestones.append(milestone)
 
     def _sort_(self, entry, sortby):
-        entries = f"{entry}s"
-        dtype = f"sorted_{entries}"
-        setattr(self, f"earliest_{entry.lower()}", FUTURE)
-        setattr(self, f"latest_{entry.lower()}", PAST)
-        setattr(self, dtype, {})
-        SortInfo = getattr(self, f"_{entry.capitalize()}SortInfo")
-        for this in getattr(self, entries):
+        dtype = f"sorted_{entry}s"
+        self.earliest = {'milestone': FUTURE, 'task': FUTURE}
+        self.latest = {'milestone': PAST, 'task': PAST}
+        setattr(self, f"sorted_{entry}s", {})
+        SortInfo = self._SortInfo[entry]
+        for this in getattr(self, f"{entry}s"):
             key = ''
             for par in sortby:
                 if par in SortInfo:
@@ -85,18 +84,18 @@ class Project:
                     upar = par
                 uval = getattr(this, upar)
                 if upar in ['date', 'ends']:
-                    if uval > self.latest_task:
-                        self.latest_task = copy(uval)
+                    if uval > self.latest[entry]:
+                        self.latest[entry] = copy(uval)
                 if upar in ['date', 'begins']:
-                    if uval < self.earliest_task:
-                        self.earliest_task = copy(uval)
+                    if uval < self.earliest[entry]:
+                        self.earliest[entry] = copy(uval)
                 if upar in DATE_FIELDS:
                     uval = uval.strftime('%Y%m%dT%H%M')
                 key += uval + '_'
             key += f"_{entry[0]}"
             getattr(self, dtype)[key] = this
 
-    def plot(self, sortby=['begins', 'name']):
+    def plot_gantt(self, sortby=['begins', 'name']):
         """
         Make a gantt chart.
 
@@ -124,3 +123,26 @@ class Project:
                 labels.append(this_task.name)
                 plotpars.append(Namespace(color=this_task.color))
         plot_gantt.plotGantt(dates, labels, plotpars, extrema)
+
+    def plot_cumulative(self, sortby=['begins', 'name']):
+        """
+        Make a cumulative milestone chart.
+
+        Parameter
+        ---------
+        sortby : list
+           fields to sort by, must be unique.  sort_info dicts map if needed
+        """
+        self._sort_('milestone', sortby)
+        allkeys = sorted(self.sorted_milestones.keys())
+        dates = []
+        labels = []
+        plotpars = []
+        extrema = Namespace(min=self.earliest_milestone, max=NO)
+        for key in allkeys:
+            if key.endswith('__m'):
+                this_milestone = self.sorted_milestones[key]
+                dates.append([this_milestone.date, None])
+                labels.append(this_milestone.name)
+                plotpars.append(Namespace(status=this_milestone.status))
+        plot_cumulative.plotCumulative(dates, labels, plotpars, extrema)

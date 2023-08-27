@@ -1,3 +1,5 @@
+import matplotlib.pyplot as plt
+
 def lag2rgb(lag):
     s = 255.0
     bs = [[85.0, (255.0 / s, 190.0 / s, 50.0 / s)],
@@ -23,3 +25,18 @@ def lag2rgb(lag):
             m = (y2 - y1) / dx
             c.append(m * (lag - bs[j][0]) + y1)
         return c
+
+def colorBar():
+    fff = plt.figure('ColorBar')
+    ax = fff.add_subplot(111)
+    ax.set_yticklabels([])
+    plt.xlabel('Days')
+    for j in range(180):
+        i = j - 90.0
+        c = lag2rgb(i)
+        plt.plot([i], [1.0], 's', markersize=20, color=c, markeredgewidth=0.0, fillstyle='full')
+    ar = plt.axis()
+    boxx = [ar[0], ar[1], ar[1], ar[0], ar[0]]
+    boxy = [-5.0, -5.0, 6.0, 6.0, -5.0]
+    plt.plot(boxx, boxy, 'k')
+    plt.axis('image')
