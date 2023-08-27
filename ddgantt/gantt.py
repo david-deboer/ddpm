@@ -97,7 +97,7 @@ class Project:
             key += f"_{entry[0]}"
             getattr(self, dtype)[key] = this
 
-    def chart(self, sortby=['begins', 'name']):
+    def chart(self, sortby=['begins', 'name'], interval=None):
         """
         Make a gantt chart.
 
@@ -127,7 +127,7 @@ class Project:
                 dates.append([this_task.begins, this_task.ends])
                 labels.append(this_task.name)
                 plotpars.append(Namespace(color=this_task.color, status=this_task.status, owner=this_task.owner))
-        plotting.gantt_chart(dates, labels, plotpars, extrema)
+        plotting.gantt_chart(dates, labels, plotpars, extrema, interval=interval)
 
     def cumulative(self, sortby=['begins', 'name'], step=1.0, show=True):
         """

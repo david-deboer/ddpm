@@ -12,7 +12,7 @@ import matplotlib.dates
 import numpy as np
 
 
-def gantt_chart(dates, labels, plotpars, extrema):
+def gantt_chart(dates, labels, plotpars, extrema, interval=None):
     """
     This will plot a gantt chart of items (ylabels) and dates.  If included, it will plot percent
     complete for tasks and color code for milestones (note, if included, it must have a status_codes
@@ -62,12 +62,17 @@ def gantt_chart(dates, labels, plotpars, extrema):
         plt.plot([now_date, now_date], [ymin - step, ymax + step], 'k--')
 
     ax1.xaxis_date()  # Tell matplotlib that these are dates...
-    if deltadate > 1000.0:
-        rule = matplotlib.dates.rrulewrapper(matplotlib.dates.YEARLY, interval=1)
-    elif deltadate > 650.0:
-        rule = matplotlib.dates.rrulewrapper(matplotlib.dates.MONTHLY, interval=3)
-    else:
-        rule = matplotlib.dates.rrulewrapper(matplotlib.dates.MONTHLY, interval=1)
+    if interval is None:
+        deltayr = deltadate / 365.0
+        if deltayr > 6.0:
+            interval = 12
+        elif deltayr > 4.0:
+            interval = 6
+        elif deltayr > 2.0:
+            interval = 3
+        else:
+            interval = 1
+    rule = matplotlib.dates.rrulewrapper(matplotlib.dates.MONTHLY, interval=interval)
     loc = matplotlib.dates.RRuleLocator(rule)
     formatter = matplotlib.dates.DateFormatter("%b '%y")
     ax1.xaxis.set_major_locator(loc)
