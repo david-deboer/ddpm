@@ -15,7 +15,7 @@ import numpy as np
 interval_map = {4:3, 5:6, 7:6, 8:6, 9:12, 10:12, 11:12}
 
 
-def gantt_chart(dates, labels, plotpars, extrema, interval=None):
+def gantt_chart(dates, labels, plotpars, extrema, **kwargs):
     """
     This will plot a gantt chart of items (ylabels) and dates.  If included, it will plot percent
     complete for tasks and color code for milestones (note, if included, it must have a status_codes
@@ -29,6 +29,7 @@ def gantt_chart(dates, labels, plotpars, extrema, interval=None):
     labels : labels for dates
     markers : colors for entry
     extrema : 2 element list of min/max datetimes
+    kwargs : interval, grid
     """
     # Initialise plot
     fig1 = plt.figure(figsize=(9, 8), tight_layout=True)
@@ -56,7 +57,10 @@ def gantt_chart(dates, labels, plotpars, extrema, interval=None):
     pos = np.arange(ymin, ymax + step / 2.0, step)  # add the step/2.0 to get that last value
     locsy, labelsy = plt.yticks(pos, labels)
     plt.setp(labelsy, fontsize=14)
-    plt.grid(color='g', linestyle=':')
+    if 'grid' in kwargs and not kwargs['grid']:
+        pass
+    else:
+        plt.grid(color='g', linestyle=':')
 
     # Plot current time
     now = datetime.datetime.now()
@@ -74,7 +78,9 @@ def gantt_chart(dates, labels, plotpars, extrema, interval=None):
             plt.plot([this_yr, this_yr], [ymin - step, ymax + step], 'k:')
 
     ax1.xaxis_date()  # Tell matplotlib that these are dates...
-    if interval is None:
+    if 'interval' in kwargs and kwargs['interval'] is not None:
+        pass
+    else:
         interval = interval_map[int(np.ceil(deltayr * deltayr / 6.0))]
     rule = matplotlib.dates.rrulewrapper(matplotlib.dates.MONTHLY, interval=interval)
     loc = matplotlib.dates.RRuleLocator(rule)
