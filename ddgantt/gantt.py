@@ -31,7 +31,7 @@ class _Base:
 class Milestone(_Base):
     def __init__(self, name, date, owner=None, label=None, status='other', lag=None, marker='D', color=None):
         super().__init__(name=name, owner=owner, status=status)
-        self.date = date
+        self.date = gantt_util.return_datetime(date)
         self.label = label
         self.marker = marker
         if self.status in ['other', 'moved'] and NOW > self.date:
@@ -48,8 +48,8 @@ class Milestone(_Base):
 class Task(_Base):
     def __init__(self, name, begins, ends, owner=None, label=None, status=None, color=None):
         super().__init__(name=name, owner=owner, status=status)
-        self.begins = begins
-        self.ends = ends
+        self.begins = gantt_util.return_datetime(begins)
+        self.ends = gantt_util.return_datetime(ends)
         self.label = label
         if color is None:
             self.color = 'b'

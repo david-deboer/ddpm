@@ -1,4 +1,13 @@
 import matplotlib.pyplot as plt
+import datetime
+
+def return_datetime(date, fmt='%Y-%m-%d'):
+    if isinstance(date, datetime.datetime):
+        return date
+    elif isinstance(date, str):
+        return datetime.datetime.strptime(date, fmt)
+    else:
+        raise ValueError(f"Invalid date format {type(date)} - {date}")
 
 def lag2rgb(lag):
     s = 255.0
