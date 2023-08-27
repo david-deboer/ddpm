@@ -21,8 +21,11 @@ class _Base:
                 setattr(self, this_attr, None)
         if isinstance(self.status, str):
             self.status = self.status.lower()
-            if self.status not in STATUS_COLOR:
-                raise ValueError(f"Invalid status {self.status}")
+            try:
+                self.status = float(self.status)
+            except ValueError:
+                if self.status not in STATUS_COLOR:
+                    raise ValueError(f"Invalid status {self.status}")
 
 
 class Milestone(_Base):
@@ -113,15 +116,15 @@ class Project:
                             max=max(self.latest['milestone'], self.latest['task']))
         for key in allkeys:
             if key.endswith('__m'):
-                this_milestone = self.sorted_milestones[key]
-                dates.append([this_milestone.date, None])
-                labels.append(this_milestone.name)
-                plotpars.append(Namespace(color=this_milestone.color, marker=this_milestone.marker))
+                this_ms = self.sorted_milestones[key]
+                dates.append([this_ms.date, None])
+                labels.append(this_ms.name)
+                plotpars.append(Namespace(color=this_ms.color, marker=this_ms.marker, owner=this_ms.owner))
             elif key.endswith('__t'):
                 this_task = self.sorted_tasks[key]
                 dates.append([this_task.begins, this_task.ends])
                 labels.append(this_task.name)
-                plotpars.append(Namespace(color=this_task.color))
+                plotpars.append(Namespace(color=this_task.color, status=self.status, owner=this_task.owner))
         plotting.gantt_chart(dates, labels, plotpars, extrema)
 
     def cumulative(self, sortby=['begins', 'name'], step=1.0, show=True):
@@ -141,10 +144,9 @@ class Project:
         status = []
         extrema = Namespace(min=self.earliest['milestone'], max=NOW)
         for key in allkeys:
-            if key.endswith('__m'):
-                this_milestone = self.sorted_milestones[key]
-                dates.append([this_milestone.date, None])
-                status.append(Namespace(status=this_milestone.status))
+            this_milestone = self.sorted_milestones[key]
+            dates.append([this_milestone.date, None])
+            status.append(Namespace(status=this_milestone.status))
         self.cdf = Namespace(num=len(dates), dates=[], values=[])
         this_date = copy(extrema.min)
         while this_date < extrema.max:
