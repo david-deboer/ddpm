@@ -76,7 +76,7 @@ def gantt_chart(dates, labels, plotpars, extrema):
     plt.tight_layout()
 
 def cumulative_graph(dates, values, norm):
-    datemin, datemax = matplotlib.dates.date2num(dates[0]), matplotlib.dates.dat2num(dates[-1])
+    datemin, datemax = matplotlib.dates.date2num(dates[0]), matplotlib.dates.date2num(dates[-1])
     cx_dat = [matplotlib.dates.date2num(_x) for _x in dates]
     cy_dat = np.array(values) / norm
     fig2 = plt.figure('cdf')
