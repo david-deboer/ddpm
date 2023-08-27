@@ -70,9 +70,7 @@ class Project:
 
     def _sort_(self, entry, sortby):
         dtype = f"sorted_{entry}s"
-        self.earliest = {'milestone': FUTURE, 'task': FUTURE}
-        self.latest = {'milestone': PAST, 'task': PAST}
-        setattr(self, f"sorted_{entry}s", {})
+        setattr(self, dtype, {})
         SortInfo = self._SortInfo[entry]
         for this in getattr(self, f"{entry}s"):
             key = ''
@@ -94,24 +92,6 @@ class Project:
             key += f"_{entry[0]}"
             getattr(self, dtype)[key] = this
 
-    def make_cumulative(self, dates, status, extrema, step=1.0):
-        """
-        Parameters
-        ----------
-        step : float
-            step in days
-        """
-        self.cdf = Namespace(num=len(dates), dates=[], values=[])
-        this_date = copy(extrema.min)
-        while this_date < extrema.max:
-            self.cdf.dates.append(this_date)
-            ctr = 0.0
-            for i in range(len(status)):
-                if this_date > dates[i][0] and status[i].status == 'complete':
-                    ctr += 1.0
-            self.cdf.values.append(ctr)
-            this_date += datetime.timedelta(days=step)
-
     def plot_gantt(self, sortby=['begins', 'name']):
         """
         Make a gantt chart.
@@ -121,6 +101,8 @@ class Project:
         sortby : list
            fields to sort by, must be unique.  sort_info dicts map if needed
         """
+        self.earliest = {'milestone': FUTURE, 'task': FUTURE}
+        self.latest = {'milestone': PAST, 'task': PAST}
         self._sort_('task', sortby)
         self._sort_('milestone', sortby)
         allkeys = sorted(list(self.sorted_milestones.keys()) + list(self.sorted_tasks.keys()))
@@ -142,7 +124,7 @@ class Project:
                 plotpars.append(Namespace(color=this_task.color))
         plotting.gantt_chart(dates, labels, plotpars, extrema)
 
-    def plot_cumulative(self, sortby=['begins', 'name'], step=1.0):
+    def cumulative(self, sortby=['begins', 'name'], step=1.0, show=True):
         """
         Make a cumulative milestone chart.
 
@@ -151,6 +133,8 @@ class Project:
         sortby : list
            fields to sort by, must be unique.  sort_info dicts map if needed
         """
+        self.earliest = {'milestone': FUTURE}
+        self.latest = {'milestone': PAST}
         self._sort_('milestone', sortby)
         allkeys = sorted(self.sorted_milestones.keys())
         dates = []
@@ -161,8 +145,18 @@ class Project:
                 this_milestone = self.sorted_milestones[key]
                 dates.append([this_milestone.date, None])
                 status.append(Namespace(status=this_milestone.status))
-        self.make_cumulative(dates, status, extrema, step=step)
-        plotting.cumulative_graph(self.cdf.dates, self.cdf.values, self.cdf.num)
+        self.cdf = Namespace(num=len(dates), dates=[], values=[])
+        this_date = copy(extrema.min)
+        while this_date < extrema.max:
+            self.cdf.dates.append(this_date)
+            ctr = 0.0
+            for i in range(len(status)):
+                if this_date > dates[i][0] and status[i].status == 'complete':
+                    ctr += 1.0
+            self.cdf.values.append(ctr)
+            this_date += datetime.timedelta(days=step)
+        if show:
+            plotting.cumulative_graph(self.cdf.dates, self.cdf.values, self.cdf.num)
 
     def color_bar(self):
         gantt_util.color_bar()
