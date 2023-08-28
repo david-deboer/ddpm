@@ -33,7 +33,7 @@ def gantt_chart(dates, labels, plotpars, extrema, **kwargs):
     kwargs : interval, grid
     """
     # Initialise plot
-    fig1 = plt.figure(figsize=(9, 8), tight_layout=True)
+    fig1 = plt.figure(figsize=(12, 8), tight_layout=True)
     ax1 = fig1.add_subplot(111)
     datemin, datemax = matplotlib.dates.date2num(extrema.min), matplotlib.dates.date2num(extrema.max)
     deltadate = datemax - datemin
