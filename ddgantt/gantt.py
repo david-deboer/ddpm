@@ -3,6 +3,7 @@ from . import plotting, gantt_util
 import datetime
 from argparse import Namespace
 import hashlib
+import csv
 
 
 DATE_FIELDS = ['date', 'begins', 'ends']
@@ -39,10 +40,12 @@ class _Base:
 
 
 class Milestone(_Base):
+    ms_columns = ['name', 'date', 'owner', 'label', 'status', 'lag', 'marker', 'color']
     def __init__(self, name, date, owner=None, label=None, status='other', lag=None, marker='D', color=None):
         super().__init__(name=name, owner=owner, status=status)
         self.date = gantt_util.return_datetime(date)
         self.label = label
+        self.lag = lag
         self.marker = marker
         if self.status in ['other', 'moved'] and NOW > self.date:
             self.status = 'late'
@@ -50,7 +53,10 @@ class Milestone(_Base):
             if status is None:
                 self.color = 'k'
             elif status == 'complete' and lag is not None:
-                self.color = gantt_util.lag2rgb(lag)
+                if abs(lag) > 1.0:
+                    self.color = gantt_util.lag2rgb(lag)
+                else:
+                    self.color = STATUS_COLOR['complete']
             else:
                 self.color = STATUS_COLOR[self.status]
         else:
@@ -60,6 +66,7 @@ class Milestone(_Base):
 
 
 class Task(_Base):
+    task_columns = ['name', 'begins', 'ends', 'owner', 'label', 'status', 'color']
     def __init__(self, name, begins, ends, owner=None, label=None, status=None, color=None):
         super().__init__(name=name, owner=owner, status=status)
         self.begins = gantt_util.return_datetime(begins)
@@ -75,6 +82,7 @@ class Task(_Base):
 class Project:
     _SortInfo = {'milestone': {'begins': 'date', 'ends': 'date'},
                  'task': {}}
+    csv_header = ['name', 'date:begins', 'ends', 'owner', 'label', 'status', 'lag', 'color', 'marker']
     def __init__(self, name, organization=None):
         self.name = name
         self.organization = organization
@@ -185,3 +193,28 @@ class Project:
 
     def color_bar(self):
         gantt_util.color_bar()
+
+    def csvreader(self, fn):
+        print(f"Reading csv file {fn}")
+        with open(fn, 'r') as fp:
+            reader = csv.reader(fp)
+            header = next(reader)
+            for row in reader:
+                print(row)
+
+    def csvwrite(self, fn):
+        print(f"Writing csv file {fn}")
+        with open(fn, 'w') as fp:
+            writer = csv.writer(fp)
+            writer.writerow(self.csv_header)
+            for entry in ['milestones', 'tasks']:
+                for this in getattr(self, entry).values():
+                    row = []
+                    for cols in self.csv_header:
+                        for col in cols.split(':'):
+                            try:
+                                val = getattr(this, col)
+                                row.append(val)
+                            except AttributeError:
+                                continue
+                    writer.writerow(row)
