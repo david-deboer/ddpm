@@ -10,7 +10,7 @@ DATE_FIELDS = ['date', 'begins', 'ends']
 NOW = datetime.datetime.now()
 PAST = datetime.datetime(year=2000, month=1, day=1)
 FUTURE = datetime.datetime(year=2040, month=12, day=31)
-STATUS_COLOR_B = {'complete': 'g', 'late': 'r', 'other': 'k', 'moved': 'y', 'removed': 'w', 'none': 'k'}
+# STATUS_COLOR = {'complete': 'g', 'late': 'r', 'other': 'k', 'moved': 'y', 'removed': 'w', 'none': 'k'}
 STATUS_COLOR = {
     'complete': gantt_util.color_palette[2],
     'late': 'r',
