@@ -194,7 +194,7 @@ class Project:
     def color_bar(self):
         gantt_util.color_bar()
 
-    def csvreader(self, fn):
+    def csvread(self, fn):
         print(f"Reading csv file {fn}")
         with open(fn, 'r') as fp:
             reader = csv.reader(fp)
