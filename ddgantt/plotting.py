@@ -41,15 +41,26 @@ def date_ticks(interval, ddate):
             fmttr = "(%a) %b/%d"
     return itvmapper, interval, fmttr
 
+
 def assign_yvals(ykeys):
     """
     Assigned a yvalue to all (colinear thing...)
     """
-    print("P48: CURRENTLY ASSIGN DOES OLD 1/LINE")
     step = 0.5
     ymin = step
-    ymax = len(ykeys) * step
-    return np.linspace(ymin, ymax, len(ykeys)), step
+    yvals = []
+    fnd_keys = {}
+    ctr = 0
+    for ykey in ykeys:
+        if ykey not in fnd_keys:
+            yval = ymin + ctr * step
+            ctr += 1
+            yvals.append(yval)
+            fnd_keys[ykey] = yval
+        else:
+            yvals.append(fnd_keys[ykey])
+    return yvals, step
+
 
 def gantt_chart(dates, labels, plotpars, ykeys, extrema, **kwargs):
     """
@@ -67,14 +78,12 @@ def gantt_chart(dates, labels, plotpars, ykeys, extrema, **kwargs):
     extrema : 2 element list of min/max datetimes
     kwargs : interval, grid
     """
-    print("P70:  NEED TO HANDLE YKEYS")
     # Initialise plot
     fig1 = plt.figure(figsize=(12, 8), tight_layout=True)
     ax1 = fig1.add_subplot(111)
     datemin, datemax = matplotlib.dates.date2num(extrema.min), matplotlib.dates.date2num(extrema.max)
     deltadate = datemax - datemin
     ax1.axis(xmin=matplotlib.dates.date2num(extrema.min)-deltadate/10.0, xmax=matplotlib.dates.date2num(extrema.max)+deltadate/10.0)
-
     ypos, step = assign_yvals(ykeys)
 
     # Plot the data
