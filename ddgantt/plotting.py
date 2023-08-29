@@ -17,7 +17,6 @@ def date_ticks(interval, ddate):
     interval_mmap = {4:3, 5:6, 7:6, 8:6, 9:12, 10:12, 11:12}
     dyr = ddate / 365.0
     itvmapper = matplotlib.dates.MONTHLY
-    print(interval, ddate)
     if interval is not None:
         try:
             interval = float(interval)
@@ -40,7 +39,6 @@ def date_ticks(interval, ddate):
             else:
                 interval = 1
             fmttr = "(%a) %b/%d"
-    print(interval, fmttr)
     return itvmapper, interval, fmttr
 
 
