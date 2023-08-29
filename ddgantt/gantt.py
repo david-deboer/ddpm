@@ -22,7 +22,7 @@ STATUS_COLOR = {
 
 
 class _Base:
-    base_attr_init = ['name', 'owner', 'status']
+    base_attr_init = ['name', 'owner', 'status', 'colinear']
     def __init__(self, **kwargs):
         for this_attr in self.base_attr_init:
             try:
@@ -40,9 +40,33 @@ class _Base:
 
 
 class Milestone(_Base):
-    ms_columns = ['name', 'date', 'owner', 'label', 'status', 'lag', 'marker', 'color']
-    def __init__(self, name, date, owner=None, label=None, status='other', lag=None, marker='D', color=None):
-        super().__init__(name=name, owner=owner, status=status)
+    """
+    """
+    ms_columns = ['name', 'date', 'owner', 'label', 'status', 'lag', 'colinear', 'marker', 'color']
+    def __init__(self, name, date, owner=None, label=None, status='other', lag=None, colinear=None, marker='D', color=None):
+        """
+        Parameters
+        ----------
+        name : str
+            Name of milestone
+        date : str, datetime
+            Date of milestone
+        owner : str, None
+            Owner of the milestone
+        label : str, None
+            Additional label associated 
+        status : str, None
+            Status of milestone (see above list in STATUS_COLOR)
+        lag : str, float, None
+            how late(=) or early (-) as complete milestone was done
+        colinear : str, None
+            Key of other milestone to put on the same line
+        marker : str
+            Marker used for plotting
+        color : str, None
+            Color used for plotting, if None make based on statu/lag
+        """
+        super().__init__(name=name, owner=owner, status=status, colinear=colinear)
         self.date = gantt_util.return_datetime(date)
         self.label = label
         self.lag = lag
@@ -66,9 +90,9 @@ class Milestone(_Base):
 
 
 class Task(_Base):
-    task_columns = ['name', 'begins', 'ends', 'owner', 'label', 'status', 'color']
-    def __init__(self, name, begins, ends, owner=None, label=None, status=None, color=None):
-        super().__init__(name=name, owner=owner, status=status)
+    task_columns = ['name', 'begins', 'ends', 'owner', 'label', 'status', 'colinear', 'color']
+    def __init__(self, name, begins, ends, owner=None, label=None, status=None, colinear=None, color=None):
+        super().__init__(name=name, owner=owner, status=status, colinear=colinear)
         self.begins = gantt_util.return_datetime(begins)
         self.ends = gantt_util.return_datetime(ends)
         self.label = label
@@ -89,18 +113,28 @@ class Project:
         self.milestones = {}
         self.tasks = {}
         self.all_activity_keys = []
+        self.earliest = {'milestone': FUTURE, 'task': FUTURE}
+        self.latest = {'milestone': PAST, 'task': PAST}
 
     def add_task(self, task):
         if task.key in self.all_activity_keys:
             raise ValueError(f"Key for {task.name} already added.")
         self.all_activity_keys.append(task.key)
         self.tasks[task.key] = task
+        if task.ends > self.latest['task']:
+            self.latest['task'] = copy(task.ends)
+        if task.begins < self.earliest['task']:
+            self.earliest['task'] = copy(task.begins)
 
     def add_milestone(self, milestone):
         if milestone.key in self.all_activity_keys:
             raise ValueError(f"Key for {milestone.name} already added.")
         self.all_activity_keys.append(milestone.key)
         self.milestones[milestone.key] = milestone
+        if milestone.date > self.latest['milestone']:
+            self.latest['milestone'] = copy(milestone.date)
+        if milestone.date < self.earliest['milestone']:
+            self.earliest['milestone'] = copy(milestone.date)
 
     def _sort_(self, entry, sortby):
         dtype = f"sorted_{entry}s"
@@ -114,17 +148,18 @@ class Project:
                 else:
                     upar = par
                 uval = getattr(this, upar)
-                if upar in ['date', 'ends']:
-                    if uval > self.latest[entry]:
-                        self.latest[entry] = copy(uval)
-                if upar in ['date', 'begins']:
-                    if uval < self.earliest[entry]:
-                        self.earliest[entry] = copy(uval)
                 if upar in DATE_FIELDS:
                     uval = uval.strftime('%Y%m%dT%H%M')
                 plotkey += uval + '_'
             plotkey += f"_{entry[0]}"
             getattr(self, dtype)[plotkey] = this.key
+
+    def _align_keys(self, ykeys):
+        """
+        Goes through colinear and puts them on the same line as first
+        """
+        print("G157:  CURENTLY ALIGN DOES NOTHING")
+        return ykeys
 
     def chart(self, sortby=['begins', 'name', 'ends'], interval=None):
         """
@@ -135,29 +170,28 @@ class Project:
         sortby : list
            fields to sort by, must be unique.  sort_info dicts map if needed
         """
-        print("NEED TO DO THE EXTREMA OUTSIDE OF SORTBY!!!")
-        self.earliest = {'milestone': FUTURE, 'task': FUTURE}
-        self.latest = {'milestone': PAST, 'task': PAST}
         self._sort_('task', sortby)
         self._sort_('milestone', sortby)
         allplotkeys = sorted(list(self.sorted_milestones.keys()) + list(self.sorted_tasks.keys()))
         dates = []
         labels = []
         plotpars = []
+        ykeys = []  # keys lists the keys used, may be used to pu
         extrema = Namespace(min=min(self.earliest['milestone'], self.earliest['task']),
                             max=max(self.latest['milestone'], self.latest['task']))
         for plotkey in allplotkeys:
             if plotkey.endswith('__m'):
-                this_ms = self.milestones[self.sorted_milestones[plotkey]]
-                dates.append([this_ms.date, None])
-                labels.append(this_ms.name)
-                plotpars.append(Namespace(color=this_ms.color, marker=this_ms.marker, owner=this_ms.owner))
+                this = self.milestones[self.sorted_milestones[plotkey]]
+                dates.append([this.date, None])
+                plotpars.append(Namespace(color=this.color, marker=this.marker, owner=this.owner))
             elif plotkey.endswith('__t'):
-                this_task = self.tasks[self.sorted_tasks[plotkey]]
-                dates.append([this_task.begins, this_task.ends])
-                labels.append(this_task.name)
-                plotpars.append(Namespace(color=this_task.color, status=this_task.status, owner=this_task.owner))
-        plotting.gantt_chart(dates, labels, plotpars, extrema, interval=interval)
+                this = self.tasks[self.sorted_tasks[plotkey]]
+                dates.append([this.begins, this.ends])
+                plotpars.append(Namespace(color=this.color, status=this.status, owner=this.owner))
+            labels.append(this.name)
+            ykeys.append(this.key)
+        ykeys = self._align_keys(ykeys)
+        plotting.gantt_chart(dates, labels, plotpars, ykeys, extrema, interval=interval)
 
     def cumulative(self, sortby=['begins', 'name'], step=1.0, show=True):
         """

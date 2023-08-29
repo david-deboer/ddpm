@@ -43,7 +43,7 @@ def date_ticks(interval, ddate):
 
 
 
-def gantt_chart(dates, labels, plotpars, extrema, **kwargs):
+def gantt_chart(dates, labels, plotpars, ykeys, extrema, **kwargs):
     """
     This will plot a gantt chart of items (ylabels) and dates.  If included, it will plot percent
     complete for tasks and color code for milestones (note, if included, it must have a status_codes
@@ -59,6 +59,7 @@ def gantt_chart(dates, labels, plotpars, extrema, **kwargs):
     extrema : 2 element list of min/max datetimes
     kwargs : interval, grid
     """
+    print("G62:  NEED TO HANDLE YKEYS")
     # Initialise plot
     fig1 = plt.figure(figsize=(12, 8), tight_layout=True)
     ax1 = fig1.add_subplot(111)
