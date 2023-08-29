@@ -107,34 +107,46 @@ class Project:
     _SortInfo = {'milestone': {'begins': 'date', 'ends': 'date'},
                  'task': {}}
     csv_header = ['name', 'date:begins', 'ends', 'owner', 'label', 'status', 'lag', 'color', 'marker']
+    entry_types = ['task', 'milestone']
     def __init__(self, name, organization=None):
         self.name = name
         self.organization = organization
         self.milestones = {}
         self.tasks = {}
         self.all_activity_keys = []
-        self.earliest = {'milestone': FUTURE, 'task': FUTURE}
-        self.latest = {'milestone': PAST, 'task': PAST}
+        self.earliest, self.latest = {}, {}
+        for entry in self.entry_types:
+            self.earliest[entry] = None
+            self.latest[entry] = None
 
     def add_task(self, task):
         if task.key in self.all_activity_keys:
             raise ValueError(f"Key for {task.name} already added.")
         self.all_activity_keys.append(task.key)
         self.tasks[task.key] = task
-        if task.ends > self.latest['task']:
-            self.latest['task'] = copy(task.ends)
-        if task.begins < self.earliest['task']:
-            self.earliest['task'] = copy(task.begins)
+        if self.earliest['task'] is None:
+            self.earliest['task'] = task.begins
+        elif task.begins < self.earliest['task']:
+            self.earliest['task'] = task.begins
+        if self.latest['task'] is None:
+            self.latest['task'] = task.ends
+        elif task.ends > self.latest['task']:
+            self.latest['task'] = task.ends
 
     def add_milestone(self, milestone):
         if milestone.key in self.all_activity_keys:
             raise ValueError(f"Key for {milestone.name} already added.")
         self.all_activity_keys.append(milestone.key)
         self.milestones[milestone.key] = milestone
-        if milestone.date > self.latest['milestone']:
-            self.latest['milestone'] = copy(milestone.date)
-        if milestone.date < self.earliest['milestone']:
-            self.earliest['milestone'] = copy(milestone.date)
+        if self.earliest['milestone'] is None:
+            self.earliest['milestone'] = milestone.date
+        elif milestone.date < self.earliest['milestone']:
+            self.earliest['milestone'] = milestone.date
+        if self.latest['milestone'] is None:
+            self.latest['milestone'] = milestone.date
+        elif milestone.date > self.latest['milestone']:
+            self.latest['milestone'] = milestone.date
+
 
     def _sort_(self, entry, sortby):
         dtype = f"sorted_{entry}s"
@@ -161,6 +173,15 @@ class Project:
         print("G157:  CURENTLY ALIGN DOES NOTHING")
         return ykeys
 
+    def _get_extrema(self):
+        chkmin, chkmax = [], []
+        for entry in self.entry_types:
+            if self.earliest[entry] is not None:
+                chkmin.append(self.earliest[entry])
+            if self.latest[entry] is not None:
+                chkmax.append(self.latest[entry])
+        return Namespace(min=min(chkmin), max=max(chkmax))
+
     def chart(self, sortby=['begins', 'name', 'ends'], interval=None):
         """
         Make a gantt chart.
@@ -177,8 +198,7 @@ class Project:
         labels = []
         plotpars = []
         ykeys = []  # keys lists the keys used, may be used to pu
-        extrema = Namespace(min=min(self.earliest['milestone'], self.earliest['task']),
-                            max=max(self.latest['milestone'], self.latest['task']))
+        extrema = self._get_extrema()
         for plotkey in allplotkeys:
             if plotkey.endswith('__m'):
                 this = self.milestones[self.sorted_milestones[plotkey]]
