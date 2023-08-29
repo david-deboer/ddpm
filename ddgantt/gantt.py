@@ -170,7 +170,7 @@ class Project:
         """
         Goes through colinear and puts them on the same line as first
         """
-        print("G157:  CURENTLY ALIGN DOES NOTHING")
+        print("G173:  CURRENTLY ALIGN DOES NOTHING")
         return ykeys
 
     def _get_extrema(self):
