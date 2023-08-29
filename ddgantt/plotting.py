@@ -13,7 +13,36 @@ import numpy as np
 from ddgantt.gantt_util import color_palette
 
 
-interval_map = {4:3, 5:6, 7:6, 8:6, 9:12, 10:12, 11:12}
+def date_ticks(interval, ddate):
+    interval_mmap = {4:3, 5:6, 7:6, 8:6, 9:12, 10:12, 11:12}
+    dyr = ddate / 365.0
+    itvmapper = matplotlib.dates.MONTHLY
+    print(interval, ddate)
+    if interval is not None:
+        try:
+            interval = float(interval)
+        except ValueError:
+            if interval.endswith('d'):
+                itvmapper = matplotlib.dates.DAILY
+                interval = float(interval.strip('d'))
+            elif interval.endswith('m'):
+                interval = float(interval.strip('m'))
+            else:
+                raise ValueError(f"Interval must be float[d/m], you provided {interval}")
+    else:
+        if ddate > 300:
+            interval = interval_mmap[int(np.ceil(dyr * dyr / 6.0))]
+            fmttr = "%b '%y"
+        else:
+            itvmapper = matplotlib.dates.DAILY
+            if ddate > 30:
+                interval = 7
+            else:
+                interval = 1
+            fmttr = "(%a) %b/%d"
+    print(interval, fmttr)
+    return itvmapper, interval, fmttr
+
 
 
 def gantt_chart(dates, labels, plotpars, extrema, **kwargs):
@@ -68,24 +97,20 @@ def gantt_chart(dates, labels, plotpars, extrema, **kwargs):
     if now >= extrema.min and now <= extrema.max:
         now_date = matplotlib.dates.date2num(now)
         plt.plot([now_date, now_date], [ymin - step, ymax + step], '--', color=color_palette[3])
-    deltayr = deltadate / 365.0
-    if deltayr > 1.1:  # plot year markers
+    if int(deltadate) > 400:  # plot year markers
         yr1 = extrema.min.year
         yr2 = extrema.max.year
-        if deltayr > 2.5 and extrema.max.month > 8:
+        if deltadate > 2.5*365 and extrema.max.month > 8:
             yr2 += 1
         for yr in range(yr1, yr2+1):
             this_yr = datetime.datetime(year=yr, month=1, day=1)
             plt.plot([this_yr, this_yr], [ymin - step, ymax + step], 'k:')
-
     ax1.xaxis_date()  # Tell matplotlib that these are dates...
-    if 'interval' in kwargs and kwargs['interval'] is not None:
-        pass
-    else:
-        interval = interval_map[int(np.ceil(deltayr * deltayr / 6.0))]
-    rule = matplotlib.dates.rrulewrapper(matplotlib.dates.MONTHLY, interval=interval)
+    interval = None if 'interval' not in kwargs else kwargs['interval']
+    itvmapper, interval, fmttr = date_ticks(interval, deltadate)
+    rule = matplotlib.dates.rrulewrapper(itvmapper, interval=interval)
     loc = matplotlib.dates.RRuleLocator(rule)
-    formatter = matplotlib.dates.DateFormatter("%b '%y")
+    formatter = matplotlib.dates.DateFormatter(fmttr)
     ax1.xaxis.set_major_locator(loc)
     ax1.xaxis.set_major_formatter(formatter)
     labelsx = ax1.get_xticklabels()

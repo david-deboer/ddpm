@@ -126,7 +126,7 @@ class Project:
             plotkey += f"_{entry[0]}"
             getattr(self, dtype)[plotkey] = this.key
 
-    def chart(self, sortby=['begins', 'name'], interval=None):
+    def chart(self, sortby=['begins', 'name', 'ends'], interval=None):
         """
         Make a gantt chart.
 
@@ -135,6 +135,7 @@ class Project:
         sortby : list
            fields to sort by, must be unique.  sort_info dicts map if needed
         """
+        print("NEED TO DO THE EXTREMA OUTSIDE OF SORTBY!!!")
         self.earliest = {'milestone': FUTURE, 'task': FUTURE}
         self.latest = {'milestone': PAST, 'task': PAST}
         self._sort_('task', sortby)
