@@ -114,6 +114,7 @@ class Project:
         self.milestones = {}
         self.tasks = {}
         self.all_activity_keys = []
+        self.colinear_map = {}
         self.earliest, self.latest = {}, {}
         for entry in self.entry_types:
             self.earliest[entry] = None
@@ -132,6 +133,8 @@ class Project:
             self.latest['task'] = task.ends
         elif task.ends > self.latest['task']:
             self.latest['task'] = task.ends
+        if task.colinear is not None:
+            self.colinear_map[task.key] = task.colinear
 
     def add_milestone(self, milestone):
         if milestone.key in self.all_activity_keys:
@@ -146,6 +149,8 @@ class Project:
             self.latest['milestone'] = milestone.date
         elif milestone.date > self.latest['milestone']:
             self.latest['milestone'] = milestone.date
+        if milestone.colinear is not None:
+            self.colinear_map[milestone.key] = milestone.colinear
 
 
     def _sort_(self, entry, sortby):
@@ -170,8 +175,13 @@ class Project:
         """
         Goes through colinear and puts them on the same line as first
         """
-        print("G173:  CURRENTLY ALIGN DOES NOTHING")
-        return ykeys
+        mapkeys = []
+        for ykey in ykeys:
+            if ykey in self.colinear_map:
+                mapkeys.append(self.colinear_map[ykey])
+            else:
+                mapkeys.append(ykey)
+        return mapkeys
 
     def _get_extrema(self):
         chkmin, chkmax = [], []

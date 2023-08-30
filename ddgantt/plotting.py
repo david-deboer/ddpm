@@ -14,7 +14,7 @@ from ddgantt.gantt_util import color_palette
 
 
 def date_ticks(interval, ddate):
-    interval_mmap = {4:3, 5:6, 7:6, 8:6, 9:12, 10:12, 11:12}
+    interval_mmap = {1:1, 2:2, 3:3, 4:3, 5:6, 7:6, 8:6, 9:12, 10:12, 11:12}
     dyr = ddate / 365.0
     itvmapper = matplotlib.dates.MONTHLY
     if interval is not None:
@@ -42,7 +42,7 @@ def date_ticks(interval, ddate):
     return itvmapper, interval, fmttr
 
 
-def assign_yvals(ykeys):
+def assign_yvals_labels(ykeys, labels):
     """
     Assigned a yvalue to all (colinear thing...)
     """
@@ -51,15 +51,22 @@ def assign_yvals(ykeys):
     yvals = []
     fnd_keys = {}
     ctr = 0
-    for ykey in ykeys:
+    yticks = []
+    ylabels = []
+    cmap = {}
+    for i, ykey in enumerate(ykeys):
         if ykey not in fnd_keys:
+            ylabels.append(labels[i])
             yval = ymin + ctr * step
+            yticks.append(yval)
+            cmap[ykey] = ctr
             ctr += 1
             yvals.append(yval)
             fnd_keys[ykey] = yval
         else:
             yvals.append(fnd_keys[ykey])
-    return yvals, step
+            ylabels[cmap[ykey]] += '|' + labels[i]
+    return yvals, yticks, ylabels
 
 
 def gantt_chart(dates, labels, plotpars, ykeys, extrema, **kwargs):
@@ -84,22 +91,23 @@ def gantt_chart(dates, labels, plotpars, ykeys, extrema, **kwargs):
     datemin, datemax = matplotlib.dates.date2num(extrema.min), matplotlib.dates.date2num(extrema.max)
     deltadate = datemax - datemin
     ax1.axis(xmin=matplotlib.dates.date2num(extrema.min)-deltadate/10.0, xmax=matplotlib.dates.date2num(extrema.max)+deltadate/10.0)
-    ypos, step = assign_yvals(ykeys)
+    yvals, yticks, ylabels = assign_yvals_labels(ykeys, labels)
+    step = yticks[1] - yticks[0]
 
     # Plot the data
     for i, dtlim in enumerate(dates):
         pp = plotpars[i]
         start = matplotlib.dates.date2num(dtlim[0])
         if dtlim[1] is None:  # Milestone
-            plt.plot(start, ypos[i], pp.marker, color=pp.color, markersize=8)
+            plt.plot(start, yvals[i], pp.marker, color=pp.color, markersize=8)
         else:
             stop = matplotlib.dates.date2num(dtlim[1])
-            plt.barh(ypos[i],  stop - start, left=start, height=0.3, align='center', color=pp.color, alpha=0.75)
+            plt.barh(yvals[i],  stop - start, left=start, height=0.3, align='center', color=pp.color, alpha=0.75)
             if isinstance(pp.status, (float, int)):
-                plt.barh(ypos[i], pp.status*(stop - start)/100.0, left=start, height=0.1, align='center', color='k', alpha=0.75)
+                plt.barh(yvals[i], pp.status*(stop - start)/100.0, left=start, height=0.1, align='center', color='k', alpha=0.75)
 
     # Format the y-axis
-    locsy, labelsy = plt.yticks(ypos, labels)
+    locsy, labelsy = plt.yticks(yticks, ylabels)
     plt.setp(labelsy, fontsize=14)
     if 'grid' in kwargs and not kwargs['grid']:
         pass
@@ -110,7 +118,7 @@ def gantt_chart(dates, labels, plotpars, ykeys, extrema, **kwargs):
     now = datetime.datetime.now()
     if now >= extrema.min and now <= extrema.max:
         now_date = matplotlib.dates.date2num(now)
-        plt.plot([now_date, now_date], [ypos[0]-step, ypos[-1]+step], '--', color=color_palette[3])
+        plt.plot([now_date, now_date], [yticks[0]-step, yticks[-1]+step], '--', color=color_palette[3])
     if int(deltadate) > 400:  # plot year markers
         yr1 = extrema.min.year
         yr2 = extrema.max.year
@@ -118,7 +126,7 @@ def gantt_chart(dates, labels, plotpars, ykeys, extrema, **kwargs):
             yr2 += 1
         for yr in range(yr1, yr2+1):
             this_yr = datetime.datetime(year=yr, month=1, day=1)
-            plt.plot([this_yr, this_yr], [ypos[0]-step, ypos[-1]+step], 'k:')
+            plt.plot([this_yr, this_yr], [yticks[0]-step, yticks[-1]+step], 'k:')
     ax1.xaxis_date()  # Tell matplotlib that these are dates...
     interval = None if 'interval' not in kwargs else kwargs['interval']
     itvmapper, interval, fmttr = date_ticks(interval, deltadate)
@@ -132,7 +140,7 @@ def gantt_chart(dates, labels, plotpars, ykeys, extrema, **kwargs):
 
     # Finish up
     ax1.invert_yaxis()
-    ax1.axis(ymin=ypos[-1] + (step - 0.01), ymax=ypos[0] - (step - 0.01))
+    ax1.axis(ymin=yticks[-1] + (step - 0.01), ymax=yticks[0] - (step - 0.01))
     fig1.autofmt_xdate()
     plt.tight_layout()
 
