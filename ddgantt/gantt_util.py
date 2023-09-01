@@ -28,13 +28,21 @@ def quarters(dates):
         q.append(this_date)
     return(q)
 
-def return_datetime(date, fmt='%Y-%m-%d'):
+def return_datetime(date, fmt=['%Y-%m-%d', '%Y-%m-%d %H:%M']):
+    if date == 'now':
+        return datetime.datetime.now()
+    if date == '___':  # Just a null value
+        return date
     if isinstance(date, datetime.datetime):
         return date
-    elif isinstance(date, str):
-        return datetime.datetime.strptime(date, fmt)
-    else:
-        raise ValueError(f"Invalid date format {type(date)} - {date}")
+    if isinstance(date, str):
+        for this_fmt in fmt:
+            try:
+                dt = datetime.datetime.strptime(date, this_fmt)
+                return dt
+            except ValueError:
+                pass
+    raise ValueError(f"Invalid date format {type(date)} - {date}")
 
 def lag2rgb(lag):
     s = 255.0

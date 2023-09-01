@@ -7,8 +7,8 @@ import csv
 import requests
 
 
-DATE_FIELDS = ['date', 'begins', 'ends']
-NOW = datetime.datetime.now()
+DATE_FIELDS = ['date', 'begins', 'ends', 'updated']
+LIST_FIELDS = ['note', 'associated_with']
 PAST = datetime.datetime(year=2000, month=1, day=1)
 FUTURE = datetime.datetime(year=2040, month=12, day=31)
 # STATUS_COLOR = {'complete': 'g', 'late': 'r', 'other': 'k', 'moved': 'y', 'removed': 'w', 'none': 'k'}
@@ -22,8 +22,8 @@ STATUS_COLOR = {
 }
 
 
-class _Base:
-    base_attr_init = ['name', 'owner', 'status', 'colinear']
+class _BaseEvent:
+    base_attr_init = ['name', 'owner', 'status', 'note', 'updated', 'colinear']
     def __init__(self, **kwargs):
         for this_attr in self.base_attr_init:
             try:
@@ -37,14 +37,23 @@ class _Base:
                 self.status = float(self.status)
             except ValueError:
                 if self.status not in STATUS_COLOR:
-                    raise ValueError(f"Invalid status {self.status}")
+                    self.status = 'none'
+        if self.updated is not None:
+            self.updated = gantt_util.return_datetime(self.updated)
+        if self.note is None:
+            self.note = []
+        elif isinstance(self.note, str):
+            self.note = [self.note]
+
+    def add_note(self, note):
+        self.note.append(note)
 
 
-class Milestone(_Base):
+class Milestone(_BaseEvent):
     """
     """
-    ms_columns = ['name', 'date', 'owner', 'label', 'status', 'lag', 'colinear', 'marker', 'color']
-    def __init__(self, name, date, owner=None, label=None, status='other', lag=None, colinear=None, marker='D', color=None):
+    entry_names = ['name', 'date', 'owner', 'label', 'status', 'note', 'updated', 'lag', 'colinear', 'marker', 'color']
+    def __init__(self, name, date, owner=None, label=None, status='other', note=None, updated='now', lag=None, colinear=None, marker='D', color=None):
         """
         Parameters
         ----------
@@ -58,6 +67,10 @@ class Milestone(_Base):
             Additional label associated 
         status : str, None
             Status of milestone (see above list in STATUS_COLOR)
+        note : list
+            General note to add
+        updated : str, datetime
+            Date of the current update
         lag : str, float, None
             how late(=) or early (-) as complete milestone was done
         colinear : str, None
@@ -67,12 +80,12 @@ class Milestone(_Base):
         color : str, None
             Color used for plotting, if None make based on statu/lag
         """
-        super().__init__(name=name, owner=owner, status=status, colinear=colinear)
+        super().__init__(name=name, owner=owner, status=status, note=note, updated=updated, colinear=colinear)
         self.date = gantt_util.return_datetime(date)
         self.label = label
         self.lag = lag
         self.marker = marker
-        if self.status in ['other', 'moved'] and NOW > self.date:
+        if self.status in ['other', 'moved'] and datetime.datetime.now() > self.date:
             self.status = 'late'
         if color is None:
             if status is None:
@@ -87,13 +100,13 @@ class Milestone(_Base):
         else:
             self.color = color
         hashstr = f"{name}-{self.date.strftime('%Y%m%d')}".encode('ascii')
-        self.key = hashlib.md5(hashstr).hexdigest()[:4]
+        self.key = hashlib.md5(hashstr).hexdigest()[:6]
 
 
-class Task(_Base):
-    task_columns = ['name', 'begins', 'ends', 'owner', 'label', 'status', 'colinear', 'color']
-    def __init__(self, name, begins, ends, owner=None, label=None, status=None, colinear=None, color=None):
-        super().__init__(name=name, owner=owner, status=status, colinear=colinear)
+class Task(_BaseEvent):
+    entry_names = ['name', 'begins', 'ends', 'owner', 'label', 'status', 'note', 'updated', 'colinear', 'color']
+    def __init__(self, name, begins, ends, owner=None, label=None, status=None, note=None, updated='now', colinear=None, color=None):
+        super().__init__(name=name, owner=owner, status=status, note=note, updated=updated, colinear=colinear)
         self.begins = gantt_util.return_datetime(begins)
         self.ends = gantt_util.return_datetime(ends)
         self.label = label
@@ -102,29 +115,57 @@ class Task(_Base):
         else:
             self.color = color
         hashstr = f"{name}-{self.begins.strftime('%Y%m%d')}-{self.ends.strftime('%Y%m%d')}".encode('ascii')
-        self.key = hashlib.md5(hashstr).hexdigest()[:4]
+        self.key = hashlib.md5(hashstr).hexdigest()[:6]
+
+
+class Note:
+    entry_names = ['note', 'date', 'associated_with']
+    def __init__(self, note, date='now', associated_with=None):
+        self.date = gantt_util.return_datetime(date)
+        self.note = note
+        if associated_with is None:
+            self.associated_with = []
+        elif isinstance(associated_with, str):
+            self.associated_with = associated_with.split(',')
+        elif isinstance(associated_with, list):
+            self.associated_with = associated_with
+        else:
+            print(f"Invalid reference {associated_with}")
+        hashstr = f"{note}-{self.date.strftime('%Y%m%d')}".encode('ascii')
+        self.key = hashlib.md5(hashstr).hexdigest()[:6]
+
+    def add_association(self, key):
+        self.associated_with.append(key)
+
 
 class Project:
+    """
+    Project
+    """
     _SortInfo = {'milestone': {'begins': 'date', 'ends': 'date'},
-                 'task': {}}
-    csv_header = ['name', 'date:begins', 'ends', 'owner', 'label', 'status', 'lag', 'color', 'marker']
-    entry_types = ['task', 'milestone']
+                 'task': {}, 'note': {}}
+    csv_header = ['name', 'date:begins', 'ends', 'owner', 'label', 'status', 'note', 'lag', 'color', 'marker', 'updated']
+    event_types = ['task', 'milestone']
+    other_types = ['note']
     def __init__(self, name, organization=None):
+        self.entry_types = self.event_types + self.other_types
         self.name = name
         self.organization = organization
         self.milestones = {}
         self.tasks = {}
-        self.all_activity_keys = []
+        self.notes = {}
+        self.all_entry_keys = []
         self.colinear_map = {}
         self.earliest, self.latest = {}, {}
+        self.updated = None
         for entry in self.entry_types:
             self.earliest[entry] = None
             self.latest[entry] = None
 
     def add_task(self, task):
-        if task.key in self.all_activity_keys:
+        if task.key in self.all_entry_keys:
             raise ValueError(f"Key for {task.name} already added.")
-        self.all_activity_keys.append(task.key)
+        self.all_entry_keys.append(task.key)
         self.tasks[task.key] = task
         if self.earliest['task'] is None:
             self.earliest['task'] = task.begins
@@ -138,9 +179,9 @@ class Project:
             self.colinear_map[task.key] = task.colinear
 
     def add_milestone(self, milestone):
-        if milestone.key in self.all_activity_keys:
+        if milestone.key in self.all_entry_keys:
             raise ValueError(f"Key for {milestone.name} already added.")
-        self.all_activity_keys.append(milestone.key)
+        self.all_entry_keys.append(milestone.key)
         self.milestones[milestone.key] = milestone
         if self.earliest['milestone'] is None:
             self.earliest['milestone'] = milestone.date
@@ -153,13 +194,27 @@ class Project:
         if milestone.colinear is not None:
             self.colinear_map[milestone.key] = milestone.colinear
 
+    def add_note(self, note):
+        if note.key in self.all_entry_keys:
+            print(f"Conflicting keys - not adding {note.note}")
+            return
+        self.all_entry_keys.append(note.key)
+        self.notes[note.key] = note
+        if self.earliest['note'] is None:
+            self.earliest['note'] = note.date
+        elif note.date < self.earliest['note']:
+            self.earliest['note'] = note.date
+        if self.latest['note'] is None:
+            self.latest['note'] = note.date
+        elif note.date > self.latest['note']:
+            self.latest['note'] = note.date
 
     def _sort_(self, entry, sortby):
         dtype = f"sorted_{entry}s"
         setattr(self, dtype, {})
         SortInfo = self._SortInfo[entry]
         for this in getattr(self, f"{entry}s").values():
-            plotkey = ''
+            sortkey = ''
             for par in sortby:
                 if par in SortInfo:
                     upar = SortInfo[par]
@@ -168,9 +223,9 @@ class Project:
                 uval = getattr(this, upar)
                 if upar in DATE_FIELDS:
                     uval = uval.strftime('%Y%m%dT%H%M')
-                plotkey += uval + '_'
-            plotkey += f"_{entry[0]}"
-            getattr(self, dtype)[plotkey] = this.key
+                sortkey += uval + '_'
+            sortkey += f"_{entry[0]}"
+            getattr(self, dtype)[sortkey] = this.key
 
     def _align_keys(self, ykeys):
         """
@@ -184,13 +239,13 @@ class Project:
                 mapkeys.append(ykey)
         return mapkeys
 
-    def _get_extrema(self):
+    def _get_event_extrema(self):
         chkmin, chkmax = [], []
-        for entry in self.entry_types:
-            if self.earliest[entry] is not None:
-                chkmin.append(self.earliest[entry])
-            if self.latest[entry] is not None:
-                chkmax.append(self.latest[entry])
+        for event in self.event_types:
+            if self.earliest[event] is not None:
+                chkmin.append(self.earliest[event])
+            if self.latest[event] is not None:
+                chkmax.append(self.latest[event])
         return Namespace(min=min(chkmin), max=max(chkmax))
 
     def chart(self, sortby=['begins', 'name', 'ends'], interval=None):
@@ -204,19 +259,19 @@ class Project:
         """
         self._sort_('task', sortby)
         self._sort_('milestone', sortby)
-        allplotkeys = sorted(list(self.sorted_milestones.keys()) + list(self.sorted_tasks.keys()))
+        allsortkeys = sorted(list(self.sorted_milestones.keys()) + list(self.sorted_tasks.keys()))
         dates = []
         labels = []
         plotpars = []
         ykeys = []  # keys lists the keys used, may be used to pu
-        extrema = self._get_extrema()
-        for plotkey in allplotkeys:
-            if plotkey.endswith('__m'):
-                this = self.milestones[self.sorted_milestones[plotkey]]
+        extrema = self._get_event_extrema()
+        for sortkey in allsortkeys:
+            if sortkey.endswith('__m'):
+                this = self.milestones[self.sorted_milestones[sortkey]]
                 dates.append([this.date, None])
                 plotpars.append(Namespace(color=this.color, marker=this.marker, owner=this.owner))
-            elif plotkey.endswith('__t'):
-                this = self.tasks[self.sorted_tasks[plotkey]]
+            elif sortkey.endswith('__t'):
+                this = self.tasks[self.sorted_tasks[sortkey]]
                 dates.append([this.begins, this.ends])
                 plotpars.append(Namespace(color=this.color, status=this.status, owner=this.owner))
             labels.append(this.name)
@@ -236,12 +291,12 @@ class Project:
         self.earliest = {'milestone': FUTURE}
         self.latest = {'milestone': PAST}
         self._sort_('milestone', sortby)
-        allplotkeys = sorted(self.sorted_milestones.keys())
+        allsortkeys = sorted(self.sorted_milestones.keys())
         dates = []
         status = []
-        extrema = Namespace(min=self.earliest['milestone'], max=NOW)
-        for plotkey in allplotkeys:
-            this_milestone = self.milestones[self.sorted_milestones[plotkey]]
+        extrema = Namespace(min=self.earliest['milestone'], max=datetime.datetime.now())
+        for sortkey in allsortkeys:
+            this_milestone = self.milestones[self.sorted_milestones[sortkey]]
             dates.append([this_milestone.date, None])
             status.append(Namespace(status=this_milestone.status))
         self.cdf = Namespace(num=len(dates), dates=[], values=[])
@@ -257,35 +312,75 @@ class Project:
         if show:
             plotting.cumulative_graph(self.cdf.dates, self.cdf.values, self.cdf.num)
 
+    def show_notes(self, sortby=['date', 'note']):
+        self._sort_('note', sortby)
+        for sortkey in self.sorted_notes:
+            this = self.notes[self.sorted_notes[sortkey]]
+            print(f"{this.note}  {this.date.strftime('%Y-%m-%d %H:%M')}  - ({', '.join(this.associated_with)})")
+
     def color_bar(self):
         gantt_util.color_bar()
 
-    def csvread(self, fn):
-        print("DOESN'T DO ANYTHING YET.")
-        print(f"Reading csv file {fn}")
-        with open(fn, 'r') as fp:
+    def csvread(self, loc):
+        classes = {'Milestone': Milestone('x','now'), 'Task':  Task('x', 'now', 'now'), 'Note':  Note('x', 'now')}
+        print(f"Reading csv {loc}")
+        if loc.startswith('http'):
+            print("NOT IMPLEMENTED")
+            data = self.load_sheet_from_web(loc)
+        with open(loc, 'r') as fp:
             reader = csv.reader(fp)
             header = next(reader)
+            nind = header.index('name')
+            eind = header.index('ends')
             for row in reader:
-                print(row)
+                dtype = 'Note'
+                if len(row[eind].strip()):
+                    dtype = 'Task'
+                elif len(row[nind].strip()):
+                    dtype = 'Milestone'
+                kwargs = {}
+                for hdrc, val in zip(header, row):
+                    for hdr in hdrc.split(':'):
+                        if hdr in classes[dtype].entry_names:
+                            if hdr in DATE_FIELDS:
+                                kwargs[hdr] = datetime.datetime.strptime(val, '%Y-%m-%d %H:%M')
+                            elif hdr in LIST_FIELDS and dtype != 'Notes':
+                                kwargs[hdr] = val.split('|')
+                            else:
+                                kwargs[hdr] = val
+                            break
+                if dtype == 'Note':
+                    self.add_note(Note(**kwargs))
+                elif dtype == 'Milestone':
+                    self.add_milestone(Milestone(**kwargs))
+                elif dtype == 'Task':
+                    self.add_task(Task(**kwargs))
 
     def csvwrite(self, fn):
         print(f"Writing csv file {fn}")
         with open(fn, 'w') as fp:
             writer = csv.writer(fp)
             writer.writerow(self.csv_header)
-            for entry in ['milestones', 'tasks']:
+            for entry in ['milestones', 'tasks', 'notes']:
                 for this in getattr(self, entry).values():
                     row = []
                     for cols in self.csv_header:
+                        found_value = False
                         for col in cols.split(':'):
                             try:
                                 val = getattr(this, col)
+                                found_value = True
+                                if col in DATE_FIELDS:
+                                    val = val.strftime('%Y-%m-%d %H:%M')
+                                elif col in LIST_FIELDS and entry != 'notes':
+                                    val = '|'.join([str(_x) for _x in val])
                                 row.append(val)
+                                break
                             except AttributeError:
                                 continue
+                        if not found_value:
+                            row.append('')
                     writer.writerow(row)
-
 
     def load_sheet_from_web(self, url):
         sheet_info = []
