@@ -4,6 +4,7 @@ import datetime
 from argparse import Namespace
 import hashlib
 import csv
+import requests
 
 
 DATE_FIELDS = ['date', 'begins', 'ends']
@@ -284,3 +285,19 @@ class Project:
                             except AttributeError:
                                 continue
                     writer.writerow(row)
+
+
+    def load_sheet_from_web(self, key):
+        sheet_info = []
+        try:
+            xxx = requests.get(gsheet[key])
+        except Exception as e:
+            print(f"Error reading {key}:  {gsheet[key]}:  {e}")
+            return
+        csv_tab = b''
+        for line in xxx:
+            csv_tab += line
+        _info = csv_tab.decode('utf-8').splitlines()
+        for nn in csv.reader(_info):
+            sheet_info.append(nn)
+        return sheet_info
