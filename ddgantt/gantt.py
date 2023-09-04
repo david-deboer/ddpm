@@ -46,6 +46,9 @@ class Entry:
         elif isinstance(self.note, str):
             self.note = [self.note]
 
+        if isinstance(self.color, str) and self.color.startswith('('):
+            self.color = [float(_x) for _x in self.color.strip('()').split(',')]
+
         try:
             self.status = float(self.status)
         except (ValueError, TypeError, AttributeError):
@@ -189,12 +192,12 @@ class Task(Timeline):
         return self.color
 
 class Note:
-    parameters = ['note', 'date', 'reference']
-    def __init__(self, note, date='now', reference=None):
-        if note is None:
+    parameters = ['jot', 'date', 'reference']
+    def __init__(self, jot, date='now', reference=None):
+        if jot is None:
             return
         self.date = gantt_util.datetimedelta(date)
-        self.note = note
+        self.jot = jot
         if reference is None:
             self.reference = []
         elif isinstance(reference, str):
@@ -203,7 +206,7 @@ class Note:
             self.reference = reference
         else:
             print(f"Invalid reference {reference}")
-        hashstr = f"{note}-{self.date.strftime('%Y%m%d')}".encode('ascii')
+        hashstr = f"{jot}-{self.date.strftime('%Y%m%d')}".encode('ascii')
         self.key = hashlib.md5(hashstr).hexdigest()[:6]
 
     def add_reference(self, key):
@@ -215,7 +218,7 @@ class Project:
     Project
     """
     columns = ['name', 'begins:date', 'ends', 'duration', 'colinear', 'color', 'status', 'groups', 'label',
-               'lag', 'marker', 'note', 'owner', 'predecessors:reference', 'updated', 'type', 'key']
+               'lag', 'marker', 'note:jot', 'owner', 'predecessors:reference', 'updated', 'type', 'key']
     chart_types = ['milestone', 'timeline', 'task']
     event_types = ['milestone', 'task']
     other_types = ['note', 'timeline']
@@ -393,11 +396,11 @@ class Project:
         if show:
             plotting.cumulative_graph(self.cdf.dates, self.cdf.values, self.cdf.num)
 
-    def show_notes(self, sortby=['date', 'note']):
+    def show_notes(self, sortby=['date', 'jot']):
         self._sort_('note', sortby)
         for sortkey in self.sorted_notes:
             this = self.notes[self.sorted_notes[sortkey]]
-            print(f"{this.note}  {this.date.strftime('%Y-%m-%d %H:%M')}  - ({', '.join(this.reference)})")
+            print(f"{this.jot}  {this.date.strftime('%Y-%m-%d %H:%M')}  - ({', '.join(this.reference)})")
 
     def color_bar(self):
         gantt_util.color_bar()
@@ -426,24 +429,18 @@ class Project:
             for hdrc, val in zip(header, row):
                 for hdr in hdrc.split(':'):
                     if hdr in classes[entry_type].parameters:
-                        if val is None or not len(val):
+                        if hdr == 'name':
+                            name = val
+                        elif hdr == 'date':
+                            date = gantt_util.datetimedelta(val)
+                        elif hdr == 'jot':
+                            jot = val
+                        elif val is None or not len(val):
                             kwargs[hdr] = None
                         elif hdr in DATE_FIELDS:
                             kwargs[hdr] = gantt_util.datetimedelta(val, hdr)
-                        elif hdr in LIST_FIELDS and entry_type != 'Note':
+                        elif hdr in LIST_FIELDS:
                             kwargs[hdr] = val.split('|')
-                        elif entry_type == 'note' and hdr == 'reference':
-                            kwargs[hdr] = val.split('|')
-                        elif hdr == 'color':
-                            if val.startswith('('):
-                                kwargs[hdr] = [float(_x) for _x in val.strip('()').split(',')]
-                            else:
-                                kwargs[hdr] = val
-                        elif hdr == 'lag':
-                            try:
-                                kwargs[hdr] = float(val)
-                            except ValueError:
-                                kwargs[hdr] = 0.0
                         else:
                             kwargs[hdr] = val
                         break
@@ -451,7 +448,9 @@ class Project:
                 entryname = f"entry{ctr}"
                 kwstr = []
                 for kk, kv in kwargs.items():
-                    if kk in DATE_FIELDS:
+                    if kv is None:
+                        kv = 'None'
+                    elif kk in DATE_FIELDS and isinstance(kv, datetime.datetime):
                         kv = f"'{kv.strftime('%Y-%m-%d %H:%M')}'"
                     elif isinstance(kv, str):
                         kv = f"'{kv}'"
@@ -459,24 +458,24 @@ class Project:
                 kwstr = ', '.join(kwstr)
             if entry_type == 'note':
                 if exportpy:
-                    print(f"{entryname} = gantt.Note({kwstr})", file=fpexport)
+                    print(f"{entryname} = gantt.Note(jot='{jot}', date='{date.strftime('%Y-%m-%d %H:%M')}', {kwstr})", file=fpexport)
                     print(f"project.add_note({entryname})", file=fpexport)
-                self.add_note(Note(**kwargs))
+                self.add_note(Note(jot=jot, date=date, **kwargs))
             elif entry_type == 'milestone':
                 if exportpy:
-                    print(f"{entryname} = gantt.Milestone({kwstr})", file=fpexport)
+                    print(f"{entryname} = gantt.Milestone(name='{name}', date='{date.strftime('%Y-%m-%d %H:%M')}', {kwstr})", file=fpexport)
                     print(f"project.add_milestone({entryname})", file=fpexport)
-                self.add_milestone(Milestone(**kwargs))
+                self.add_milestone(Milestone(name=name, date=date, **kwargs))
             elif entry_type == 'timeline':
                 if exportpy:
-                    print(f"{entryname} = gantt.Timeline({kwstr})", file=fpexport)
+                    print(f"{entryname} = gantt.Timeline(name='{name}', {kwstr})", file=fpexport)
                     print(f"project.add_timeline({entryname})", file=fpexport)
-                self.add_task(Task(**kwargs))
+                self.add_timeline(Timeline(name=name, **kwargs))
             elif entry_type == 'task':
                 if exportpy:
-                    print(f"{entryname} = gantt.Task({kwstr})", file=fpexport)
+                    print(f"{entryname} = gantt.Task(name='{name}', {kwstr})", file=fpexport)
                     print(f"project.add_task({entryname})", file=fpexport)
-                self.add_task(Task(**kwargs))
+                self.add_task(Task(name=name, **kwargs))
             ctr += 1
         if fp is not None:
             fp.close()
@@ -496,14 +495,12 @@ class Project:
                         for col in cols.split(':'):
                             try:
                                 val = getattr(this, col)
-                                if col in DATE_FIELDS:
+                                if val is None:
+                                    val = ''
+                                elif col in DATE_FIELDS:
                                     val = val.strftime('%Y-%m-%d %H:%M')
                                 elif col in LIST_FIELDS:
-                                    if entry == 'notes':
-                                        if col == 'reference' and val is not None:
-                                            val = '|'.join([str(_x) for _x in val])
-                                    elif val is not None:
-                                        val = '|'.join([str(_x) for _x in val])
+                                    val = '|'.join([str(_x) for _x in val])
                                 row.append(val)
                                 added = True
                                 break
