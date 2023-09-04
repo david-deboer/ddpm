@@ -7,7 +7,7 @@ import csv
 
 
 DATE_FIELDS = ['date', 'begins', 'ends', 'updated', 'duration']
-LIST_FIELDS = ['note', 'predecessors', 'groups']
+LIST_FIELDS = ['note', 'predecessors', 'groups', 'reference']
 PAST = datetime.datetime(year=2000, month=1, day=1)
 FUTURE = datetime.datetime(year=2040, month=12, day=31)
 # STATUS_COLOR = {'complete': 'g', 'late': 'r', 'other': 'k', 'moved': 'y', 'removed': 'w', 'none': 'k'}
@@ -91,6 +91,8 @@ class Milestone(Entry):
         """
         self.parameters = ['name', 'date', 'owner', 'label', 'status', 'note', 'updated',
                            'lag', 'predecessors', 'groups', 'colinear', 'marker', 'color']
+        if name is None:
+            return
         super().__init__(name=name, **kwargs)
         self.date = gantt_util.datetimedelta(date)
         if self.marker is None:
@@ -127,23 +129,27 @@ class Timeline(Entry):
             self.parameters += self.tl_parameters
         except AttributeError:
             self.parameters = self.tl_parameters
+        if name is None:
+            return
         super().__init__(name=name, **kwargs)
 
         # Check/get timing
         provided_timing = []
         for key in ['begins', 'ends', 'duration']:
-            if key in kwargs:
+            if key in kwargs and kwargs[key] is not None:
                 provided_timing.append(key)
         if len(provided_timing) == 3:
-            raise ValueError(f"{self.name}:  can't specify time endpoints and duration")
-        if len(provided_timing) != 2:
-            raise ValueError(f"{self.name}:  not enough timing parameters provided")
-        if 'duration' not in provided_timing:
-            self.duration = self.ends - self.begins
-        elif 'ends' not in provided_timing:
-            self.ends = self.begins + self.duration
-        elif 'begins' not in provided_timing:
-            self.begins = self.ends - self.duration
+            if self.ends - self.begins != self.duration:
+                raise ValueError(f"{self.name}:  can't specify time endpoints and duration incorrectly")
+        else:
+            if len(provided_timing) != 2:
+                raise ValueError(f"{self.name}:  not enough timing parameters provided")
+            if 'duration' not in provided_timing:
+                self.duration = self.ends - self.begins
+            elif 'ends' not in provided_timing:
+                self.ends = self.begins + self.duration
+            elif 'begins' not in provided_timing:
+                self.begins = self.ends - self.duration
 
         hashstr = f"{name}-{self.begins.strftime('%Y%m%d')}-{self.ends.strftime('%Y%m%d')}".encode('ascii')
         self.key = hashlib.md5(hashstr).hexdigest()[:6]
@@ -183,8 +189,10 @@ class Task(Timeline):
         return self.color
 
 class Note:
-    entry_names = ['note', 'date', 'reference']
+    parameters = ['note', 'date', 'reference']
     def __init__(self, note, date='now', reference=None):
+        if note is None:
+            return
         self.date = gantt_util.datetimedelta(date)
         self.note = note
         if reference is None:
@@ -206,7 +214,8 @@ class Project:
     """
     Project
     """
-    csv_header = ['name', 'date:begins', 'ends', 'owner', 'label', 'status', 'note', 'lag', 'color', 'marker', 'updated']
+    columns = ['name', 'begins:date', 'ends', 'duration', 'colinear', 'color', 'status', 'groups', 'label',
+               'lag', 'marker', 'note', 'owner', 'predecessors:reference', 'updated', 'type', 'key']
     chart_types = ['milestone', 'timeline', 'task']
     event_types = ['milestone', 'task']
     other_types = ['note', 'timeline']
@@ -264,8 +273,8 @@ class Project:
         self.notes[note.key] = note
 
     def _sort_(self, entry, sortby):
-        dtype = f"sorted_{entry}s"
-        setattr(self, dtype, {})
+        entry_type = f"sorted_{entry}s"
+        setattr(self, entry_type, {})
         for this in getattr(self, f"{entry}s").values():
             sortkey = ''
             for upar in sortby:
@@ -280,7 +289,7 @@ class Project:
                         uval = str(uval)
                     sortkey += uval + '_'
             sortkey += f"_{entry}"
-            getattr(self, dtype)[sortkey] = this.key
+            getattr(self, entry_type)[sortkey] = this.key
 
     def _align_keys(self, ykeys):
         """
@@ -310,7 +319,6 @@ class Project:
         for etype in to_chart:
             elist += list(getattr(self, f"sorted_{etype}s").keys())
         return sorted(elist)
-
 
     def chart(self, chart='all', sortby=['begins', 'date', 'name', 'ends'], interval=None):
         """
@@ -402,7 +410,7 @@ class Project:
             print("Writing exportpy.py")
             print("from ddgantt import gantt\n", file=fpexport)
             print(f"project = gantt.Project('{self.name}', organization='{self.organization}')\n", file=fpexport)
-        classes = {'Milestone': Milestone('x','now'), 'Task':  Task('x', 'now', 'now'), 'Note':  Note('x', 'now')}
+        classes = {'milestone': Milestone(None, 'now'), 'timeline': Timeline(None), 'task':  Task(None), 'note':  Note(None)}
         if loc.startswith('http'):
             data = gantt_util.load_sheet_from_url(loc)
             header = copy(data[0])
@@ -411,23 +419,20 @@ class Project:
             fp = open(loc, 'r')
             reader = csv.reader(fp)
             header = next(reader)
-        print(header)
-        nind = header.index('name')
-        eind = header.index('ends')
         ctr = 1
         for row in reader:
-            dtype = 'Note'
-            if len(row[eind].strip()):
-                dtype = 'Task'
-            elif len(row[nind].strip()):
-                dtype = 'Milestone'
+            entry_type = row[header.index('type')]
             kwargs = {}
             for hdrc, val in zip(header, row):
                 for hdr in hdrc.split(':'):
-                    if hdr in classes[dtype].entry_names:
-                        if hdr in DATE_FIELDS:
-                            kwargs[hdr] = gantt_util.datetimedelta(val)
-                        elif hdr in LIST_FIELDS and dtype != 'Note':
+                    if hdr in classes[entry_type].parameters:
+                        if val is None or not len(val):
+                            kwargs[hdr] = None
+                        elif hdr in DATE_FIELDS:
+                            kwargs[hdr] = gantt_util.datetimedelta(val, hdr)
+                        elif hdr in LIST_FIELDS and entry_type != 'Note':
+                            kwargs[hdr] = val.split('|')
+                        elif entry_type == 'note' and hdr == 'reference':
                             kwargs[hdr] = val.split('|')
                         elif hdr == 'color':
                             if val.startswith('('):
@@ -452,17 +457,22 @@ class Project:
                         kv = f"'{kv}'"
                     kwstr.append(f"{kk}={kv}")
                 kwstr = ', '.join(kwstr)
-            if dtype == 'Note':
+            if entry_type == 'note':
                 if exportpy:
                     print(f"{entryname} = gantt.Note({kwstr})", file=fpexport)
                     print(f"project.add_note({entryname})", file=fpexport)
                 self.add_note(Note(**kwargs))
-            elif dtype == 'Milestone':
+            elif entry_type == 'milestone':
                 if exportpy:
                     print(f"{entryname} = gantt.Milestone({kwstr})", file=fpexport)
                     print(f"project.add_milestone({entryname})", file=fpexport)
                 self.add_milestone(Milestone(**kwargs))
-            elif dtype == 'Task':
+            elif entry_type == 'timeline':
+                if exportpy:
+                    print(f"{entryname} = gantt.Timeline({kwstr})", file=fpexport)
+                    print(f"project.add_timeline({entryname})", file=fpexport)
+                self.add_task(Task(**kwargs))
+            elif entry_type == 'task':
                 if exportpy:
                     print(f"{entryname} = gantt.Task({kwstr})", file=fpexport)
                     print(f"project.add_task({entryname})", file=fpexport)
@@ -477,25 +487,31 @@ class Project:
         print(f"Writing csv file {fn}")
         with open(fn, 'w') as fp:
             writer = csv.writer(fp)
-            writer.writerow(self.csv_header)
-            for entry in ['milestones', 'tasks', 'notes']:
+            writer.writerow(self.columns)
+            for entry in ['milestones', 'timelines', 'tasks', 'notes']:
                 for this in getattr(self, entry).values():
                     row = []
-                    for cols in self.csv_header:
-                        found_value = False
+                    for cols in self.columns:
+                        added = False
                         for col in cols.split(':'):
                             try:
                                 val = getattr(this, col)
-                                found_value = True
                                 if col in DATE_FIELDS:
                                     val = val.strftime('%Y-%m-%d %H:%M')
-                                elif col in LIST_FIELDS and entry != 'notes':
-                                    val = '|'.join([str(_x) for _x in val])
+                                elif col in LIST_FIELDS:
+                                    if entry == 'notes':
+                                        if col == 'reference' and val is not None:
+                                            val = '|'.join([str(_x) for _x in val])
+                                    elif val is not None:
+                                        val = '|'.join([str(_x) for _x in val])
                                 row.append(val)
+                                added = True
                                 break
                             except AttributeError:
-                                continue
-                        if not found_value:
+                                if col == 'type':
+                                    row.append(entry.strip('s'))
+                                    added = True
+                        if not added:
                             row.append('')
                     writer.writerow(row)
 

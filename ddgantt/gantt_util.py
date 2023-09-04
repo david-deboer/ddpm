@@ -47,7 +47,10 @@ def quarters(dates):
 
 def datetimedelta(date, key=None, fmt=['%Y-%m-%d', '%y/%m/%d', '%Y-%m-%d %H:%M']):
     if key == 'duration':
-        return datetime.timedelta(days = float(date))
+        try:
+            return datetime.timedelta(days = float(date))
+        except (TypeError, ValueError):
+            return None
     if date == 'now':
         return datetime.datetime.now()
     if date == '___':  # Just a null value
