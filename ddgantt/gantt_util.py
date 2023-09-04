@@ -1,5 +1,7 @@
 import matplotlib.pyplot as plt
 import datetime
+import requests
+import csv
 
 color_palette = [
     (0.12156862745098039, 0.4666666666666667, 0.7058823529411765, 1.0),
@@ -9,6 +11,21 @@ color_palette = [
     (0.5803921568627451, 0.403921568627451, 0.7411764705882353, 1.0),
     (0.5490196078431373, 0.33725490196078434, 0.29411764705882354, 1.0)
         ]
+
+def load_sheet_from_url(url):
+    sheet_info = []
+    try:
+        xxx = requests.get(url)
+    except Exception as e:
+        print(f"Error reading {url}:  {e}")
+        return
+    csv_tab = b''
+    for line in xxx:
+        csv_tab += line
+    _info = csv_tab.decode('utf-8').splitlines()
+    for nn in csv.reader(_info):
+        sheet_info.append(nn)
+    return sheet_info
 
 def quarters(dates):
     smo = dates[0].month
@@ -28,7 +45,7 @@ def quarters(dates):
         q.append(this_date)
     return(q)
 
-def return_datetime(date, fmt=['%Y-%m-%d', '%Y-%m-%d %H:%M']):
+def return_datetime(date, fmt=['%Y-%m-%d', '%y/%m/%d', '%Y-%m-%d %H:%M']):
     if date == 'now':
         return datetime.datetime.now()
     if date == '___':  # Just a null value

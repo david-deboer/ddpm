@@ -4,7 +4,6 @@ import datetime
 from argparse import Namespace
 import hashlib
 import csv
-import requests
 
 
 DATE_FIELDS = ['date', 'begins', 'ends', 'updated']
@@ -117,6 +116,9 @@ class Task(_BaseEvent):
         hashstr = f"{name}-{self.begins.strftime('%Y%m%d')}-{self.ends.strftime('%Y%m%d')}".encode('ascii')
         self.key = hashlib.md5(hashstr).hexdigest()[:6]
 
+    def __repr__(self):
+        return f"{self.key}:  {self.name}  {self.begins} -  {self.ends}"
+
 
 class Note:
     entry_names = ['note', 'date', 'associated_with']
@@ -164,7 +166,8 @@ class Project:
 
     def add_task(self, task):
         if task.key in self.all_entry_keys:
-            raise ValueError(f"Key for {task.name} already added.")
+            print(f"Warning No-add: Key for {task.name} already added ({task.key}).")
+            return
         self.all_entry_keys.append(task.key)
         self.tasks[task.key] = task
         if self.earliest['task'] is None:
@@ -180,7 +183,8 @@ class Project:
 
     def add_milestone(self, milestone):
         if milestone.key in self.all_entry_keys:
-            raise ValueError(f"Key for {milestone.name} already added.")
+            print(f"Warning No-add: Key for {milestone.name} already added ({milestone.key}).")
+            return
         self.all_entry_keys.append(milestone.key)
         self.milestones[milestone.key] = milestone
         if self.earliest['milestone'] is None:
@@ -322,6 +326,7 @@ class Project:
         gantt_util.color_bar()
 
     def csvread(self, loc, exportpy=False):
+        fp = None
         print(f"Reading {loc}")
         if exportpy:
             fpexport = open(f"exportpy.py", 'w')
@@ -330,70 +335,74 @@ class Project:
             print(f"project = gantt.Project('{self.name}', organization='{self.organization}')\n", file=fpexport)
         classes = {'Milestone': Milestone('x','now'), 'Task':  Task('x', 'now', 'now'), 'Note':  Note('x', 'now')}
         if loc.startswith('http'):
-            print("NOT IMPLEMENTED")
-            return
-            data = self.load_sheet_from_web(loc)
-        with open(loc, 'r') as fp:
+            data = gantt_util.load_sheet_from_url(loc)
+            header = copy(data[0])
+            reader = data[1:]
+        else:
+            fp = open(loc, 'r')
             reader = csv.reader(fp)
             header = next(reader)
-            nind = header.index('name')
-            eind = header.index('ends')
-            ctr = 1
-            for row in reader:
-                dtype = 'Note'
-                if len(row[eind].strip()):
-                    dtype = 'Task'
-                elif len(row[nind].strip()):
-                    dtype = 'Milestone'
-                kwargs = {}
-                for hdrc, val in zip(header, row):
-                    for hdr in hdrc.split(':'):
-                        if hdr in classes[dtype].entry_names:
-                            if hdr in DATE_FIELDS:
-                                kwargs[hdr] = datetime.datetime.strptime(val, '%Y-%m-%d %H:%M')
-                            elif hdr in LIST_FIELDS and dtype != 'Note':
-                                kwargs[hdr] = val.split('|')
-                            elif hdr == 'color':
-                                if val.startswith('('):
-                                    kwargs[hdr] = [float(_x) for _x in val.strip('()').split(',')]
-                                else:
-                                    kwargs[hdr] = val
-                            elif hdr == 'lag':
-                                try:
-                                    kwargs[hdr] = float(val)
-                                except ValueError:
-                                    kwargs[hdr] = 0.0
+        print(header)
+        nind = header.index('name')
+        eind = header.index('ends')
+        ctr = 1
+        for row in reader:
+            dtype = 'Note'
+            if len(row[eind].strip()):
+                dtype = 'Task'
+            elif len(row[nind].strip()):
+                dtype = 'Milestone'
+            kwargs = {}
+            for hdrc, val in zip(header, row):
+                for hdr in hdrc.split(':'):
+                    if hdr in classes[dtype].entry_names:
+                        if hdr in DATE_FIELDS:
+                            kwargs[hdr] = gantt_util.return_datetime(val)
+                        elif hdr in LIST_FIELDS and dtype != 'Note':
+                            kwargs[hdr] = val.split('|')
+                        elif hdr == 'color':
+                            if val.startswith('('):
+                                kwargs[hdr] = [float(_x) for _x in val.strip('()').split(',')]
                             else:
                                 kwargs[hdr] = val
-                            break
+                        elif hdr == 'lag':
+                            try:
+                                kwargs[hdr] = float(val)
+                            except ValueError:
+                                kwargs[hdr] = 0.0
+                        else:
+                            kwargs[hdr] = val
+                        break
+            if exportpy:
+                entryname = f"entry{ctr}"
+                kwstr = []
+                for kk, kv in kwargs.items():
+                    if kk in DATE_FIELDS:
+                        kv = f"'{kv.strftime('%Y-%m-%d %H:%M')}'"
+                    elif isinstance(kv, str):
+                        kv = f"'{kv}'"
+                    kwstr.append(f"{kk}={kv}")
+                kwstr = ', '.join(kwstr)
+            if dtype == 'Note':
                 if exportpy:
-                    entryname = f"entry{ctr}"
-                    kwstr = []
-                    for kk, kv in kwargs.items():
-                        if kk in DATE_FIELDS:
-                            kv = f"'{kv.strftime('%Y-%m-%d %H:%M')}'"
-                        elif isinstance(kv, str):
-                            kv = f"'{kv}'"
-                        kwstr.append(f"{kk}={kv}")
-                    kwstr = ', '.join(kwstr)
-                if dtype == 'Note':
-                    if exportpy:
-                        print(f"{entryname} = gantt.Note({kwstr})", file=fpexport)
-                        print(f"project.add_note({entryname})", file=fpexport)
-                    self.add_note(Note(**kwargs))
-                elif dtype == 'Milestone':
-                    if exportpy:
-                        print(f"{entryname} = gantt.Milestone({kwstr})", file=fpexport)
-                        print(f"project.add_milestone({entryname})", file=fpexport)
-                    self.add_milestone(Milestone(**kwargs))
-                elif dtype == 'Task':
-                    if exportpy:
-                        print(f"{entryname} = gantt.Task({kwstr})", file=fpexport)
-                        print(f"project.add_task({entryname})", file=fpexport)
-                    self.add_task(Task(**kwargs))
-                ctr += 1
-        if exportpy:
+                    print(f"{entryname} = gantt.Note({kwstr})", file=fpexport)
+                    print(f"project.add_note({entryname})", file=fpexport)
+                self.add_note(Note(**kwargs))
+            elif dtype == 'Milestone':
+                if exportpy:
+                    print(f"{entryname} = gantt.Milestone({kwstr})", file=fpexport)
+                    print(f"project.add_milestone({entryname})", file=fpexport)
+                self.add_milestone(Milestone(**kwargs))
+            elif dtype == 'Task':
+                if exportpy:
+                    print(f"{entryname} = gantt.Task({kwstr})", file=fpexport)
+                    print(f"project.add_task({entryname})", file=fpexport)
+                self.add_task(Task(**kwargs))
+            ctr += 1
+        if fp is not None:
             fp.close()
+        if exportpy:
+            fpexport.close()
 
     def csvwrite(self, fn):
         print(f"Writing csv file {fn}")
@@ -421,17 +430,3 @@ class Project:
                             row.append('')
                     writer.writerow(row)
 
-    def load_sheet_from_web(self, url):
-        sheet_info = []
-        try:
-            xxx = requests.get(url)
-        except Exception as e:
-            print(f"Error reading {url}:  {e}")
-            return
-        csv_tab = b''
-        for line in xxx:
-            csv_tab += line
-        _info = csv_tab.decode('utf-8').splitlines()
-        for nn in csv.reader(_info):
-            sheet_info.append(nn)
-        return sheet_info
