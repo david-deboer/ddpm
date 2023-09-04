@@ -45,16 +45,24 @@ def quarters(dates):
         q.append(this_date)
     return(q)
 
+def datedeltastr(val, fmt='%Y-%m-%d %H:%M'):
+    if isinstance(val, datetime.datetime):
+        return val.strftime(fmt)
+    elif isinstance(val, datetime.timedelta):
+        return f"{val.days + val.seconds / 86400:.2f}"
+    else:
+        return None
+
 def datetimedelta(date, key=None, fmt=['%Y-%m-%d', '%y/%m/%d', '%Y-%m-%d %H:%M']):
     if key == 'duration':
+        if isinstance(date, datetime.timedelta):
+            return date
         try:
             return datetime.timedelta(days = float(date))
         except (TypeError, ValueError):
             return None
     if date == 'now':
         return datetime.datetime.now()
-    if date == '___':  # Just a null value
-        return date
     if isinstance(date, datetime.datetime):
         return date
     if isinstance(date, str):

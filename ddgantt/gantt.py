@@ -139,11 +139,12 @@ class Timeline(Entry):
         # Check/get timing
         provided_timing = []
         for key in ['begins', 'ends', 'duration']:
-            if key in kwargs and kwargs[key] is not None:
+            if key in kwargs and isinstance(getattr(self, key), (datetime.datetime, datetime.timedelta)):
                 provided_timing.append(key)
         if len(provided_timing) == 3:
-            if self.ends - self.begins != self.duration:
+            if gantt_util.datedeltastr(self.ends-self.begins) != gantt_util.datedeltastr(self.duration):
                 raise ValueError(f"{self.name}:  can't specify time endpoints and duration incorrectly")
+            self.duration = self.ends - self.begins  # Make match exactly.
         else:
             if len(provided_timing) != 2:
                 raise ValueError(f"{self.name}:  not enough timing parameters provided")
@@ -255,9 +256,11 @@ class Project:
             self.latest[entry_type] = late_date
         elif late_date > self.latest[entry_type]:
             self.latest[entry_type] = late_date
-        if entry_type != 'note':
+        try:
             if entry.colinear is not None:
                 self.colinear_map[entry.key] = entry.colinear
+        except AttributeError:
+            return
 
     def add_timeline(self, timeline):
         self._add_entry('timeline', timeline)
@@ -282,15 +285,9 @@ class Project:
             sortkey = ''
             for upar in sortby:
                 try:
-                    uval = getattr(this, upar)
+                    sortkey += str(getattr(this, upar)) + '_'
                 except AttributeError:
-                    uval = None
-                if uval is not None:
-                    if upar in DATE_FIELDS:
-                        uval = uval.strftime('%Y%m%dT%H%M')
-                    else:
-                        uval = str(uval)
-                    sortkey += uval + '_'
+                    continue
             sortkey += f"_{entry}"
             getattr(self, entry_type)[sortkey] = this.key
 
@@ -340,7 +337,7 @@ class Project:
         dates = []
         labels = []
         plotpars = []
-        ykeys = []  # keys lists the keys used, may be used to pu
+        ykeys = []  # keys lists the keys used, used to make the vertical axis including colinear
         extrema = self._get_event_extrema()
         for sortkey in allsortkeys:
             if sortkey.endswith('__milestone'):
@@ -405,12 +402,12 @@ class Project:
     def color_bar(self):
         gantt_util.color_bar()
 
-    def csvread(self, loc, exportpy=False):
+    def csvread(self, loc, export_gen_script=False):
         fp = None
         print(f"Reading {loc}")
-        if exportpy:
-            fpexport = open(f"exportpy.py", 'w')
-            print("Writing exportpy.py")
+        if export_gen_script:
+            fpexport = open(f"export_gen_script.py", 'w')
+            print("Writing export_gen_script.py")
             print("from ddgantt import gantt\n", file=fpexport)
             print(f"project = gantt.Project('{self.name}', organization='{self.organization}')\n", file=fpexport)
         classes = {'milestone': Milestone(None, 'now'), 'timeline': Timeline(None), 'task':  Task(None), 'note':  Note(None)}
@@ -429,13 +426,7 @@ class Project:
             for hdrc, val in zip(header, row):
                 for hdr in hdrc.split(':'):
                     if hdr in classes[entry_type].parameters:
-                        if hdr == 'name':
-                            name = val
-                        elif hdr == 'date':
-                            date = gantt_util.datetimedelta(val)
-                        elif hdr == 'jot':
-                            jot = val
-                        elif val is None or not len(val):
+                        if val is None or not len(val):
                             kwargs[hdr] = None
                         elif hdr in DATE_FIELDS:
                             kwargs[hdr] = gantt_util.datetimedelta(val, hdr)
@@ -444,42 +435,44 @@ class Project:
                         else:
                             kwargs[hdr] = val
                         break
-            if exportpy:
+            if export_gen_script:
                 entryname = f"entry{ctr}"
                 kwstr = []
                 for kk, kv in kwargs.items():
                     if kv is None:
                         kv = 'None'
-                    elif kk in DATE_FIELDS and isinstance(kv, datetime.datetime):
-                        kv = f"'{kv.strftime('%Y-%m-%d %H:%M')}'"
+                    elif kk in DATE_FIELDS:
+                        kv = gantt_util.datedeltastr(kv)
+                    elif kk in LIST_FIELDS:
+                        kv = '|'.join(kv)
                     elif isinstance(kv, str):
                         kv = f"'{kv}'"
                     kwstr.append(f"{kk}={kv}")
                 kwstr = ', '.join(kwstr)
             if entry_type == 'note':
-                if exportpy:
+                if export_gen_script:
                     print(f"{entryname} = gantt.Note(jot='{jot}', date='{date.strftime('%Y-%m-%d %H:%M')}', {kwstr})", file=fpexport)
                     print(f"project.add_note({entryname})", file=fpexport)
                 self.add_note(Note(jot=jot, date=date, **kwargs))
             elif entry_type == 'milestone':
-                if exportpy:
+                if export_gen_script:
                     print(f"{entryname} = gantt.Milestone(name='{name}', date='{date.strftime('%Y-%m-%d %H:%M')}', {kwstr})", file=fpexport)
                     print(f"project.add_milestone({entryname})", file=fpexport)
                 self.add_milestone(Milestone(name=name, date=date, **kwargs))
             elif entry_type == 'timeline':
-                if exportpy:
+                if export_gen_script:
                     print(f"{entryname} = gantt.Timeline(name='{name}', {kwstr})", file=fpexport)
                     print(f"project.add_timeline({entryname})", file=fpexport)
                 self.add_timeline(Timeline(name=name, **kwargs))
             elif entry_type == 'task':
-                if exportpy:
+                if export_gen_script:
                     print(f"{entryname} = gantt.Task(name='{name}', {kwstr})", file=fpexport)
                     print(f"project.add_task({entryname})", file=fpexport)
                 self.add_task(Task(name=name, **kwargs))
             ctr += 1
         if fp is not None:
             fp.close()
-        if exportpy:
+        if export_gen_script:
             fpexport.close()
 
     def csvwrite(self, fn):
@@ -498,7 +491,7 @@ class Project:
                                 if val is None:
                                     val = ''
                                 elif col in DATE_FIELDS:
-                                    val = val.strftime('%Y-%m-%d %H:%M')
+                                    val = gantt_util.datedeltastr(val)
                                 elif col in LIST_FIELDS:
                                     val = '|'.join([str(_x) for _x in val])
                                 row.append(val)
