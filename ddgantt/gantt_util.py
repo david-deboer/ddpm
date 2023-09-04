@@ -45,7 +45,9 @@ def quarters(dates):
         q.append(this_date)
     return(q)
 
-def return_datetime(date, fmt=['%Y-%m-%d', '%y/%m/%d', '%Y-%m-%d %H:%M']):
+def datetimedelta(date, key=None, fmt=['%Y-%m-%d', '%y/%m/%d', '%Y-%m-%d %H:%M']):
+    if key == 'duration':
+        return datetime.timedelta(days = float(date))
     if date == 'now':
         return datetime.datetime.now()
     if date == '___':  # Just a null value
