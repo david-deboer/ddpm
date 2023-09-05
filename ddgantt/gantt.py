@@ -52,7 +52,7 @@ class Entry:
             self.color = 'k'
 
         try:
-            self.status = float(self.status)
+            self.status = float(self.status.strip('%'))
         except (ValueError, TypeError, AttributeError):
             pass
         try:
