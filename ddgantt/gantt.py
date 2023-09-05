@@ -431,15 +431,25 @@ class Project:
     def color_bar(self):
         gantt_util.color_bar()
 
-    def csvread(self, loc, export_gen_script=False, projectname='project'):
+    def scriptwrite(self, fn='export_script.py', projectname='project'):
+        """
+        This will write out the project to a python script.
+        """
+        print(f"Writing {fn}")
+        with open(fn, 'w') as fp:
+            print("from ddgantt import gantt\n", file=fp)
+            print(f"{projectname} = gantt.Project('{self.name}', organization='{self.organization}')\n", file=fp)
+            for entries in ['milestone', 'timeline', 'task', 'note']:
+                ctr = 1
+                for entry in getattr(self, f"{entries}s").values():
+                    entryname = f"{entries}{ctr}"
+                    print(entry.gen_script_entry(entries.capitalize(), entryname, projectname), file=fp)
+                    ctr += 1
+
+    def csvread(self, loc):
         fp = None
         print(f"Reading {loc}")
-        if export_gen_script:
-            fpexport = open(f"export_gen_script.py", 'w')
-            print("Writing export_gen_script.py")
-            print("from ddgantt import gantt\n", file=fpexport)
-            print(f"{projectname} = gantt.Project('{self.name}', organization='{self.organization}')\n", file=fpexport)
-        classes = {'milestone': Milestone(None, 'now'), 'timeline': Timeline(None), 'task':  Task(None), 'note':  Note(None)}
+
         if loc.startswith('http'):
             data = gantt_util.load_sheet_from_url(loc)
             header = copy(data[0])
@@ -448,7 +458,7 @@ class Project:
             fp = open(loc, 'r')
             reader = csv.reader(fp)
             header = next(reader)
-        ctr = 1
+        classes = {'milestone': Milestone(None, 'now'), 'timeline': Timeline(None), 'task':  Task(None), 'note':  Note(None)}
         for row in reader:
             entry_type = row[header.index('type')]
             kwargs = {}
@@ -474,14 +484,8 @@ class Project:
                 del kwargs['name']
                 this = Task(name=name, **kwargs)
             getattr(self, f"add_{entry_type}")(this)
-            if export_gen_script:
-                entryname = f"{entry_type}{ctr}"
-                print(this.gen_script_entry(entry_type.capitalize(), entryname, projectname), file=fpexport)
-            ctr += 1
         if fp is not None:
             fp.close()
-        if export_gen_script:
-            fpexport.close()
 
     def csvwrite(self, fn):
         print(f"Writing csv file {fn}")
