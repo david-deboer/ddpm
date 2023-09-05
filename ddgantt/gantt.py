@@ -48,6 +48,8 @@ class Entry:
 
         if isinstance(self.color, str) and self.color.startswith('('):
             self.color = [float(_x) for _x in self.color.strip('()').split(',')]
+        if isinstance(self.color, str) and not len(self.color):
+            self.color = 'k'
 
         try:
             self.status = float(self.status)
@@ -60,6 +62,32 @@ class Entry:
 
     def add_note(self, note):
         self.note.append(note)
+
+    def gen_script_entry(self, entrytype, entryname, projectname):
+        kwlist = []
+        for par in self.parameters:
+            val = getattr(self, par)
+            if val is not None:
+                if par in DATE_FIELDS:
+                    val = gantt_util.datedeltastr(val)
+                elif par in LIST_FIELDS:
+                    val = '|'.join(val)
+                else:
+                    val = str(val)
+                sp = "'"
+                if par == 'duration':  # Because here there is always a begins/ends
+                    val = False
+                if par in ['status', 'lag']:
+                    try:
+                        val = float(val)
+                        sp = ''
+                    except ValueError:
+                        pass
+                if val:
+                    kwlist.append(f"{par}={sp}{val}{sp}")
+        s = f"{entryname} = gantt.{entrytype}({', '.join(kwlist)})\n"
+        s += f"{projectname}.add_{entrytype.lower()}({entryname})"
+        return s
 
 
 class Milestone(Entry):
@@ -129,7 +157,7 @@ class Timeline(Entry):
                      'predecessors', 'groups', 'label', 'color']
     def __init__(self, name, **kwargs):
         try:
-            self.parameters += self.tl_parameters
+            self.parameters = self.tl_parameters + self.parameters
         except AttributeError:
             self.parameters = self.tl_parameters
         if name is None:
@@ -192,7 +220,8 @@ class Task(Timeline):
             return gantt_util.color_palette[0]
         return self.color
 
-class Note:
+
+class Note(Entry):
     parameters = ['jot', 'date', 'reference']
     def __init__(self, jot, date='now', reference=None):
         if jot is None:
@@ -402,14 +431,14 @@ class Project:
     def color_bar(self):
         gantt_util.color_bar()
 
-    def csvread(self, loc, export_gen_script=False):
+    def csvread(self, loc, export_gen_script=False, projectname='project'):
         fp = None
         print(f"Reading {loc}")
         if export_gen_script:
             fpexport = open(f"export_gen_script.py", 'w')
             print("Writing export_gen_script.py")
             print("from ddgantt import gantt\n", file=fpexport)
-            print(f"project = gantt.Project('{self.name}', organization='{self.organization}')\n", file=fpexport)
+            print(f"{projectname} = gantt.Project('{self.name}', organization='{self.organization}')\n", file=fpexport)
         classes = {'milestone': Milestone(None, 'now'), 'timeline': Timeline(None), 'task':  Task(None), 'note':  Note(None)}
         if loc.startswith('http'):
             data = gantt_util.load_sheet_from_url(loc)
@@ -426,49 +455,28 @@ class Project:
             for hdrc, val in zip(header, row):
                 for hdr in hdrc.split(':'):
                     if hdr in classes[entry_type].parameters:
-                        if val is None or not len(val):
-                            kwargs[hdr] = None
-                        elif hdr in DATE_FIELDS:
-                            kwargs[hdr] = gantt_util.datetimedelta(val, hdr)
-                        elif hdr in LIST_FIELDS:
-                            kwargs[hdr] = val.split('|')
-                        else:
-                            kwargs[hdr] = val
+                        kwargs[hdr] = val
                         break
-            if export_gen_script:
-                entryname = f"entry{ctr}"
-                kwstr = []
-                for kk, kv in kwargs.items():
-                    if kv is None:
-                        kv = 'None'
-                    elif kk in DATE_FIELDS:
-                        kv = gantt_util.datedeltastr(kv)
-                    elif kk in LIST_FIELDS:
-                        kv = '|'.join(kv)
-                    elif isinstance(kv, str):
-                        kv = f"'{kv}'"
-                    kwstr.append(f"{kk}={kv}")
-                kwstr = ', '.join(kwstr)
             if entry_type == 'note':
-                if export_gen_script:
-                    print(f"{entryname} = gantt.Note(jot='{jot}', date='{date.strftime('%Y-%m-%d %H:%M')}', {kwstr})", file=fpexport)
-                    print(f"project.add_note({entryname})", file=fpexport)
-                self.add_note(Note(jot=jot, date=date, **kwargs))
+                jot = copy(kwargs['jot'])
+                del kwargs['jot']
+                this = Note(jot=jot, **kwargs)
             elif entry_type == 'milestone':
-                if export_gen_script:
-                    print(f"{entryname} = gantt.Milestone(name='{name}', date='{date.strftime('%Y-%m-%d %H:%M')}', {kwstr})", file=fpexport)
-                    print(f"project.add_milestone({entryname})", file=fpexport)
-                self.add_milestone(Milestone(name=name, date=date, **kwargs))
+                name, date = copy(kwargs['name']), copy(kwargs['date'])
+                del kwargs['name'], kwargs['date']
+                this = Milestone(name=name, date=date, **kwargs)
             elif entry_type == 'timeline':
-                if export_gen_script:
-                    print(f"{entryname} = gantt.Timeline(name='{name}', {kwstr})", file=fpexport)
-                    print(f"project.add_timeline({entryname})", file=fpexport)
-                self.add_timeline(Timeline(name=name, **kwargs))
+                name = copy(kwargs['name'])
+                del kwargs['name']
+                this = Timeline(name=name, **kwargs)
             elif entry_type == 'task':
-                if export_gen_script:
-                    print(f"{entryname} = gantt.Task(name='{name}', {kwstr})", file=fpexport)
-                    print(f"project.add_task({entryname})", file=fpexport)
-                self.add_task(Task(name=name, **kwargs))
+                name = copy(kwargs['name'])
+                del kwargs['name']
+                this = Task(name=name, **kwargs)
+            getattr(self, f"add_{entry_type}")(this)
+            if export_gen_script:
+                entryname = f"{entry_type}{ctr}"
+                print(this.gen_script_entry(entry_type.capitalize(), entryname, projectname), file=fpexport)
             ctr += 1
         if fp is not None:
             fp.close()

@@ -66,6 +66,7 @@ def assign_yvals_labels(ykeys, labels):
         else:
             yvals.append(fnd_keys[ykey])
             ylabels[cmap[ykey]] += '|' + labels[i]
+        ylabels[cmap[ykey]] = ylabels[cmap[ykey]].strip('| ')
     return yvals, yticks, ylabels
 
 
