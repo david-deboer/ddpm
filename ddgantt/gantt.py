@@ -213,10 +213,9 @@ class Task(Timeline):
                     return gantt_util.color_palette[0]
                 if self.lag is not None:
                     return gantt_util.lag2rgb(self.lag)
-                print("GU165: will need to finish the taskbar color logic")
                 pc_elapsed = 100.0 * (now - self.begins) / self.duration
-                lag = 2.0 * (pc_elapsed - self.status)
-                return gantt_util.lag2rgb(lag)
+                lag = pc_elapsed - self.status if pc_elapsed > self.status else 0.0
+                return gantt_util.lag2rgb((lag-50.0))
             return gantt_util.color_palette[0]
         return self.color
 
@@ -446,6 +445,38 @@ class Project:
                     print(entry.gen_script_entry(entries.capitalize(), entryname, projectname), file=fp)
                     ctr += 1
 
+    def _determine_entry_type(self, header, row):
+        if 'type' in header:
+            hind = header.index('type')
+            if isinstance(row[hind], str) and row[hind].lower() in self.entry_types:
+                return row[hind]
+        if 'ends' in header:
+            eind = header.index('ends')
+            if isinstance(row[eind], str) and len(row[eind]) and 'status' in header:
+                return 'task'
+            else:
+                return 'timeline'
+        if 'name' in header:
+            rind = header.index('name')
+            if isinstance(row[rind], str) and len(row[rind]):
+                return 'milestone'
+        return 'note'
+
+    def _is_valid_entry(self, entry_type, kwargs):
+        if entry_type == 'note' and len(kwargs['jot'].strip()):
+            return True
+        if not len(kwargs['name'].strip()):
+            return False
+        if entry_type == 'milestone' and len(kwargs['date'].strip()):
+            return True
+        timing = 0
+        for par in ['begins', 'ends', 'duration']:
+            if par in kwargs and len(kwargs[par].strip()):
+                timing += 1
+        if timing < 2:
+            return False
+        return True
+
     def csvread(self, loc):
         fp = None
         print(f"Reading {loc}")
@@ -460,30 +491,32 @@ class Project:
             header = next(reader)
         classes = {'milestone': Milestone(None, 'now'), 'timeline': Timeline(None), 'task':  Task(None), 'note':  Note(None)}
         for row in reader:
-            entry_type = row[header.index('type')]
+            entry_type = self._determine_entry_type(header, row)
             kwargs = {}
             for hdrc, val in zip(header, row):
                 for hdr in hdrc.split(':'):
                     if hdr in classes[entry_type].parameters:
                         kwargs[hdr] = val
                         break
-            if entry_type == 'note':
-                jot = copy(kwargs['jot'])
+            valid = self._is_valid_entry(entry_type, kwargs)
+            if entry_type == 'note' and valid:
+                jot = copy(kwargs['jot']).strip()
                 del kwargs['jot']
                 this = Note(jot=jot, **kwargs)
-            elif entry_type == 'milestone':
-                name, date = copy(kwargs['name']), copy(kwargs['date'])
+            elif entry_type == 'milestone' and valid:
+                name, date = copy(kwargs['name']).strip(), copy(kwargs['date']).strip()
                 del kwargs['name'], kwargs['date']
                 this = Milestone(name=name, date=date, **kwargs)
-            elif entry_type == 'timeline':
-                name = copy(kwargs['name'])
+            elif entry_type == 'timeline' and valid:
+                name = copy(kwargs['name']).strip()
                 del kwargs['name']
                 this = Timeline(name=name, **kwargs)
-            elif entry_type == 'task':
-                name = copy(kwargs['name'])
+            elif entry_type == 'task' and valid:
+                name = copy(kwargs['name']).strip()
                 del kwargs['name']
                 this = Task(name=name, **kwargs)
-            getattr(self, f"add_{entry_type}")(this)
+            if valid:
+                getattr(self, f"add_{entry_type}")(this)
         if fp is not None:
             fp.close()
 
