@@ -3,6 +3,7 @@ import datetime
 import requests
 import csv
 
+
 color_palette = [
     (0.12156862745098039, 0.4666666666666667, 0.7058823529411765, 1.0),
     (1.0, 0.4980392156862745, 0.054901960784313725, 1.0),
@@ -11,6 +12,24 @@ color_palette = [
     (0.5803921568627451, 0.403921568627451, 0.7411764705882353, 1.0),
     (0.5490196078431373, 0.33725490196078434, 0.29411764705882354, 1.0)
         ]
+
+def pretty_duration(seconds):
+    years = seconds / (86400 * 365)  # approximately...
+    seconds = int(seconds)
+    days, seconds = divmod(seconds, 86400)
+    hours, seconds = divmod(seconds, 3600)
+    minutes, seconds = divmod(seconds, 60)
+    if days > 365:
+        s = f"{years:.1f} years  ({days} days)"
+    elif days > 30:
+        s = f"{days} days"
+    elif days > 3:
+        s = f"{days} days {hours} hours"
+    elif days > 1:
+        s = f"{hours} hours"
+    else:
+        s = f"{hours} hours {minutes} minutes"
+    return s
 
 def load_sheet_from_url(url):
     sheet_info = []

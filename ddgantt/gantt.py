@@ -285,7 +285,7 @@ class Project:
         elif late_date > self.latest[entry_type]:
             self.latest[entry_type] = late_date
         try:
-            if entry.colinear is not None:
+            if entry.colinear is not None and len(entry.colinear.strip()):
                 self.colinear_map[entry.key] = entry.colinear
         except AttributeError:
             return
@@ -367,6 +367,8 @@ class Project:
         plotpars = []
         ykeys = []  # keys lists the keys used, used to make the vertical axis including colinear
         extrema = self._get_event_extrema()
+        duration = extrema.max - extrema.min
+        print(f"Duration = {gantt_util.pretty_duration(duration.total_seconds())}")
         for sortkey in allsortkeys:
             if sortkey.endswith('__milestone'):
                 this = self.milestones[self.sorted_milestones[sortkey]]
@@ -430,21 +432,6 @@ class Project:
     def color_bar(self):
         gantt_util.color_bar()
 
-    def scriptwrite(self, fn='export_script.py', projectname='project'):
-        """
-        This will write out the project to a python script.
-        """
-        print(f"Writing {fn}")
-        with open(fn, 'w') as fp:
-            print("from ddgantt import gantt\n", file=fp)
-            print(f"{projectname} = gantt.Project('{self.name}', organization='{self.organization}')\n", file=fp)
-            for entries in ['milestone', 'timeline', 'task', 'note']:
-                ctr = 1
-                for entry in getattr(self, f"{entries}s").values():
-                    entryname = f"{entries}{ctr}"
-                    print(entry.gen_script_entry(entries.capitalize(), entryname, projectname), file=fp)
-                    ctr += 1
-
     def _determine_entry_type(self, header, row):
         if 'type' in header:
             hind = header.index('type')
@@ -452,10 +439,18 @@ class Project:
                 return row[hind]
         if 'ends' in header:
             eind = header.index('ends')
-            if isinstance(row[eind], str) and len(row[eind]) and 'status' in header:
-                return 'task'
-            else:
-                return 'timeline'
+            if isinstance(row[eind], str) and len(row[eind].strip()):
+                status = False
+                if 'status' in header:
+                    sind = header.index('status')
+                    if isinstance(row[sind], str):
+                        status = len(row[sind].strip())
+                    else:
+                        status = row[sind]
+                if status:
+                    return 'task'
+                else:
+                    return 'timeline'
         if 'name' in header:
             rind = header.index('name')
             if isinstance(row[rind], str) and len(row[rind]):
@@ -463,21 +458,29 @@ class Project:
         return 'note'
 
     def _is_valid_entry(self, entry_type, kwargs):
-        if entry_type == 'note' and len(kwargs['jot'].strip()):
+        if entry_type == 'note' and len(kwargs['jot']):
             return True
         if not len(kwargs['name'].strip()):
             return False
-        if entry_type == 'milestone' and len(kwargs['date'].strip()):
+        if entry_type == 'milestone' and len(kwargs['date']):
             return True
         timing = 0
         for par in ['begins', 'ends', 'duration']:
-            if par in kwargs and len(kwargs[par].strip()):
+            if par in kwargs and len(kwargs[par]):
                 timing += 1
         if timing < 2:
             return False
         return True
 
-    def csvread(self, loc):
+    def _clean_val(self, val):
+        """
+        Do more later, e.g. check if val=='none' and return None etc...
+        """
+        if isinstance(val, str):
+            return val.strip()
+        return val
+
+    def csvread(self, loc, verbose=False):
         fp = None
         print(f"Reading {loc}")
 
@@ -496,29 +499,47 @@ class Project:
             for hdrc, val in zip(header, row):
                 for hdr in hdrc.split(':'):
                     if hdr in classes[entry_type].parameters:
-                        kwargs[hdr] = val
+                        kwargs[hdr] = self._clean_val(val)
                         break
             valid = self._is_valid_entry(entry_type, kwargs)
+            if verbose:
+                stat = 'Adding' if valid else 'Skipping'
+                print(f'{stat} {entry_type}:  {row}')
             if entry_type == 'note' and valid:
-                jot = copy(kwargs['jot']).strip()
+                jot = copy(kwargs['jot'])
                 del kwargs['jot']
                 this = Note(jot=jot, **kwargs)
             elif entry_type == 'milestone' and valid:
-                name, date = copy(kwargs['name']).strip(), copy(kwargs['date']).strip()
+                name, date = copy(kwargs['name']), copy(kwargs['date'])
                 del kwargs['name'], kwargs['date']
                 this = Milestone(name=name, date=date, **kwargs)
             elif entry_type == 'timeline' and valid:
-                name = copy(kwargs['name']).strip()
+                name = copy(kwargs['name'])
                 del kwargs['name']
                 this = Timeline(name=name, **kwargs)
             elif entry_type == 'task' and valid:
-                name = copy(kwargs['name']).strip()
+                name = copy(kwargs['name'])
                 del kwargs['name']
                 this = Task(name=name, **kwargs)
             if valid:
                 getattr(self, f"add_{entry_type}")(this)
         if fp is not None:
             fp.close()
+
+    def scriptwrite(self, fn='export_script.py', projectname='project'):
+        """
+        This will write out the project to a python script.
+        """
+        print(f"Writing {fn}")
+        with open(fn, 'w') as fp:
+            print("from ddgantt import gantt\n", file=fp)
+            print(f"{projectname} = gantt.Project('{self.name}', organization='{self.organization}')\n", file=fp)
+            for entries in ['milestone', 'timeline', 'task', 'note']:
+                ctr = 1
+                for entry in getattr(self, f"{entries}s").values():
+                    entryname = f"{entries}{ctr}"
+                    print(entry.gen_script_entry(entries.capitalize(), entryname, projectname), file=fp)
+                    ctr += 1
 
     def csvwrite(self, fn):
         print(f"Writing csv file {fn}")
