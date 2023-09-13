@@ -3,6 +3,7 @@ from . import plotting, gantt_util
 import datetime
 from argparse import Namespace
 import hashlib
+import time
 import csv
 
 
@@ -59,6 +60,9 @@ class Entry:
             self.lag = float(self.lag)
         except (ValueError, TypeError, AttributeError):
             pass
+
+    def make_key(self, keystr):
+        self.key = hashlib.md5(keystr.encode('ascii')).hexdigest()[:6]
 
     def add_note(self, note):
         self.note.append(note)
@@ -129,9 +133,7 @@ class Milestone(Entry):
         if self.marker is None:
             self.marker = 'D'
 
-        # Make key
-        hashstr = f"{self.name}-{self.date.strftime('%Y%m%d')}".encode('ascii')
-        self.key = hashlib.md5(hashstr).hexdigest()[:6]
+        self.make_key(name)
 
     def __repr__(self):
         return f"{self.key}:  {self.name}  {self.date} "
@@ -183,8 +185,7 @@ class Timeline(Entry):
             elif 'begins' not in provided_timing:
                 self.begins = self.ends - self.duration
 
-        hashstr = f"{name}-{self.begins.strftime('%Y%m%d')}-{self.ends.strftime('%Y%m%d')}".encode('ascii')
-        self.key = hashlib.md5(hashstr).hexdigest()[:6]
+        self.make_key(name)
 
     def __repr__(self):
         return f"{self.key}:  {self.name}  {self.begins} -  {self.ends}"
@@ -235,8 +236,8 @@ class Note(Entry):
             self.reference = reference
         else:
             print(f"Invalid reference {reference}")
-        hashstr = f"{jot}-{self.date.strftime('%Y%m%d')}".encode('ascii')
-        self.key = hashlib.md5(hashstr).hexdigest()[:6]
+
+        self.make_key(jot)
 
     def add_reference(self, key):
         self.reference.append(key)
@@ -267,7 +268,7 @@ class Project:
 
     def _add_entry(self, entry_type, entry):
         if entry.key in self.all_entry_keys:
-            print(f"Warning '{entry_type}': Key for {entry.name} already added ({entry.key}).")
+            print(f"Warning - not adding '{entry_type}': Key for {entry.name} already used ({entry.key}).")
             return
         self.all_entry_keys.append(entry.key)
         if entry_type in ['milestone', 'note']:
@@ -503,8 +504,8 @@ class Project:
                         break
             valid = self._is_valid_entry(entry_type, kwargs)
             if verbose:
-                stat = 'Adding' if valid else 'Skipping'
-                print(f'{stat} {entry_type}:  {row}')
+                stat = f'Adding {entry_type}' if valid else f'Skipping {entry_type}'
+                print(f'{stat:18s}  {row}')
             if entry_type == 'note' and valid:
                 jot = copy(kwargs['jot'])
                 del kwargs['jot']
