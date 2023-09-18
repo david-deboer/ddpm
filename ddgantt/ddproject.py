@@ -35,7 +35,7 @@ class Project:
         for pt in self.predecessor_types:
             self.predecessor_timing_flags[pt] = False
 
-    def _add_entry(self, entry):
+    def add_entry(self, entry):
         if entry.key in self.all_entries.keys():
             print(f"Warning - not adding '{entry.type}': Key for {entry.name} already used ({entry.key}).")
             return
@@ -58,29 +58,10 @@ class Project:
             if entry.colinear is not None and len(entry.colinear.strip()):
                 self.colinear_map[entry.key] = entry.colinear
         except AttributeError:
-            return
-
-    def add_timeline(self, timeline):
-        self._add_entry(timeline)
-        self.timelines.append(timeline.key)
-        if timeline.predecessor_timing:
-            self.predecessor_timing_flags['timeline'] = True
-
-    def add_task(self, task):
-        self._add_entry(task)
-        self.tasks.append(task.key)
-        if task.predecessor_timing:
-            self.predecessor_timing_flags['task'] = True
-
-    def add_milestone(self, milestone):
-        self._add_entry(milestone)
-        self.milestones.append(milestone.key)
-        if milestone.predecessor_timing:
-            self.predecessor_timing_flags['milestone'] = True
-
-    def add_note(self, note):
-        self._add_entry(note)
-        self.notes.append(note.key)
+            pass
+        getattr(self, f"{entry.type}s").append(entry.key)
+        if entry.type in self.predecessor_timing_flags and entry.predecessor_timing:
+            self.predecessor_timing_flags[entry.type] = True
 
     def _sort_(self, entry_types, sortby):
         sort_key_dict = {}
@@ -133,7 +114,7 @@ class Project:
             if self.predecessor_timing_flags[pt]:
                 for ev in getattr(f"{pt}s").values():
                     if ev.predecessor_timing:
-                        timing.append(ev.date if pt == 'milestone' and ev.ends)
+                        timing.append(ev.date if pt == 'milestone' else ev.ends)
                         ev.set_predecessor_timing(timing)
 
     def chart(self, chart='all', sortby=['begins', 'date', 'name', 'ends'], interval=None):
