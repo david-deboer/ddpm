@@ -119,6 +119,7 @@ class Milestone(Entry):
         if name is None:
             return
         super().__init__(name=name, **kwargs)
+        self.type = 'milestone'
         self.date = gu.datetimedelta(date)
         if self.marker is None:
             self.marker = 'D'
@@ -172,6 +173,7 @@ class Timeline(Entry):
         if name is None:
             return
         super().__init__(name=name, **kwargs)
+        self.type = 'timeline'
         self.make_key(name)
         self.init_timing(kwargs)
 
@@ -211,6 +213,7 @@ class Task(Timeline):
     def __init__(self, name, **kwargs):
         self.parameters = ['owner', 'status', 'complete']
         super().__init__(name=name, **kwargs)
+        self.type = 'task'
 
     def get_color(self):
         if self.color is None or self.color == 'auto':
@@ -244,7 +247,7 @@ class Note(Entry):
             self.reference = reference
         else:
             print(f"Invalid reference {reference}")
-
+        self.type = 'note'
         self.make_key(jot)
 
     def add_reference(self, key):

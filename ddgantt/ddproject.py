@@ -22,9 +22,9 @@ class Project:
         self.predecessor_types = copy(self.chart_types)
         self.name = name
         self.organization = organization
+        self.all_entries = {}
         for entry_type in self.entry_types:
-            setattr(self, f"{entry_type}s", {})
-        self.all_entry_keys = []
+            setattr(self, f"{entry_type}s", [])
         self.colinear_map = {}
         self.earliest, self.latest = {}, {}
         self.updated = None
@@ -35,25 +35,25 @@ class Project:
         for pt in self.predecessor_types:
             self.predecessor_timing_flags[pt] = False
 
-    def _add_entry(self, entry_type, entry):
-        if entry.key in self.all_entry_keys:
-            print(f"Warning - not adding '{entry_type}': Key for {entry.name} already used ({entry.key}).")
+    def _add_entry(self, entry):
+        if entry.key in self.all_entries.keys():
+            print(f"Warning - not adding '{entry.type}': Key for {entry.name} already used ({entry.key}).")
             return
-        self.all_entry_keys.append(entry.key)
-        if entry_type in ['milestone', 'note']:
+        self.all_entries[entry.key] = entry
+        if entry.type in ['milestone', 'note']:
             early_date = copy(entry.date)
             late_date = copy(entry.date)
         else:
             early_date = copy(entry.begins)
             late_date = copy(entry.ends)
-        if self.earliest[entry_type] is None:
-            self.earliest[entry_type] = early_date
-        elif early_date < self.earliest[entry_type]:
-            self.earliest[entry_type] = early_date
-        if self.latest[entry_type] is None:
-            self.latest[entry_type] = late_date
-        elif late_date > self.latest[entry_type]:
-            self.latest[entry_type] = late_date
+        if self.earliest[entry.type] is None:
+            self.earliest[entry.type] = early_date
+        elif early_date < self.earliest[entry.type]:
+            self.earliest[entry.type] = early_date
+        if self.latest[entry.type] is None:
+            self.latest[entry.type] = late_date
+        elif late_date > self.latest[entry.type]:
+            self.latest[entry.type] = late_date
         try:
             if entry.colinear is not None and len(entry.colinear.strip()):
                 self.colinear_map[entry.key] = entry.colinear
@@ -61,39 +61,44 @@ class Project:
             return
 
     def add_timeline(self, timeline):
-        self._add_entry('timeline', timeline)
-        self.timelines[timeline.key] = timeline
+        self._add_entry(timeline)
+        self.timelines.append(timeline.key)
         if timeline.predecessor_timing:
             self.predecessor_timing_flags['timeline'] = True
 
     def add_task(self, task):
-        self._add_entry('task', task)
-        self.tasks[task.key] = task
+        self._add_entry(task)
+        self.tasks.append(task.key)
         if task.predecessor_timing:
             self.predecessor_timing_flags['task'] = True
 
     def add_milestone(self, milestone):
-        self._add_entry('milestone', milestone)
-        self.milestones[milestone.key] = milestone
+        self._add_entry(milestone)
+        self.milestones.append(milestone.key)
         if milestone.predecessor_timing:
             self.predecessor_timing_flags['milestone'] = True
 
     def add_note(self, note):
-        self._add_entry('note', note)
-        self.notes[note.key] = note
+        self._add_entry(note)
+        self.notes.append(note.key)
 
-    def _sort_(self, entry, sortby):
-        entry_type = f"sorted_{entry}s"
-        setattr(self, entry_type, {})
-        for this in getattr(self, f"{entry}s").values():
-            sortkey = ''
-            for upar in sortby:
-                try:
-                    sortkey += str(getattr(this, upar)) + '_'
-                except AttributeError:
-                    continue
-            sortkey += f"_{entry}"
-            getattr(self, entry_type)[sortkey] = this.key
+    def _sort_(self, entry_types, sortby):
+        sort_key_dict = {}
+        for entry_type in entry_types:
+            for key in getattr(self, f"{entry_type}s"):
+                this = self.all_entries[key]
+                skey = ''
+                for upar in sortby:
+                    try:
+                        skey += str(getattr(this, upar)) + '_'
+                    except AttributeError:
+                        continue
+                skey += f"{key}"  # To make sure unique
+                sort_key_dict[skey] = this.key
+        sorted_keys = []
+        for skey in sorted(sort_key_dict.keys()):
+            sorted_keys.append(sort_key_dict[skey])
+        return sorted_keys
 
     def _align_keys(self, ykeys):
         """
@@ -118,12 +123,6 @@ class Project:
         chkmax = None if not len(chkmax) else max(chkmax)
         return Namespace(min=chkmin, max=chkmax)
 
-    def _get_sorted_chart_keys(self, to_chart):
-        elist = []
-        for etype in to_chart:
-            elist += list(getattr(self, f"sorted_{etype}s").keys())
-        return sorted(elist)
-
     def set_predecessors(self):
         """
         Set project predecessor timing.
@@ -144,15 +143,13 @@ class Project:
 
         Parameter
         ---------
-        sortby : list
+        sortby : list or 'all' (chart_types)
            fields to sort by
         """
         self.set_predecessors()
         if chart == 'all':
             chart = self.chart_types
-        for sort_this in chart:
-            self._sort_(sort_this, sortby)
-        allsortkeys = self._get_sorted_chart_keys(chart)
+        sorted_keys = self._sort_(chart, sortby)
         dates = []
         labels = []
         plotpars = []
@@ -160,17 +157,15 @@ class Project:
         extrema = self._get_event_extrema()
         duration = extrema.max - extrema.min
         print(f"Duration = {gu.pretty_duration(duration.total_seconds())}")
-        for sortkey in allsortkeys:
-            if sortkey.endswith('__milestone'):
-                this = self.milestones[self.sorted_milestones[sortkey]]
+        for sortkey in sorted_keys:
+            this = self.all_entries[sortkey]
+            if this.type == 'milestone':
                 dates.append([this.date, None])
                 plotpars.append(Namespace(color=this.get_color(), marker=this.marker, owner=this.owner))
-            elif sortkey.endswith('__timeline'):
-                this = self.timelines[self.sorted_timelines[sortkey]]
+            elif this.type == 'timeline':
                 dates.append([this.begins, this.ends])
                 plotpars.append(Namespace(color=this.get_color(), status=None, owner=None))
-            elif sortkey.endswith('__task'):
-                this = self.tasks[self.sorted_tasks[sortkey]]
+            elif this.type == 'task':
                 dates.append([this.begins, this.ends])
                 plotpars.append(Namespace(color=this.get_color(), status=this.status, owner=this.owner))
             if this.label is not None:
@@ -215,9 +210,9 @@ class Project:
             plotting.cumulative_graph(self.cdf.dates, self.cdf.values, self.cdf.num)
 
     def show_notes(self, sortby=['date', 'jot']):
-        self._sort_('note', sortby)
-        for sortkey in self.sorted_notes:
-            this = self.notes[self.sorted_notes[sortkey]]
+        sorted_keys = self._sort_(['note'], sortby)
+        for sortkey in sorted_keys:
+            this = self.all_entries[sortkey]
             print(f"{this.jot}  {this.date.strftime('%Y-%m-%d %H:%M')}  - ({', '.join(this.reference)})")
 
     def color_bar(self):
