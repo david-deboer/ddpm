@@ -149,7 +149,6 @@ class Project:
         self.set_predecessors()
         if chart == 'all':
             chart = self.chart_types
-        sorted_keys = self._sort_(chart, sortby)
         dates = []
         labels = []
         plotpars = []
@@ -157,7 +156,7 @@ class Project:
         extrema = self._get_event_extrema()
         duration = extrema.max - extrema.min
         print(f"Duration = {gu.pretty_duration(duration.total_seconds())}")
-        for sortkey in sorted_keys:
+        for sortkey in self._sort_(chart, sortby):
             this = self.all_entries[sortkey]
             if this.type == 'milestone':
                 dates.append([this.date, None])
@@ -185,29 +184,41 @@ class Project:
         sortby : list
            fields to sort by, must be unique.  sort_info dicts map if needed
         """
-        self.earliest = {'milestone': gu.FUTURE}
-        self.latest = {'milestone': gu.PAST}
-        self._sort_('milestone', sortby)
-        allsortkeys = sorted(self.sorted_milestones.keys())
-        dates = []
-        status = []
-        extrema = Namespace(min=self.earliest['milestone'], max=datetime.datetime.now())
-        for sortkey in allsortkeys:
-            this_milestone = self.milestones[self.sorted_milestones[sortkey]]
-            dates.append([this_milestone.date, None])
-            status.append(Namespace(status=this_milestone.status))
-        self.cdf = Namespace(num=len(dates), dates=[], values=[])
+        extrema = self._get_event_extrema()
+        dates, status = [], []
+        for sortkey in self._sort_(self.event_types, sortby):
+            this = self.all_entries[sortkey]
+            if this.type == 'milestone':
+                dates.append(this.date)
+            elif this.type == 'task':
+                dates.append(this.ends)
+            status.append(Namespace(status=this.status, type=this.type))
+        self.cdf = Namespace(dates=[], values=[])
         this_date = copy(extrema.min)
         while this_date < extrema.max:
             self.cdf.dates.append(this_date)
             ctr = 0.0
             for i in range(len(status)):
-                if this_date > dates[i][0] and status[i].status == 'complete':
+                if this_date > dates[i] and self._eval_status_complete(status[i]):
                     ctr += 1.0
             self.cdf.values.append(ctr)
             this_date += datetime.timedelta(days=step)
+        if self.cdf.dates[-1] != extrema_max:
+            self.cdf.dates.append(extrema_max)
+            ctr = 0.0
+            for i in range(len(status)):
+                if self._eval_state_complete(status[i]):
+                    ctr += 1.0
+            self.cdf.values.append(ctr)
         if show:
-            plotting.cumulative_graph(self.cdf.dates, self.cdf.values, self.cdf.num)
+            plotting.cumulative_graph(self.cdf.dates, self.cdf.values, len(dates))
+
+    def _eval_status_complete(self, status):
+        if status.status.lower() == 'complete':
+            return True
+        if int(status.status) == 100:
+            return True
+        return False
 
     def show_notes(self, sortby=['date', 'jot']):
         sorted_keys = self._sort_(['note'], sortby)
