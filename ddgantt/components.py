@@ -115,15 +115,27 @@ class Milestone(Entry):
             Color used for plotting, if None or 'auto' make based on status/lag
         """
         self.parameters = ['name', 'date', 'owner', 'label', 'status', 'note', 'updated', 'complete',
-                           'lag', 'predecessors', 'groups', 'colinear', 'marker', 'color']
+                           'predecessors', 'lag', 'groups', 'colinear', 'marker', 'color']
         if name is None:
             return
         super().__init__(name=name, **kwargs)
         self.date = gu.datetimedelta(date)
         if self.marker is None:
             self.marker = 'D'
-
         self.make_key(name)
+        self.set_timing(kwargs)
+
+    def set_timing(self, kwargs):
+        self.predecessor_timing = False
+        provided_timing = set()
+        for key in ['date', 'predecessors']:
+            if key in kwargs and isinstance(getattr(self, key), (datetime.datetime, list)):
+                provided_timing.add(key)
+        if len(provided_timing) == 2:
+            raise ValueError("Can't provide date and predecessors.")
+        if provided_timing == {'predecessors'}:
+            print("Not doing that yet...(Predecessors)")
+            self.predecessor_timing = True  # This flag will be looked for later in project
 
     def __repr__(self):
         return f"{self.key}:  {self.name}  {self.date} "
