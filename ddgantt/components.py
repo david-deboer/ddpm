@@ -123,9 +123,9 @@ class Milestone(Entry):
         if self.marker is None:
             self.marker = 'D'
         self.make_key(name)
-        self.set_timing(kwargs)
+        self.init_timing(kwargs)
 
-    def set_timing(self, kwargs):
+    def init_timing(self, kwargs):
         self.predecessor_timing = False
         provided_timing = set()
         for key in ['date', 'predecessors']:
@@ -173,9 +173,9 @@ class Timeline(Entry):
             return
         super().__init__(name=name, **kwargs)
         self.make_key(name)
-        self.set_timing(kwargs)
+        self.init_timing(kwargs)
 
-    def set_timing(self, kwargs):
+    def init_timing(self, kwargs):
         # Check/get timing
         self.predecessor_timing = False
         provided_timing = set()
