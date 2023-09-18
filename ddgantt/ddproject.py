@@ -16,8 +16,10 @@ class Project:
     chart_types = ['milestone', 'timeline', 'task']
     event_types = ['milestone', 'task']
     other_types = ['note', 'timeline']
+
     def __init__(self, name, organization=None):
         self.entry_types = self.event_types + self.other_types
+        self.predecessor_types = copy(self.chart_types)
         self.name = name
         self.organization = organization
         for entry_type in self.entry_types:
@@ -29,6 +31,9 @@ class Project:
         for entry in self.entry_types:
             self.earliest[entry] = None
             self.latest[entry] = None
+        self.predecessor_timing_flags = {}
+        for pt in self.predecessor_types:
+            self.predecessor_timing_flags[pt] = False
 
     def _add_entry(self, entry_type, entry):
         if entry.key in self.all_entry_keys:
@@ -58,14 +63,20 @@ class Project:
     def add_timeline(self, timeline):
         self._add_entry('timeline', timeline)
         self.timelines[timeline.key] = timeline
+        if timeline.predecessor_timing:
+            self.predecessor_timing_flags['timeline'] = True
 
     def add_task(self, task):
         self._add_entry('task', task)
         self.tasks[task.key] = task
+        if task.predecessor_timing:
+            self.predecessor_timing_flags['task'] = True
 
     def add_milestone(self, milestone):
         self._add_entry('milestone', milestone)
         self.milestones[milestone.key] = milestone
+        if milestone.predecessor_timing:
+            self.predecessor_timing_flags['milestone'] = True
 
     def add_note(self, note):
         self._add_entry('note', note)
@@ -113,6 +124,20 @@ class Project:
             elist += list(getattr(self, f"sorted_{etype}s").keys())
         return sorted(elist)
 
+    def set_predecessors(self):
+        """
+        Set project predecessor timing.
+        """
+        print("Get predecessor timing and pass to the Entry set_timing method.")
+        for pt in self.predecessor_types:
+            if self.predecessor_timing_flags[pt]:
+                for ev in getattr(f"{pt}s").values():
+                    if ev.predecessor_timing:
+                        last_timing = gu.PAST
+                        for prdr in ms.predecessors:
+                            print(f"Working on it {prdr}")
+                        ev.set_timing(last_timing)
+
     def chart(self, chart='all', sortby=['begins', 'date', 'name', 'ends'], interval=None):
         """
         Make a gantt chart.
@@ -122,6 +147,7 @@ class Project:
         sortby : list
            fields to sort by
         """
+        self.set_predecessors()
         if chart == 'all':
             chart = self.chart_types
         for sort_this in chart:
