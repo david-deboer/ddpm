@@ -37,8 +37,15 @@ class Entry:
             self.status = float(self.status.strip('%'))
         except (ValueError, TypeError, AttributeError):
             pass
+        if self.lag is None:
+            self.lag = 0.0
+        else:
+            try:
+                self.lag = float(self.lag)
+            except (ValueError, TypeError, AttributeError):
+                pass
         try:
-            self.lag = float(self.lag)
+            self.complete = float(self.complete)
         except (ValueError, TypeError, AttributeError):
             pass
 
@@ -62,7 +69,7 @@ class Entry:
                 sp = "'"
                 if par == 'duration':  # Because here there is always a begins/ends
                     val = False
-                if par in ['status', 'lag']:
+                if par in ['status', 'complete']:
                     try:
                         val = float(val)
                         sp = ''
@@ -96,8 +103,10 @@ class Milestone(Entry):
             General note to add
         updated : str, datetime
             Date of the current update
-        lag : str, float, None
+        complete : str, float, None
             how late(=) or early (-) as complete milestone was done
+        lag : str, float, None
+            how late to follow after last predecessor
         colinear : str, None
             Key of other milestone to put on the same line
         marker : str
@@ -105,7 +114,7 @@ class Milestone(Entry):
         color : str, None
             Color used for plotting, if None or 'auto' make based on status/lag
         """
-        self.parameters = ['name', 'date', 'owner', 'label', 'status', 'note', 'updated',
+        self.parameters = ['name', 'date', 'owner', 'label', 'status', 'note', 'updated', 'complete',
                            'lag', 'predecessors', 'groups', 'colinear', 'marker', 'color']
         if name is None:
             return
@@ -126,9 +135,9 @@ class Milestone(Entry):
             return self.color
         if self.status != 'complete' and datetime.datetime.now() > self.date:
             return gu.STATUS_COLOR['late']
-        if self.status == 'complete' and self.lag is not None:
-            if abs(self.lag) > 1.0:
-                return gu.lag2rgb(self.lag)
+        if self.status == 'complete' and self.complete is not None:
+            if abs(self.complete) > 1.0:
+                return gu.complete2rgb(self.complete)
             return gu.STATUS_COLOR['complete']
         if self.status in gu.STATUS_COLOR:
             return gu.STATUS_COLOR[self.status]
@@ -137,7 +146,7 @@ class Milestone(Entry):
 
 class Timeline(Entry):
     tl_parameters = ['name', 'begins', 'ends', 'duration', 'note', 'updated', 'colinear',
-                     'predecessors', 'groups', 'label', 'color']
+                     'predecessors', 'lag', 'groups', 'label', 'color']
     def __init__(self, name, **kwargs):
         try:
             self.parameters = self.tl_parameters + self.parameters
@@ -182,7 +191,7 @@ class Timeline(Entry):
 
 class Task(Timeline):
     def __init__(self, name, **kwargs):
-        self.parameters = ['owner', 'status', 'lag']
+        self.parameters = ['owner', 'status', 'complete']
         super().__init__(name=name, **kwargs)
 
     def get_color(self):
@@ -193,11 +202,11 @@ class Task(Timeline):
                     return gu.STATUS_COLOR['late']
                 if self.begins > now:
                     return gu.color_palette[0]
-                if self.lag is not None:
-                    return gu.lag2rgb(self.lag)
+                if self.complete is not None:
+                    return gu.complete2rgb(self.complete)
                 pc_elapsed = 100.0 * (now - self.begins) / self.duration
-                lag = pc_elapsed - self.status if pc_elapsed > self.status else 0.0
-                return gu.lag2rgb((lag-50.0))
+                completed = pc_elapsed - self.status if pc_elapsed > self.status else 0.0
+                return gu.complete2rgb((completed-50.0))
             return gu.color_palette[0]
         return self.color
 

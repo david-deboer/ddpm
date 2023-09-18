@@ -109,7 +109,7 @@ def datetimedelta(date, key=None, fmt=['%Y-%m-%d', '%y/%m/%d', '%Y-%m-%d %H:%M']
                 pass
     raise ValueError(f"Invalid date format {type(date)} - {date}")
 
-def lag2rgb(lag):
+def complete2rgb(lag):
     s = 255.0
     bs = [[85.0, (255.0 / s, 190.0 / s, 50.0 / s)],
           [50.0, (220.0 / s, 110.0 / s, 110.0 / s)],
@@ -142,7 +142,7 @@ def color_bar():
     plt.xlabel('Days')
     for j in range(180):
         i = j - 90.0
-        c = lag2rgb(i)
+        c = complete2rgb(i)
         plt.plot([i], [1.0], 's', markersize=20, color=c, markeredgewidth=0.0, fillstyle='full')
     ar = plt.axis()
     boxx = [ar[0], ar[1], ar[1], ar[0], ar[0]]

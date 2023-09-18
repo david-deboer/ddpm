@@ -12,7 +12,7 @@ class Project:
     Project
     """
     columns = ['name', 'begins:date', 'ends', 'duration', 'colinear', 'color', 'status', 'groups', 'label',
-               'lag', 'marker', 'note:jot', 'owner', 'predecessors:reference', 'updated', 'type', 'key']
+               'complete', 'marker', 'note:jot', 'owner', 'predecessors:reference', 'updated', 'type', 'key']
     chart_types = ['milestone', 'timeline', 'task']
     event_types = ['milestone', 'task']
     other_types = ['note', 'timeline']
@@ -133,7 +133,7 @@ class Project:
         ykeys = []  # keys lists the keys used, used to make the vertical axis including colinear
         extrema = self._get_event_extrema()
         duration = extrema.max - extrema.min
-        print(f"Duration = {gantt_util.pretty_duration(duration.total_seconds())}")
+        print(f"Duration = {gu.pretty_duration(duration.total_seconds())}")
         for sortkey in allsortkeys:
             if sortkey.endswith('__milestone'):
                 this = self.milestones[self.sorted_milestones[sortkey]]
@@ -195,7 +195,7 @@ class Project:
             print(f"{this.jot}  {this.date.strftime('%Y-%m-%d %H:%M')}  - ({', '.join(this.reference)})")
 
     def color_bar(self):
-        gantt_util.color_bar()
+        gu.color_bar()
 
     def _determine_entry_type(self, header, row):
         if 'type' in header:
@@ -250,7 +250,7 @@ class Project:
         print(f"Reading {loc}")
 
         if loc.startswith('http'):
-            data = gantt_util.load_sheet_from_url(loc)
+            data = gu.load_sheet_from_url(loc)
             header = copy(data[0])
             reader = data[1:]
         else:
@@ -322,7 +322,7 @@ class Project:
                                 if val is None:
                                     val = ''
                                 elif col in gu.DATE_FIELDS:
-                                    val = gantt_util.datedeltastr(val)
+                                    val = gu.datedeltastr(val)
                                 elif col in gu.LIST_FIELDS:
                                     val = '|'.join([str(_x) for _x in val])
                                 row.append(val)
