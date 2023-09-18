@@ -175,7 +175,7 @@ class Project:
         ykeys = self._align_keys(ykeys)
         plotting.gantt_chart(dates, labels, plotpars, ykeys, extrema, interval=interval)
 
-    def cumulative(self, sortby=['begins', 'name'], step=1.0, show=True):
+    def cumulative(self, step=1.0, show=True):
         """
         Make a cumulative milestone chart.
 
@@ -186,37 +186,38 @@ class Project:
         """
         extrema = self._get_event_extrema()
         dates, status = [], []
-        for sortkey in self._sort_(self.event_types, sortby):
-            this = self.all_entries[sortkey]
-            if this.type == 'milestone':
-                dates.append(this.date)
-            elif this.type == 'task':
-                dates.append(this.ends)
+        for key in self.milestones + self.tasks:
+            this = self.all_entries[key]
+            dates.append(this.date if this.type == 'milestone' else this.ends)
             status.append(Namespace(status=this.status, type=this.type))
         self.cdf = Namespace(dates=[], values=[])
         this_date = copy(extrema.min)
         while this_date < extrema.max:
             self.cdf.dates.append(this_date)
             ctr = 0.0
-            for i in range(len(status)):
+            for i in range(len(dates)):
                 if this_date > dates[i] and self._eval_status_complete(status[i]):
                     ctr += 1.0
             self.cdf.values.append(ctr)
             this_date += datetime.timedelta(days=step)
-        if self.cdf.dates[-1] != extrema_max:
-            self.cdf.dates.append(extrema_max)
+        if self.cdf.dates[-1] != extrema.max:
+            self.cdf.dates.append(extrema.max)
             ctr = 0.0
             for i in range(len(status)):
-                if self._eval_state_complete(status[i]):
+                if self._eval_status_complete(status[i]):
                     ctr += 1.0
             self.cdf.values.append(ctr)
         if show:
             plotting.cumulative_graph(self.cdf.dates, self.cdf.values, len(dates))
 
     def _eval_status_complete(self, status):
-        if status.status.lower() == 'complete':
+        if isinstance(status.status, str) and status.status.lower() == 'complete':
             return True
-        if int(status.status) == 100:
+        try:
+            score = int(status.status)
+        except (TypeError, ValueError):
+            score = False
+        if score == 100:
             return True
         return False
 
