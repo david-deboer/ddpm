@@ -85,7 +85,7 @@ class Entry:
 class Milestone(Entry):
     """
     """
-    def __init__(self, name, date, **kwargs):
+    def __init__(self, name, **kwargs):
         """
         Parameters
         ----------
@@ -120,7 +120,6 @@ class Milestone(Entry):
             return
         super().__init__(name=name, **kwargs)
         self.type = 'milestone'
-        self.date = gu.datetimedelta(date)
         if self.marker is None:
             self.marker = 'D'
         self.make_key(name)

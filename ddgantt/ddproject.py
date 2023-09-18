@@ -1,4 +1,4 @@
-from copy import copy
+from copy import copy, deepcopy
 from . import plotting
 from . import gantt_util as gu
 from ddgantt.components import *
@@ -39,7 +39,7 @@ class Project:
         if entry.key in self.all_entries.keys():
             print(f"Warning - not adding '{entry.type}': Key for {entry.name} already used ({entry.key}).")
             return
-        self.all_entries[entry.key] = entry
+        self.all_entries[entry.key] = copy(entry)
         if entry.type in ['milestone', 'note']:
             early_date = copy(entry.date)
             late_date = copy(entry.date)
@@ -108,14 +108,15 @@ class Project:
         """
         Set project predecessor timing.
         """
-        print("Get predecessor timing and pass to the Entry set_timing method.")
         for pt in self.predecessor_types:
             timing = []
             if self.predecessor_timing_flags[pt]:
-                for ev in getattr(f"{pt}s").values():
-                    if ev.predecessor_timing:
-                        timing.append(ev.date if pt == 'milestone' else ev.ends)
-                        ev.set_predecessor_timing(timing)
+                for key in getattr(self, f"{pt}s"):
+                    if self.all_entries[key].predecessor_timing:
+                        for pkey in self.all_entries[key].predecessors:
+                            that = self.all_entries[pkey]
+                            timing.append(that.date if that.type == 'milestone' else that.ends)
+                        self.all_entries[key].set_predecessor_timing(timing)
 
     def chart(self, chart='all', sortby=['begins', 'date', 'name', 'ends'], interval=None):
         """
