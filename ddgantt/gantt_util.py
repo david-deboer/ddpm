@@ -89,6 +89,8 @@ def datedeltastr(val, fmt='%Y-%m-%d %H:%M'):
         return None
 
 def datetimedelta(date, key=None, fmt=['%Y-%m-%d', '%y/%m/%d', '%Y-%m-%d %H:%M']):
+    if date is None or date.lower() == 'none' or not len(date.strip()):
+        return None
     if key == 'duration':
         if isinstance(date, datetime.timedelta):
             return date

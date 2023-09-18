@@ -104,7 +104,7 @@ class Milestone(Entry):
         updated : str, datetime
             Date of the current update
         complete : str, float, None
-            how late(=) or early (-) as complete milestone was done
+            how late(=) or early (-) completed milestone was done - that is date is the actual and this tells how late/early that was
         lag : str, float, None
             how late to follow after last predecessor
         colinear : str, None
@@ -147,6 +147,11 @@ class Milestone(Entry):
 class Timeline(Entry):
     tl_parameters = ['name', 'begins', 'ends', 'duration', 'note', 'updated', 'colinear',
                      'predecessors', 'lag', 'groups', 'label', 'color']
+    allowed_timing_sets = [{'begins', 'ends'},
+                           {'begins', 'duration'},
+                           {'ends', 'duration'},
+                           {'predecessors', 'duration'}]
+
     def __init__(self, name, **kwargs):
         try:
             self.parameters = self.tl_parameters + self.parameters
@@ -155,27 +160,28 @@ class Timeline(Entry):
         if name is None:
             return
         super().__init__(name=name, **kwargs)
+        self.make_key(name)
+        self.set_timing(kwargs)
 
+    def set_timing(self, kwargs):
         # Check/get timing
-        provided_timing = []
-        for key in ['begins', 'ends', 'duration']:
-            if key in kwargs and isinstance(getattr(self, key), (datetime.datetime, datetime.timedelta)):
-                provided_timing.append(key)
-        if len(provided_timing) == 3:
-            if gu.datedeltastr(self.ends-self.begins) != gu.datedeltastr(self.duration):
-                raise ValueError(f"{self.name}:  can't specify time endpoints and duration incorrectly")
-            self.duration = self.ends - self.begins  # Make match exactly.
+        self.predecessor_timing = False
+        provided_timing = set()
+        for key in ['begins', 'ends', 'duration', 'predecessors']:
+            if key in kwargs and isinstance(getattr(self, key), (datetime.datetime, datetime.timedelta, list)):
+                provided_timing.add(key)
+        if provided_timing not in self.allowed_timing_sets:
+            raise ValueError("Timing information not in allowed timing sets.")
+        if provided_timing == {'predecessors', 'duration'}:
+            print("Not doing that yet...(Predecessors)")
+            self.predecessor_timing = True  # This flag will be looked for later in project
         else:
-            if len(provided_timing) != 2:
-                raise ValueError(f"{self.name}:  not enough timing parameters provided")
             if 'duration' not in provided_timing:
                 self.duration = self.ends - self.begins
             elif 'ends' not in provided_timing:
                 self.ends = self.begins + self.duration
             elif 'begins' not in provided_timing:
                 self.begins = self.ends - self.duration
-
-        self.make_key(name)
 
     def __repr__(self):
         return f"{self.key}:  {self.name}  {self.begins} -  {self.ends}"
