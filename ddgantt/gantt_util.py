@@ -2,6 +2,7 @@ import matplotlib.pyplot as plt
 import datetime
 import requests
 import csv
+import datetime
 
 
 color_palette = [
@@ -12,6 +13,21 @@ color_palette = [
     (0.5803921568627451, 0.403921568627451, 0.7411764705882353, 1.0),
     (0.5490196078431373, 0.33725490196078434, 0.29411764705882354, 1.0)
         ]
+
+DATE_FIELDS = ['date', 'begins', 'ends', 'updated', 'duration']
+LIST_FIELDS = ['note', 'predecessors', 'groups', 'reference']
+PAST = datetime.datetime(year=2000, month=1, day=1)
+FUTURE = datetime.datetime(year=2040, month=12, day=31)
+# STATUS_COLOR = {'complete': 'g', 'late': 'r', 'other': 'k', 'moved': 'y', 'removed': 'w', 'none': 'k'}
+STATUS_COLOR = {
+    'complete': color_palette[2],
+    'late': 'r',
+    'other': 'k',
+    'none': 'k',
+    'moved': color_palette[1],
+    'removed': color_palette[4]
+}
+
 
 def pretty_duration(seconds):
     years = seconds / (86400 * 365)  # approximately...
