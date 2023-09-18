@@ -135,8 +135,10 @@ class Milestone(Entry):
         if len(provided_timing) == 2:
             raise ValueError("Can't provide date and predecessors.")
         if provided_timing == {'predecessors'}:
-            print("Not doing that yet...(Predecessors)")
             self.predecessor_timing = True  # This flag will be looked for later in project
+
+    def set_predecessor_timing(self, timing):
+        self.date = max(timing) + datetime.timedelta(days=self.lag)
 
     def __repr__(self):
         return f"{self.key}:  {self.name}  {self.date} "
@@ -187,7 +189,6 @@ class Timeline(Entry):
         if provided_timing not in self.allowed_timing_sets:
             raise ValueError("Timing information not in allowed timing sets.")
         if provided_timing == {'predecessors', 'duration'}:
-            print("Not doing that yet...(Predecessors)")
             self.predecessor_timing = True  # This flag will be looked for later in project
         else:
             if 'duration' not in provided_timing:
@@ -196,6 +197,10 @@ class Timeline(Entry):
                 self.ends = self.begins + self.duration
             elif 'begins' not in provided_timing:
                 self.begins = self.ends - self.duration
+
+    def set_predecessor_timing(self, timing):
+        self.begins = max(timing) + datetime.timedelta(days=self.lag)
+        self.ends = self.begins + self.duration
 
     def __repr__(self):
         return f"{self.key}:  {self.name}  {self.begins} -  {self.ends}"

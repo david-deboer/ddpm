@@ -129,13 +129,12 @@ class Project:
         """
         print("Get predecessor timing and pass to the Entry set_timing method.")
         for pt in self.predecessor_types:
+            timing = []
             if self.predecessor_timing_flags[pt]:
                 for ev in getattr(f"{pt}s").values():
                     if ev.predecessor_timing:
-                        last_timing = gu.PAST
-                        for prdr in ms.predecessors:
-                            print(f"Working on it {prdr}")
-                        ev.set_timing(last_timing)
+                        timing.append(ev.date if pt == 'milestone' and ev.ends)
+                        ev.set_predecessor_timing(timing)
 
     def chart(self, chart='all', sortby=['begins', 'date', 'name', 'ends'], interval=None):
         """
