@@ -80,24 +80,21 @@ class Entry:
         kwlist = []
         for par in self.parameters:
             val = getattr(self, par)
-            if val is not None:
-                if par in gu.DATE_FIELDS:
-                    val = gu.datedeltastr(val)
-                elif par in gu.LIST_FIELDS:
-                    val = '|'.join(val)
-                else:
-                    val = str(val)
-                sp = "'"
-                if par == 'duration':  # Because here there is always a begins/ends
-                    val = False
-                if par in ['status', 'complete']:
-                    try:
-                        val = float(val)
-                        sp = ''
-                    except ValueError:
-                        pass
-                if val:
-                    kwlist.append(f"{par}={sp}{val}{sp}")
+            if val is None or not len(str(val).strip()):
+                continue
+            if par in gu.DATE_FIELDS:
+                val = gu.datedeltastr(val)
+            elif par in gu.LIST_FIELDS:
+                val = '|'.join([str(x).strip() for x in val])
+            else:
+                try:
+                    val = f"{float(val):.1f}"
+                    val = val.split('.')[0] if val.endswith('.0') else val
+                except ValueError:
+                    val = str(val).strip()
+            if len(val):
+                sp = ',' if ' ' in val else ''
+                kwlist.append(f"{par}={sp}{val}{sp}")
         s = f"{entryname} = gantt.{entrytype}({', '.join(kwlist)})\n"
         s += f"{projectname}.add_{entrytype.lower()}({entryname})"
         return s
