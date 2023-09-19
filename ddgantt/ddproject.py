@@ -35,6 +35,22 @@ class Project:
         for pt in self.predecessor_types:
             self.predecessor_timing_flags[pt] = False
 
+    def __repr__(self):
+        extrema = self._get_event_extrema()
+        duration = extrema.max - extrema.min
+        s = f"Project:  {self.name}\n"
+        if self.organization is not None:
+            s += f"Organization: {self.organization}\n"
+        s += f"{extrema.min} - {extrema.max}  ({duration})\n"
+        tot = 0
+        for et in self.entry_types:
+            n = len(getattr, f"{et}s")
+            if n:
+                s += f"{n:03d} {et.capitalize()}\n"
+                tot += n
+        s += f"{tot:03d} Totals\n"
+        return s
+
     def add_entry(self, entry):
         try:
             if entry.key in self.all_entries.keys():
