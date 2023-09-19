@@ -44,11 +44,13 @@ class Project:
         s += f"{extrema.min} - {extrema.max}  ({duration})\n"
         tot = 0
         for et in self.entry_types:
-            n = len(getattr, f"{et}s")
+            n = len(getattr(self, f"{et}s"))
             if n:
-                s += f"{n:03d} {et.capitalize()}\n"
+                pr = '' if n == 1 else 's'
+                s += f"{n:03d} {et.capitalize()}{pr}\n"
                 tot += n
-        s += f"{tot:03d} Totals\n"
+        s +=  "-----------------\n"
+        s += f"{tot:03d} Total Entries\n"
         return s
 
     def add_entry(self, entry):
