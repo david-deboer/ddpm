@@ -247,6 +247,7 @@ class Project:
         fp = None
         print(f"Reading {loc}")
         self.empty_classes = {'entry': Entry(), 'milestone': Milestone(None), 'timeline': Timeline(None), 'task':  Task(None), 'note':  Note(None)}
+        classdecl = {'milestone': Milestone, 'timeline': Timeline, 'task': Task}
 
         if loc.startswith('http'):
             data = gu.load_sheet_from_url(loc)
@@ -275,22 +276,13 @@ class Project:
                     jot = copy(kwargs['jot'])
                     del kwargs['jot']
                     this = Note(jot=jot, **kwargs)
-                elif entry_type == 'milestone':
+                else:
                     name = copy(kwargs['name'])
                     del kwargs['name']
-                    this = Milestone(name=name, **kwargs)
-                elif entry_type == 'timeline':
-                    name = copy(kwargs['name'])
-                    del kwargs['name']
-                    this = Timeline(name=name, **kwargs)
-                elif entry_type == 'task':
-                    name = copy(kwargs['name'])
-                    del kwargs['name']
-                    this = Task(name=name, **kwargs)
+                    this = classdecl[entry_type](name=name, **kwargs)
                 self.add_entry(this)
             elif verbose:
                 print(f"Skipping invalid {entry_type}:  {row}.")
-
         if fp is not None:
             fp.close()
 

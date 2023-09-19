@@ -11,6 +11,15 @@ class Entry:
             self._init_parameters()
             self._update_parameters(**kwargs)
 
+    def __repr__(self):
+        try:
+            s = f"key: {self.key}\n"
+            for par in self.parameters:
+                s += f"\t{par}: {getattr(self, par)}\n"
+            return s
+        except AttributeError:
+            return "Blank Entry"
+
     def _init_parameters(self):
         for par in self.parameters:
             setattr(self, par, None)
@@ -171,8 +180,8 @@ class Milestone(Entry):
     def set_predecessor_timing(self, timing):
         self.date = max(timing) + datetime.timedelta(days=self.lag)
 
-    def __repr__(self):
-        return f"{self.key}:  {self.name}  {self.date} "
+    # def __repr__(self):
+    #     return f"{self.key}:  {self.name}  {self.date} "
 
     def get_color(self):
         if self.color is None or self.color == 'auto':
@@ -252,8 +261,8 @@ class Timeline(Entry):
         self.begins = max(timing) + datetime.timedelta(days=self.lag)
         self.ends = self.begins + self.duration
 
-    def __repr__(self):
-        return f"{self.key}:  {self.name}  {self.begins} -  {self.ends}"
+    # def __repr__(self):
+    #     return f"{self.key}:  {self.name}  {self.begins} -  {self.ends}"
 
     def get_color(self):
         if self.color is None or self.color == 'auto':
@@ -271,7 +280,7 @@ class Task(Timeline):
         super().__init__(name=name, **kwargs)
         self.type = 'task'
 
-    def valid_request(self, **kwargs):  # This actually just differentiates if a Task
+    def valid_request(self, **kwargs):  # This actually just differentiates Task or Timeline
         if self._valid_request(**kwargs):
             for par in self.ta_extra:
                 if par in kwargs and isinstance(kwargs[par], (str, float, int)):
