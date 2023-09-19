@@ -212,6 +212,12 @@ class Project:
         gu.color_bar()
 
     def _determine_entry_type(self, header, row):
+        kwargs = {}
+        for hdr, r in zip(header, row):
+            if len(hdr.strip()):
+                for h in hdr.split(':'):
+                    kwargs[h.strip()] = r.strip()
+
         if 'type' in header:
             hind = header.index('type')
             if isinstance(row[hind], str) and row[hind].lower() in self.entry_types:
@@ -237,31 +243,43 @@ class Project:
         return 'note'
 
     def _is_valid_entry(self, entry_type, kwargs):
-        if entry_type == 'note' and len(kwargs['jot']):
-            return True
-        if not len(kwargs['name'].strip()):
+        if entry_type == 'note':
+            return self.empty_classes['']
+        if 'name' not in kwargs  or not len(kwargs['name'].strip()):
             return False
-        if entry_type == 'milestone' and len(kwargs['date']):
-            return True
         timing = 0
-        for par in ['begins', 'ends', 'duration']:
-            if par in kwargs and len(kwargs[par]):
+        if entry_type == 'milestone':
+            if 'duration' in kwargs and len(kwargs['duration'].strip()):
+                return False
+            for par in ['date', 'predecessors']:
+                if par in kwargs and len(kwargs[par].strip():
+                    timing += 1
+            return True if timing == 1 else False
+        # Is task or timeline
+        for par in ['begins', 'ends', 'duration', 'predecessors']:
+            if par in kwargs and len(kwargs[par].strip()):
                 timing += 1
-        if timing < 2:
-            return False
-        return True
+        return True if timing == 2 else False
 
-    def _clean_val(self, val):
+    def _preproc_val(self, hdr, val):
         """
         Do more later, e.g. check if val=='none' and return None etc...
+
         """
-        if isinstance(val, str):
-            return val.strip()
+        if isinstance(val, str):  # Should _always_ be a str
+            val = val.strip()
+            if not len(val):
+                return val
+        else:
+            print(f"Information:  {val} is not a str ({hdr}) - do I care?")
+        if hdr == 'colinear':
+            val = self.empty_classes['entry'].make_key(val)
         return val
 
     def csvread(self, loc, verbose=False):
         fp = None
         print(f"Reading {loc}")
+        self.empty_classes = {'entry': Entry(None), 'milestone': Milestone(None), 'timeline': Timeline(None), 'task':  Task(None), 'note':  Note(None)}
 
         if loc.startswith('http'):
             data = gu.load_sheet_from_url(loc)
@@ -271,16 +289,16 @@ class Project:
             fp = open(loc, 'r')
             reader = csv.reader(fp)
             header = next(reader)
-        classes = {'milestone': Milestone(None, 'now'), 'timeline': Timeline(None), 'task':  Task(None), 'note':  Note(None)}
+        
         for row in reader:
             entry_type = self._determine_entry_type(header, row)
             kwargs = {}
             for hdrc, val in zip(header, row):
                 for hdr in hdrc.split(':'):
-                    if hdr in classes[entry_type].parameters:
-                        kwargs[hdr] = self._clean_val(val)
+                    if hdr.strip() in self.empty_classes[entry_type].parameters:
+                        kwargs[hdr] = self._preproc_val(hdr, val)
                         break
-            valid = self._is_valid_entry(entry_type, kwargs)
+            valid = self.empty_classes[entry_type].valid_request(**kwargs)
             if verbose:
                 stat = f'Adding {entry_type}' if valid else f'Skipping {entry_type}'
                 print(f'{stat:18s}  {row}')
@@ -301,7 +319,7 @@ class Project:
                 del kwargs['name']
                 this = Task(name=name, **kwargs)
             if valid:
-                getattr(self, f"add_{entry_type}")(this)
+                self.add_entry(this)
         if fp is not None:
             fp.close()
 

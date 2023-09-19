@@ -50,7 +50,7 @@ class Entry:
             pass
 
     def make_key(self, keystr):
-        self.key = hashlib.md5(keystr.encode('ascii')).hexdigest()[:6]
+        return hashlib.md5(keystr.encode('ascii')).hexdigest()[:6]
 
     def add_note(self, note):
         self.note.append(note)
@@ -122,7 +122,7 @@ class Milestone(Entry):
         self.type = 'milestone'
         if self.marker is None:
             self.marker = 'D'
-        self.make_key(name)
+        self.key = self.make_key(name)
         self.init_timing(kwargs)
 
     def init_timing(self, kwargs):
@@ -175,7 +175,7 @@ class Timeline(Entry):
             return
         super().__init__(name=name, **kwargs)
         self.type = 'timeline'
-        self.make_key(name)
+        self.key = self.make_key(name)
         self.init_timing(kwargs)
 
     def init_timing(self, kwargs):
@@ -239,20 +239,26 @@ class Task(Timeline):
 class Note(Entry):
     parameters = ['jot', 'date', 'reference']
     def __init__(self, jot, date='now', reference=None):
-        if jot is None:
-            return
-        self.date = gu.datetimedelta(date)
-        self.jot = jot
-        if reference is None:
-            self.reference = []
-        elif isinstance(reference, str):
-            self.reference = reference.split(',')
-        elif isinstance(reference, list):
-            self.reference = reference
+        if jot is None:  # Just want the parameters
+            pass
+        elif valid_request(jot=jot):
+            self.date = gu.datetimedelta(date)
+            self.jot = jot
+            if reference is None:
+                self.reference = []
+            elif isinstance(reference, str):
+                self.reference = reference.split(',')
+            elif isinstance(reference, list):
+                self.reference = reference
+            else:
+                print(f"Invalid reference {reference}")
+            self.type = 'note'
+            self.key = self.make_key(jot)
         else:
-            print(f"Invalid reference {reference}")
-        self.type = 'note'
-        self.make_key(jot)
+            print("Invalid Note request.")
+
+    def valid_request(self, **kwargs):
+        return True if 'jot' in kwargs and isinstance(kwargs['jot'], str) and len(kwargs['jot'].strip()) else False
 
     def add_reference(self, key):
         """
