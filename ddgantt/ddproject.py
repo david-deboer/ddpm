@@ -36,8 +36,11 @@ class Project:
             self.predecessor_timing_flags[pt] = False
 
     def add_entry(self, entry):
-        if entry.key in self.all_entries.keys():
-            print(f"Warning - not adding '{entry.type}': Key for {entry.name} already used ({entry.key}).")
+        try:
+            if entry.key in self.all_entries.keys():
+                print(f"Warning - not adding '{entry.type}': Key for {entry.name} already used ({entry.key}).")
+                return
+        except AttributeError:
             return
         self.all_entries[entry.key] = copy(entry)
         if entry.type in ['milestone', 'note']:
@@ -217,49 +220,13 @@ class Project:
             if len(hdr.strip()):
                 for h in hdr.split(':'):
                     kwargs[h.strip()] = r.strip()
-
-        if 'type' in header:
-            hind = header.index('type')
-            if isinstance(row[hind], str) and row[hind].lower() in self.entry_types:
-                return row[hind]
-        if 'ends' in header:
-            eind = header.index('ends')
-            if isinstance(row[eind], str) and len(row[eind].strip()):
-                status = False
-                if 'status' in header:
-                    sind = header.index('status')
-                    if isinstance(row[sind], str):
-                        status = len(row[sind].strip())
-                    else:
-                        status = row[sind]
-                if status:
-                    return 'task'
-                else:
-                    return 'timeline'
-        if 'name' in header:
-            rind = header.index('name')
-            if isinstance(row[rind], str) and len(row[rind]):
-                return 'milestone'
-        return 'note'
-
-    def _is_valid_entry(self, entry_type, kwargs):
-        if entry_type == 'note':
-            return self.empty_classes['']
-        if 'name' not in kwargs  or not len(kwargs['name'].strip()):
-            return False
-        timing = 0
-        if entry_type == 'milestone':
-            if 'duration' in kwargs and len(kwargs['duration'].strip()):
-                return False
-            for par in ['date', 'predecessors']:
-                if par in kwargs and len(kwargs[par].strip():
-                    timing += 1
-            return True if timing == 1 else False
-        # Is task or timeline
-        for par in ['begins', 'ends', 'duration', 'predecessors']:
-            if par in kwargs and len(kwargs[par].strip()):
-                timing += 1
-        return True if timing == 2 else False
+        if 'type' in kwargs:
+            if isinstance(kwargs['type'], str) and kwargs['type'].lower() in self.entry_types:
+                return kwargs['type']
+        for trial in ['task', 'timeline', 'milestone', 'note']:
+            if self.empty_classes[trial].valid_request(**kwargs):
+                return trial
+        return False
 
     def _preproc_val(self, hdr, val):
         """
@@ -279,7 +246,7 @@ class Project:
     def csvread(self, loc, verbose=False):
         fp = None
         print(f"Reading {loc}")
-        self.empty_classes = {'entry': Entry(None), 'milestone': Milestone(None), 'timeline': Timeline(None), 'task':  Task(None), 'note':  Note(None)}
+        self.empty_classes = {'entry': Entry(), 'milestone': Milestone(None), 'timeline': Timeline(None), 'task':  Task(None), 'note':  Note(None)}
 
         if loc.startswith('http'):
             data = gu.load_sheet_from_url(loc)
@@ -292,34 +259,38 @@ class Project:
         
         for row in reader:
             entry_type = self._determine_entry_type(header, row)
+            if not entry_type:
+                print(f"No valid entry_type:  {row}")
+                continue
             kwargs = {}
             for hdrc, val in zip(header, row):
                 for hdr in hdrc.split(':'):
                     if hdr.strip() in self.empty_classes[entry_type].parameters:
                         kwargs[hdr] = self._preproc_val(hdr, val)
                         break
-            valid = self.empty_classes[entry_type].valid_request(**kwargs)
-            if verbose:
-                stat = f'Adding {entry_type}' if valid else f'Skipping {entry_type}'
-                print(f'{stat:18s}  {row}')
-            if entry_type == 'note' and valid:
-                jot = copy(kwargs['jot'])
-                del kwargs['jot']
-                this = Note(jot=jot, **kwargs)
-            elif entry_type == 'milestone' and valid:
-                name, date = copy(kwargs['name']), copy(kwargs['date'])
-                del kwargs['name'], kwargs['date']
-                this = Milestone(name=name, date=date, **kwargs)
-            elif entry_type == 'timeline' and valid:
-                name = copy(kwargs['name'])
-                del kwargs['name']
-                this = Timeline(name=name, **kwargs)
-            elif entry_type == 'task' and valid:
-                name = copy(kwargs['name'])
-                del kwargs['name']
-                this = Task(name=name, **kwargs)
-            if valid:
+            if self.empty_classes[entry_type].valid_request(**kwargs):
+                if verbose:
+                    print(f'Adding {entry_type}  {row}')
+                if entry_type == 'note':
+                    jot = copy(kwargs['jot'])
+                    del kwargs['jot']
+                    this = Note(jot=jot, **kwargs)
+                elif entry_type == 'milestone':
+                    name = copy(kwargs['name'])
+                    del kwargs['name']
+                    this = Milestone(name=name, **kwargs)
+                elif entry_type == 'timeline':
+                    name = copy(kwargs['name'])
+                    del kwargs['name']
+                    this = Timeline(name=name, **kwargs)
+                elif entry_type == 'task':
+                    name = copy(kwargs['name'])
+                    del kwargs['name']
+                    this = Task(name=name, **kwargs)
                 self.add_entry(this)
+            elif verbose:
+                print(f"Skipping invalid {entry_type}:  {row}.")
+
         if fp is not None:
             fp.close()
 

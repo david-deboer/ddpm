@@ -1,53 +1,65 @@
 from . import gantt_util as gu
 import datetime
 import hashlib
+from copy import copy
 
 
 class Entry:
-    def __init__(self, name, **kwargs):
+    def __init__(self, **kwargs):
         # Set parameter defaults to None
+        if len(kwargs):
+            self._init_parameters()
+            self._update_parameters(**kwargs)
+
+    def _init_parameters(self):
         for par in self.parameters:
             setattr(self, par, None)
         self.updated = gu.datetimedelta('now')
 
+    def _update_parameters(self, **kwargs):
         # Update parameters
-        self.name = name
         for key, val in kwargs.items():
             if key not in self.parameters:
-                print(f"Invalid key {key} in {self.name}")
+                print(f"Invalid key '{key}' for {self.type}.")
                 continue
             if key in gu.DATE_FIELDS:
                 setattr(self, key, gu.datetimedelta(val, key))
             elif key in gu.LIST_FIELDS and isinstance(val, str):
                 setattr(self, key, val.split(','))
+            elif isinstance(val, str):
+                setattr(self, key, val.strip())
             else:
                 setattr(self, key, val)
 
-        if self.note is None:
-            self.note = []
-        elif isinstance(self.note, str):
-            self.note = [self.note]
+        if 'note' in self.parameters:
+            if self.note is None:
+                self.note = []
+            elif isinstance(self.note, str):
+                self.note = [self.note]
 
-        if isinstance(self.color, str) and self.color.startswith('('):
-            self.color = [float(_x) for _x in self.color.strip('()').split(',')]
-        if isinstance(self.color, str) and not len(self.color):
-            self.color = 'k'
+        if 'color' in self.parameters:
+            if isinstance(self.color, str) and self.color.startswith('('):
+                self.color = [float(_x) for _x in self.color.strip('()').split(',')]
+            if isinstance(self.color, str) and not len(self.color):
+                self.color = 'k'
 
         try:
             self.status = float(self.status.strip('%'))
         except (ValueError, TypeError, AttributeError):
             pass
-        if self.lag is None:
-            self.lag = 0.0
-        else:
+        if 'lag' in self.parameters:
+            if self.lag is None:
+                self.lag = 0.0
+            else:
+                try:
+                    self.lag = float(self.lag)
+                except (ValueError, TypeError, AttributeError):
+                    pass
+        if 'complete' in self.parameters:
             try:
-                self.lag = float(self.lag)
+                self.complete = float(self.complete)
             except (ValueError, TypeError, AttributeError):
                 pass
-        try:
-            self.complete = float(self.complete)
-        except (ValueError, TypeError, AttributeError):
-            pass
 
     def make_key(self, keystr):
         return hashlib.md5(keystr.encode('ascii')).hexdigest()[:6]
@@ -114,16 +126,20 @@ class Milestone(Entry):
         color : str, None
             Color used for plotting, if None or 'auto' make based on status/lag
         """
+        self.type = 'milestone'
         self.parameters = ['name', 'date', 'owner', 'label', 'status', 'note', 'updated', 'complete',
                            'predecessors', 'lag', 'groups', 'colinear', 'marker', 'color']
+        kwargs.update({'name': name})
         if name is None:
-            return
-        super().__init__(name=name, **kwargs)
-        self.type = 'milestone'
-        if self.marker is None:
-            self.marker = 'D'
-        self.key = self.make_key(name)
-        self.init_timing(kwargs)
+            pass
+        elif self.valid_request(**kwargs):
+            super().__init__(**kwargs)
+            if self.marker is None:
+                self.marker = 'D'
+            self.key = self.make_key(name)
+            self.init_timing(kwargs)
+        else:
+            print("Invalid Milestone request.")
 
     def init_timing(self, kwargs):
         self.predecessor_timing = False
@@ -133,8 +149,24 @@ class Milestone(Entry):
                 provided_timing.add(key)
         if len(provided_timing) == 2:
             raise ValueError("Can't provide date and predecessors.")
+        if not len(provided_timing):
+            raise ValueError("Must provide one form of timing.")
         if provided_timing == {'predecessors'}:
-            self.predecessor_timing = True  # This flag will be looked for later in project
+            self.predecessor_timing = True  # This flag will be looked for later in ddproject
+
+    def valid_request(self, **kwargs):
+        if 'duration' in kwargs and len(kwargs['duration'].strip()):
+            return False
+        if 'name' not in kwargs or not isinstance(kwargs['name'], str) or not len(kwargs['name'].strip()):
+            return False
+        timing = 0
+        for par in ['date', 'predecessors']:
+            if par in kwargs:
+                if isinstance(kwargs[par], str) and len(kwargs[par].strip()):
+                    timing += 1
+                elif isinstance(kwargs[par], (datetime.datetime, list)):
+                    timing += 1
+        return True if timing == 1 else False
 
     def set_predecessor_timing(self, timing):
         self.date = max(timing) + datetime.timedelta(days=self.lag)
@@ -167,16 +199,20 @@ class Timeline(Entry):
                            {'predecessors', 'duration'}]
 
     def __init__(self, name, **kwargs):
+        self.type = 'timeline'
         try:
             self.parameters = self.tl_parameters + self.parameters
         except AttributeError:
-            self.parameters = self.tl_parameters
+            self.parameters = copy(self.tl_parameters)
+        kwargs.update({'name': name})
         if name is None:
-            return
-        super().__init__(name=name, **kwargs)
-        self.type = 'timeline'
-        self.key = self.make_key(name)
-        self.init_timing(kwargs)
+            pass
+        elif self._valid_request(**kwargs):
+            super().__init__(**kwargs)
+            self.key = self.make_key(name)
+            self.init_timing(kwargs)
+        else:
+            print("Invalid Timeline request.")
 
     def init_timing(self, kwargs):
         # Check/get timing
@@ -197,6 +233,21 @@ class Timeline(Entry):
             elif 'begins' not in provided_timing:
                 self.begins = self.ends - self.duration
 
+    def valid_request(self, **kwargs):
+        return self._valid_request(**kwargs)
+
+    def _valid_request(self, **kwargs):
+        if 'name' not in kwargs or not isinstance(kwargs['name'], str) or not len(kwargs['name'].strip()):
+            return False
+        provided_timing = set()
+        for par in ['begins', 'ends', 'duration', 'predecessors']:
+            if par in kwargs:
+                if isinstance(kwargs[par], str) and len(kwargs[par].strip()):
+                    provided_timing.add(par)
+                elif isinstance(kwargs[par], (datetime.datetime, datetime.timedelta, list)):
+                    provided_timing.add(par)
+        return True if provided_timing in self.allowed_timing_sets else False
+
     def set_predecessor_timing(self, timing):
         self.begins = max(timing) + datetime.timedelta(days=self.lag)
         self.ends = self.begins + self.duration
@@ -214,10 +265,18 @@ class Timeline(Entry):
 
 
 class Task(Timeline):
+    ta_extra = ['owner', 'status', 'complete']
     def __init__(self, name, **kwargs):
-        self.parameters = ['owner', 'status', 'complete']
+        self.parameters = copy(self.ta_extra)
         super().__init__(name=name, **kwargs)
         self.type = 'task'
+
+    def valid_request(self, **kwargs):  # This actually just differentiates if a Task
+        if self._valid_request(**kwargs):
+            for par in self.ta_extra:
+                if par in kwargs and isinstance(kwargs[par], (str, float, int)):
+                    return True
+        return False
 
     def get_color(self):
         if self.color is None or self.color == 'auto':
@@ -239,9 +298,10 @@ class Task(Timeline):
 class Note(Entry):
     parameters = ['jot', 'date', 'reference']
     def __init__(self, jot, date='now', reference=None):
+        self.type = 'note'
         if jot is None:  # Just want the parameters
             pass
-        elif valid_request(jot=jot):
+        elif self.valid_request(jot=jot):
             self.date = gu.datetimedelta(date)
             self.jot = jot
             if reference is None:
@@ -252,7 +312,6 @@ class Note(Entry):
                 self.reference = reference
             else:
                 print(f"Invalid reference {reference}")
-            self.type = 'note'
             self.key = self.make_key(jot)
         else:
             print("Invalid Note request.")
