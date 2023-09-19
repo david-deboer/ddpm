@@ -258,7 +258,10 @@ class Project:
         else:
             print(f"Information:  {val} is not a str ({hdr}) - do I care?")
         if hdr == 'colinear':
-            val = self.empty_classes['entry'].make_key(val)
+            if val.startswith('#'):
+                val = val.strip('#')
+            else:
+                val = self.empty_classes['entry'].make_key(val)
         return val
 
     def csvread(self, loc, verbose=False):
