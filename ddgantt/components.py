@@ -76,7 +76,7 @@ class Entry:
     def add_note(self, note):
         self.note.append(note)
 
-    def gen_script_entry(self, entrytype, entryname, projectname):
+    def gen_script_entry(self, ctr, projectname):
         kwlist = []
         for par in self.parameters:
             val = getattr(self, par)
@@ -90,13 +90,15 @@ class Entry:
                 try:
                     val = f"{float(val):.1f}"
                     val = val.split('.')[0] if val.endswith('.0') else val
+                    is_num = True
                 except ValueError:
                     val = str(val).strip()
+                    is_num = False
             if len(val):
-                sp = ',' if ' ' in val else ''
+                sp = '' if is_num else "'"
                 kwlist.append(f"{par}={sp}{val}{sp}")
-        s = f"{entryname} = gantt.{entrytype}({', '.join(kwlist)})\n"
-        s += f"{projectname}.add_{entrytype.lower()}({entryname})"
+        s = f"{self.type}{ctr} = ddp.{self.type.capitalize}({', '.join(kwlist)})\n"
+        s += f"{projectname}.add_entry({self.type}{ctr})"
         return s
 
 

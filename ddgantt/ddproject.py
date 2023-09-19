@@ -312,15 +312,15 @@ class Project:
         This will write out the project to a python script.
         """
         print(f"Writing {fn}")
+        ctr = {}
         with open(fn, 'w') as fp:
-            print("from ddgantt import gantt\n", file=fp)
-            print(f"{projectname} = gantt.Project('{self.name}', organization='{self.organization}')\n", file=fp)
-            for entries in ['milestone', 'timeline', 'task', 'note']:
-                ctr = 1
-                for entry in getattr(self, f"{entries}s").values():
-                    entryname = f"{entries}{ctr}"
-                    print(entry.gen_script_entry(entries.capitalize(), entryname, projectname), file=fp)
-                    ctr += 1
+            print("from ddgantt import ddproject as ddp\n", file=fp)
+            org = '' if self.organization is None else f", organization='{self.organization}'"
+            print(f"{projectname} = gantt.Project('{self.name}'{org})\n", file=fp)
+            for entry in self.all_entries.values():
+                ctr[entry.type].setdefault(1)
+                print(entry.gen_script_entry(ctr[entry.type], projectname), file=fp)
+                ctr[entry.type] += 1
 
     def csvwrite(self, fn):
         print(f"Writing csv file {fn}")
