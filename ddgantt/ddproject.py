@@ -1,4 +1,4 @@
-from copy import copy, deepcopy
+from copy import copy
 from . import plotting
 from . import gantt_util as gu
 from ddgantt.components import *
