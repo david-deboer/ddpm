@@ -17,8 +17,7 @@ color_palette = [
 DATE_FIELDS = ['date', 'begins', 'ends', 'updated', 'duration']
 LIST_FIELDS = ['note', 'predecessors', 'groups', 'reference']
 PAST = datetime.datetime(year=2000, month=1, day=1)
-FUTURE = datetime.datetime(year=2040, month=12, day=31)
-# STATUS_COLOR = {'complete': 'g', 'late': 'r', 'other': 'k', 'moved': 'y', 'removed': 'w', 'none': 'k'}
+FUTURE = datetime.datetime(year=2050, month=12, day=31)
 STATUS_COLOR = {
     'complete': color_palette[2],
     'late': 'r',
@@ -30,6 +29,20 @@ STATUS_COLOR = {
 
 
 def pretty_duration(seconds):
+    """
+    Display a duration (given in seconds) in a more human-readable form.
+
+    Parameters
+    ----------
+    seconds : float, int
+        Number of seconds in the duration
+
+    Return
+    ------
+    str
+        Text of the duration.
+
+    """
     years = seconds / (86400 * 365)  # approximately...
     seconds = int(seconds)
     days, seconds = divmod(seconds, 86400)
@@ -48,6 +61,19 @@ def pretty_duration(seconds):
     return s
 
 def load_sheet_from_url(url):
+    """
+    Load in a csv-sheet from a published googledoc
+
+    Parameters
+    ----------
+    url : str
+        url containing the published googledoc
+    
+    Return
+    ------
+    list
+        list of strings containing the csv data
+    """
     sheet_info = []
     try:
         xxx = requests.get(url)

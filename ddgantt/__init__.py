@@ -1,2 +1,2 @@
-from . import gantt
+from . import ddproject
 
