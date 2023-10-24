@@ -5,8 +5,20 @@ from copy import copy
 
 
 class Entry:
+    """
+    Component Entry baseclass - it needs parameters to be set in child component.
+
+    This baseclass has the small number of common methods across all components.  Each component gets a
+    unique hash key, which is defined in a method here.
+
+    """
     def __init__(self, **kwargs):
-        # Set parameter defaults to None
+        """
+        Initialize the component Entry baseclass.
+
+        First sets all of the component parameters to None, and then updates them with supplied values.
+
+        """
         if len(kwargs):
             self._init_parameters()
             self._update_parameters(**kwargs)
@@ -21,12 +33,13 @@ class Entry:
             return "Blank Entry"
 
     def _init_parameters(self):
+        """Set all parameters to None and initialize 'updated' attribute to now."""
         for par in self.parameters:
             setattr(self, par, None)
         self.updated = gu.datetimedelta('now')
 
     def _update_parameters(self, **kwargs):
-        # Update parameters
+        """Update any parameter attributes with some baselevel checking."""
         for key, val in kwargs.items():
             if key not in self.parameters:
                 print(f"Invalid key '{key}' for {self.type}.")
@@ -71,12 +84,33 @@ class Entry:
                 pass
 
     def make_key(self, keystr):
+        """Generate the unique hash key"""
         return hashlib.md5(keystr.encode('ascii')).hexdigest()[:6]
 
     def add_note(self, note):
+        """Add a note string to the note list."""
         self.note.append(note)
 
+    def get_color(self):
+        print("Consolidate all of the get_color methods in the components below.")
+
     def gen_script_entry(self, ctr, projectname):
+        """
+        Take a component Entry and generate a python script line to implement it.
+
+        Parameters
+        ----------
+        ctr : int
+            Project supplied integer to provide a unique id.
+        projectname : str
+            Name of the project that is looking for this update script line.
+        
+        Return
+        ------
+        str
+            A line of python text that would implement the component Entry
+
+        """
         kwlist = []
         for par in self.parameters:
             val = getattr(self, par)
@@ -133,6 +167,7 @@ class Milestone(Entry):
             Marker used for plotting
         color : str, None
             Color used for plotting, if None or 'auto' make based on status/lag
+
         """
         self.type = 'milestone'
         self.parameters = ['name', 'date', 'owner', 'label', 'status', 'note', 'updated', 'complete',
@@ -163,6 +198,7 @@ class Milestone(Entry):
             self.predecessor_timing = True  # This flag will be looked for later in ddproject
 
     def valid_request(self, **kwargs):
+        """Check that sufficient info (mainly timing) is provided to define a milestone"""
         if 'duration' in kwargs and len(kwargs['duration'].strip()):
             return False
         if 'name' not in kwargs or not isinstance(kwargs['name'], str) or not len(kwargs['name'].strip()):
@@ -208,7 +244,7 @@ class Timeline(Entry):
 
     def __init__(self, name, **kwargs):
         self.type = 'timeline'
-        try:
+        try:  # Done this way to allow for the extra task parameters.
             self.parameters = self.tl_parameters + self.parameters
         except AttributeError:
             self.parameters = copy(self.tl_parameters)
@@ -277,7 +313,7 @@ class Task(Timeline):
     def __init__(self, name, **kwargs):
         self.parameters = copy(self.ta_extra)
         super().__init__(name=name, **kwargs)
-        self.type = 'task'
+        self.type = 'task'  # Overwrites 'timeline' type so is after super()
 
     def valid_request(self, **kwargs):  # This actually just differentiates Task or Timeline
         if self._valid_request(**kwargs):

@@ -9,7 +9,7 @@ import csv
 
 class Project:
     """
-    Project
+    This is a collection of components (components.py) and handles them as an aggregate.
     """
     columns = ['name', 'begins:date', 'ends', 'duration', 'colinear', 'color', 'status', 'groups', 'label',
                'complete', 'marker', 'note:jot', 'owner', 'predecessors:reference', 'updated', 'type', 'key']
