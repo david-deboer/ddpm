@@ -19,34 +19,50 @@ class Gantt:
     def __init__(self, name=None):
         self.name = name
 
-    def setup(self, dates, labels, ykeys, extrema):
+    def setup(self, dates, plotpars, labels, ykeys, extrema):
         """
         Parameters
         ----------
         dates : list
-            list of list-pairs of datetimes that comprise the data
-        labels : labels to use
+            each entry is a datetime pair (or end is None)
+        plotpars : list
+            list of Namespaces containing the data for the chart
+        labels : list
+            extra labels for entries
+        ykeys : list
+            entry keys contained within the plot
+        extrema : Namespace
+            min/max datetimes
         """
         self.dates = dates
+        self.plotpars = plotpars
         self.labels = labels
         self.ykeys = ykeys
         self.extrema = extrema
         self.datemin, self.datemax = matplotlib.dates.date2num(extrema.min), matplotlib.dates.date2num(extrema.max)
         self.deltadate = self.datemax - self.datemin
 
-    def plot_weekends(self):
+    def plot_weekends(self, color='lightcyan'):
+        """
+        Include weekend on the plot.
+        
+        Parameter
+        ---------
+        color : str
+            color to use for the weekends
+        """
         first_sat = copy(self.extrema.min)
         while first_sat.weekday() != 5:
             first_sat += datetime.timedelta(days=1)
         ybound = 1.1 * len(self.ykeys)
         this_date = copy(first_sat)
         while this_date < self.extrema.max:
-            plt.fill_between([this_date, this_date + datetime.timedelta(days=2)], [ybound, ybound], -10, color='lightcyan')
+            plt.fill_between([this_date, this_date + datetime.timedelta(days=2)], [ybound, ybound], -10, color=color)
             this_date += datetime.timedelta(days=7)
 
     def assign_yvals_labels(self):
         """
-        Assigned a yvalue to all (colinear thing...)
+        Assigned a yvalue to all ykeys (colinear thing...)
         """
         step = 0.5
         ymin = step
@@ -98,7 +114,7 @@ class Gantt:
                 self.fmttr = "(%a) %b/%d"
         self.interval = interval
 
-    def chart(self, plotpars, **kwargs):
+    def chart(self, **kwargs):
         """
         This will plot a gantt chart of items (ylabels) and dates.  If included, it will plot percent
         complete for tasks and color code for milestones (note, if included, it must have a status_codes
@@ -108,11 +124,7 @@ class Gantt:
 
         Parameters
         ----------
-        dates : list of lists -- each individual is a datetime pair (or end is None)
-        labels : labels for dates
-        markers : colors for entry
-        extrema : 2 element list of min/max datetimes
-        kwargs : interval, grid, show_weekends
+
         """
         # Initialise plot
         fig1 = plt.figure(figsize=(12, 8), tight_layout=True)
