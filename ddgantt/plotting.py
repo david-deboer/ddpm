@@ -162,9 +162,9 @@ class Gantt:
         loc = matplotlib.dates.RRuleLocator(rule)
         formatter = matplotlib.dates.DateFormatter(self.fmttr)
         ax1.xaxis.set_major_locator(loc)
-        ax1.xaxis.set_major_formatter(formatter)
-        labelsx = ax1.get_xticklabels()
-        plt.setp(labelsx, rotation=30, fontsize=12)
+        #ax1.xaxis.set_major_formatter(formatter)
+        #labelsx = ax1.get_xticklabels()
+        #plt.setp(labelsx, rotation=30, fontsize=12)
 
         # Finish up
         ax1.invert_yaxis()
