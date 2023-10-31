@@ -11,7 +11,7 @@ import datetime
 import matplotlib.pyplot as plt
 import matplotlib.dates
 import numpy as np
-from ddgantt.gantt_util import color_palette
+from ddgantt.util import color_palette
 from copy import copy
 
 
@@ -140,9 +140,8 @@ class Gantt:
         # Format the y-axis
         locsy, labelsy = plt.yticks(self.yticks, self.ylabels)
         plt.setp(labelsy, fontsize=14)
-        if 'grid' in kwargs and not kwargs['grid']:
-            pass
-        else:
+        show_grid = False if 'grid' not in kwargs else kwargs['grid']
+        if show_grid:
             plt.grid(color='0.6', linestyle=':')
 
         # Plot current time

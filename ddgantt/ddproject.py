@@ -1,6 +1,6 @@
 from copy import copy
 from . import plotting
-from . import gantt_util as gu
+from . import util
 from ddgantt.components import *
 import datetime
 from argparse import Namespace
@@ -139,7 +139,7 @@ class Project:
                             timing.append(that.date if that.type == 'milestone' else that.ends)
                         self.all_entries[key].set_predecessor_timing(timing)
 
-    def chart(self, chart='all', sortby=['begins', 'date', 'name', 'ends'], interval=None, show_weekends=True):
+    def chart(self, chart='all', sortby=['begins', 'date', 'name', 'ends'], interval=None, grid=False, show_weekends=True):
         """
         Make a gantt chart.
 
@@ -152,13 +152,15 @@ class Project:
         self.set_predecessors()
         if chart == 'all':
             chart = self.chart_types
+        elif isinstance(chart, str):
+            chart = [chart]
         dates = []
         labels = []
         plotpars = []
         ykeys = []  # keys lists the keys used, used to make the vertical axis including colinear
         extrema = self._get_event_extrema()
         duration = extrema.max - extrema.min
-        print(f"Duration = {gu.pretty_duration(duration.total_seconds())}")
+        print(f"Duration = {util.pretty_duration(duration.total_seconds())}")
         for sortkey in self._sort_(chart, sortby):
             this = self.all_entries[sortkey]
             if this.type == 'milestone':
@@ -177,7 +179,7 @@ class Project:
             ykeys.append(this.key)
         ykeys = self._align_keys(ykeys)
         self.gantt.setup(dates=dates, labels=labels, ykeys=ykeys, extrema=extrema)
-        self.gantt.chart(plotpars, interval=interval, show_weekends=show_weekends)
+        self.gantt.chart(plotpars, interval=interval, grid=grid, show_weekends=show_weekends)
 
     def cumulative(self, step=1.0, show=True):
         """
@@ -232,7 +234,7 @@ class Project:
             print(f"{this.jot}  {this.date.strftime('%Y-%m-%d %H:%M')}  - ({', '.join(this.reference)})")
 
     def color_bar(self):
-        gu.color_bar()
+        util.color_bar()
 
     def _determine_entry_type(self, header, row):
         kwargs = {}
@@ -269,11 +271,11 @@ class Project:
     def csvread(self, loc, verbose=False):
         fp = None
         print(f"Reading {loc}")
-        self.empty_classes = {'entry': Entry(), 'milestone': Milestone(None), 'timeline': Timeline(None), 'task':  Task(None), 'note':  Note(None)}
+        self.empty_classes = components_dict()  # defined in components.py
         classdecl = {'milestone': Milestone, 'timeline': Timeline, 'task': Task}
 
         if loc.startswith('http'):
-            data = gu.load_sheet_from_url(loc)
+            data = util.load_sheet_from_url(loc)
             header = copy(data[0])
             reader = data[1:]
         else:
@@ -292,6 +294,8 @@ class Project:
                     if hdr.strip() in self.empty_classes[entry_type].parameters:
                         kwargs[hdr] = self._preproc_val(hdr, val)
                         break
+                    elif verbose:
+                        print(f"{hdr} not valid component.")
             if self.empty_classes[entry_type].valid_request(**kwargs):
                 if verbose:
                     print(f'Adding {entry_type}  {row}')
@@ -339,9 +343,9 @@ class Project:
                                 val = getattr(this, col)
                                 if val is None:
                                     val = ''
-                                elif col in gu.DATE_FIELDS:
-                                    val = gu.datedeltastr(val)
-                                elif col in gu.LIST_FIELDS:
+                                elif col in util.DATE_FIELDS:
+                                    val = util.datedeltastr(val)
+                                elif col in util.LIST_FIELDS:
                                     val = '|'.join([str(_x) for _x in val])
                                 row.append(val)
                                 added = True
