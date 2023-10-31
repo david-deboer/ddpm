@@ -148,6 +148,7 @@ class Project:
         sortby : list or 'all' (chart_types)
            fields to sort by
         """
+        self.gantt = plotting.Gantt(name = self.name)
         self.set_predecessors()
         if chart == 'all':
             chart = self.chart_types
@@ -175,7 +176,8 @@ class Project:
                 labels.append(this.name)
             ykeys.append(this.key)
         ykeys = self._align_keys(ykeys)
-        plotting.gantt_chart(dates, labels, plotpars, ykeys, extrema, interval=interval)
+        self.gantt.setup(dates=dates, labels=labels, ykeys=ykeys, extrema=extrema)
+        self.gantt.chart(plotpars, interval=interval)
 
     def cumulative(self, step=1.0, show=True):
         """
