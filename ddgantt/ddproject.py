@@ -139,7 +139,7 @@ class Project:
                             timing.append(that.date if that.type == 'milestone' else that.ends)
                         self.all_entries[key].set_predecessor_timing(timing)
 
-    def chart(self, chart='all', sortby=['begins', 'date', 'name', 'ends'], interval=None):
+    def chart(self, chart='all', sortby=['begins', 'date', 'name', 'ends'], interval=None, show_weekends=True):
         """
         Make a gantt chart.
 
@@ -177,7 +177,7 @@ class Project:
             ykeys.append(this.key)
         ykeys = self._align_keys(ykeys)
         self.gantt.setup(dates=dates, labels=labels, ykeys=ykeys, extrema=extrema)
-        self.gantt.chart(plotpars, interval=interval)
+        self.gantt.chart(plotpars, interval=interval, show_weekends=show_weekends)
 
     def cumulative(self, step=1.0, show=True):
         """

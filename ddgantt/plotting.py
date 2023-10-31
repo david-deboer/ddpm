@@ -112,7 +112,7 @@ class Gantt:
         labels : labels for dates
         markers : colors for entry
         extrema : 2 element list of min/max datetimes
-        kwargs : interval, grid
+        kwargs : interval, grid, show_weekends
         """
         # Initialise plot
         fig1 = plt.figure(figsize=(12, 8), tight_layout=True)
@@ -121,6 +121,9 @@ class Gantt:
                  xmax=matplotlib.dates.date2num(self.extrema.max)+self.deltadate/10.0)
         self.assign_yvals_labels()
         step = self.yticks[1] - self.yticks[0]
+        show_weekends = False if 'show_weekends' not in kwargs else kwargs['show_weekends']
+        if show_weekends:
+            self.plot_weekends()
 
         # Plot the data
         for i, dtlim in enumerate(self.dates):
@@ -145,8 +148,8 @@ class Gantt:
         # Plot current time
         now = datetime.datetime.now()
         if now >= self.extrema.min and now <= self.extrema.max:
-            now_date = matplotlib.dates.date2num(now)
-            plt.plot([now_date, now_date], [self.yticks[0]-step, self.yticks[-1]+step], '--', color=color_palette[3])
+            now_num = matplotlib.dates.date2num(now)
+            plt.plot([now_num, now_num], [self.yticks[0]-step, self.yticks[-1]+step], '--', color=color_palette[3])
         if int(self.deltadate) > 400:  # plot year markers
             yr1 = self.extrema.min.year
             yr2 = self.extrema.max.year
@@ -158,13 +161,13 @@ class Gantt:
         ax1.xaxis_date()  # Tell matplotlib that these are dates...
         interval = None if 'interval' not in kwargs else kwargs['interval']
         self.date_ticks(interval)
-        rule = matplotlib.dates.rrulewrapper(self.itvmapper, interval=interval)
+        rule = matplotlib.dates.rrulewrapper(self.itvmapper, interval=self.interval)
         loc = matplotlib.dates.RRuleLocator(rule)
         formatter = matplotlib.dates.DateFormatter(self.fmttr)
-        #ax1.xaxis.set_major_locator(loc)
-        #ax1.xaxis.set_major_formatter(formatter)
-        #labelsx = ax1.get_xticklabels()
-        #plt.setp(labelsx, rotation=30, fontsize=12)
+        ax1.xaxis.set_major_locator(loc)
+        ax1.xaxis.set_major_formatter(formatter)
+        labelsx = ax1.get_xticklabels()
+        plt.setp(labelsx, rotation=30, fontsize=12)
 
         # Finish up
         ax1.invert_yaxis()
