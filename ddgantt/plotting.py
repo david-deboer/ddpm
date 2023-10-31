@@ -139,7 +139,7 @@ class Gantt:
 
         # Plot the data
         for i, dtlim in enumerate(self.dates):
-            pp = plotpars[i]
+            pp = self.plotpars[i]
             start = matplotlib.dates.date2num(dtlim[0])
             if dtlim[1] is None:  # Milestone
                 plt.plot(start, self.yvals[i], pp.marker, color=pp.color, markersize=8)
