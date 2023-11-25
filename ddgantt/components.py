@@ -1,8 +1,15 @@
-from . import gantt_util as gu
+from . import util
 import datetime
 import hashlib
 from copy import copy
 
+
+def components_dict():
+    return {'entry': Entry(),
+            'milestone': Milestone(None),
+            'timeline': Timeline(None),
+            'task':  Task(None),
+            'note':  Note(None)}
 
 class Entry:
     """
@@ -36,7 +43,7 @@ class Entry:
         """Set all parameters to None and initialize 'updated' attribute to now."""
         for par in self.parameters:
             setattr(self, par, None)
-        self.updated = gu.datetimedelta('now')
+        self.updated = util.datetimedelta('now')
 
     def _update_parameters(self, **kwargs):
         """Update any parameter attributes with some baselevel checking."""
@@ -44,9 +51,9 @@ class Entry:
             if key not in self.parameters:
                 print(f"Invalid key '{key}' for {self.type}.")
                 continue
-            if key in gu.DATE_FIELDS:
-                setattr(self, key, gu.datetimedelta(val, key))
-            elif key in gu.LIST_FIELDS and isinstance(val, str):
+            if key in util.DATE_FIELDS:
+                setattr(self, key, util.datetimedelta(val, key))
+            elif key in util.LIST_FIELDS and isinstance(val, str):
                 setattr(self, key, val.split(','))
             elif isinstance(val, str):
                 setattr(self, key, val.strip())
@@ -116,9 +123,9 @@ class Entry:
             val = getattr(self, par)
             if val is None or not len(str(val).strip()):
                 continue
-            if par in gu.DATE_FIELDS:
-                val = gu.datedeltastr(val)
-            elif par in gu.LIST_FIELDS:
+            if par in util.DATE_FIELDS:
+                val = util.datedeltastr(val)
+            elif par in util.LIST_FIELDS:
                 val = '|'.join([str(x).strip() for x in val])
             else:
                 try:
@@ -224,14 +231,14 @@ class Milestone(Entry):
         else:
             return self.color
         if self.status != 'complete' and datetime.datetime.now() > self.date:
-            return gu.STATUS_COLOR['late']
+            return util.STATUS_COLOR['late']
         if self.status == 'complete' and self.complete is not None:
             if abs(self.complete) > 1.0:
-                return gu.complete2rgb(self.complete)
-            return gu.STATUS_COLOR['complete']
-        if self.status in gu.STATUS_COLOR:
-            return gu.STATUS_COLOR[self.status]
-        return gu.STATUS_COLOR['other']
+                return util.complete2rgb(self.complete)
+            return util.STATUS_COLOR['complete']
+        if self.status in util.STATUS_COLOR:
+            return util.STATUS_COLOR[self.status]
+        return util.STATUS_COLOR['other']
 
 
 class Timeline(Entry):
@@ -301,7 +308,7 @@ class Timeline(Entry):
 
     def get_color(self):
         if self.color is None or self.color == 'auto':
-            return gu.color_palette[0]
+            return util.color_palette[0]
         return self.color
 
     def add_note(self, note):
@@ -327,15 +334,15 @@ class Task(Timeline):
             if isinstance(self.status, float):
                 now = datetime.datetime.now()
                 if int(self.status) != 100 and now > self.ends:
-                    return gu.STATUS_COLOR['late']
+                    return util.STATUS_COLOR['late']
                 if self.begins > now:
-                    return gu.color_palette[0]
+                    return util.color_palette[0]
                 if self.complete is not None:
-                    return gu.complete2rgb(self.complete)
+                    return util.complete2rgb(self.complete)
                 pc_elapsed = 100.0 * (now - self.begins) / self.duration
                 completed = pc_elapsed - self.status if pc_elapsed > self.status else 0.0
-                return gu.complete2rgb((completed-50.0))
-            return gu.color_palette[0]
+                return util.complete2rgb((completed-50.0))
+            return util.color_palette[0]
         return self.color
 
 
@@ -346,7 +353,7 @@ class Note(Entry):
         if jot is None:  # Just want the parameters
             pass
         elif self.valid_request(jot=jot):
-            self.date = gu.datetimedelta(date)
+            self.date = util.datetimedelta(date)
             self.jot = jot
             if reference is None:
                 self.reference = []

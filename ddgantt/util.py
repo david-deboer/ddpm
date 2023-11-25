@@ -28,6 +28,21 @@ STATUS_COLOR = {
 }
 
 
+def components_parameters(show=True):
+    from . import components
+    allcmp = {}
+    for cmpnt, cls in components.components_dict().items():
+        try:
+            allcmp[cmpnt] = cls.parameters
+        except AttributeError:
+            pass
+    if show:
+        for cmpnt, clspar in allcmp.items():
+            print(f"{cmpnt}: {', '.join(clspar)}")
+    else:
+        return allcmp
+
+
 def pretty_duration(seconds):
     """
     Display a duration (given in seconds) in a more human-readable form.
