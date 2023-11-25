@@ -1,4 +1,3 @@
-### MOVED TO my_office ical_class
 import vobject
 import datetime
 from copy import copy
