@@ -28,13 +28,19 @@ STATUS_COLOR = {
 }
 
 
-def list_components_parameters():
+def components_parameters(show=True):
     from . import components
+    allcmp = {}
     for cmpnt, cls in components.components_dict().items():
         try:
-            print(f"{cmpnt}: {', '.join(cls.parameters)}")
+            allcmp[cmpnt] = cls.parameters
         except AttributeError:
             pass
+    if show:
+        for cmpnt, clspar in allcmp.items():
+            print(f"{cmpnt}: {', '.join(clspar)}")
+    else:
+        return allcmp
 
 
 def pretty_duration(seconds):

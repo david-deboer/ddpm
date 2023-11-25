@@ -11,11 +11,9 @@ class Project:
     """
     This is a collection of components (components.py) and handles them as an aggregate.
     """
-    columns = ['name', 'begins:date', 'ends', 'duration', 'colinear', 'color', 'status', 'groups', 'label',
-               'complete', 'marker', 'note:jot', 'owner', 'predecessors:reference', 'updated', 'type', 'key']
-    chart_types = ['milestone', 'timeline', 'task']
-    event_types = ['milestone', 'task']
-    other_types = ['note', 'timeline']
+    chart_types = ['task', 'milestone', 'timeline']
+    event_types = ['task', 'milestone']
+    other_types = ['timeline', 'note']
 
     def __init__(self, name, organization=None):
         self.entry_types = self.event_types + self.other_types
@@ -328,15 +326,44 @@ class Project:
                 print(entry.gen_script_entry(ctr[entry.type], projectname), file=fp)
                 ctr[entry.type] += 1
 
-    def csvwrite(self, fn):
+    def _get_csv_col(self, paired_col):
+        """Done ugly to get the complete and unique column headers."""
+        cols = []
+        trackcol = set()
+        pcdict = {}
+        for pcol in paired_col:
+            col2 = pcol.split(':')
+            pcdict[col2[0]] = col2[1]
+            pcdict[col2[1]] = col2[0]
+            pcdict[f"v{col2[0]}"] = pcol
+            pcdict[f"v{col2[1]}"] = pcol
+
+        entpar = util.components_parameters(show=False)
+        for entry in self.entry_types:
+            for p in entpar[entry]:
+                if p in pcdict:
+                    trackcol.add(pcdict[p])
+                if p not in trackcol:
+                    if p in pcdict:
+                        cols.append(pcdict[f'v{p}'])
+                    else:
+                        cols.append(p)
+                trackcol.add(p)
+#        cols = ['name', 'begins:date', 'ends', 'duration', 'colinear', 'color', 'status', 'groups', 'label',
+#                'complete', 'marker', 'note:jot', 'owner', 'predecessors:reference', 'updated', 'type', 'key']
+        return cols
+
+    def csvwrite(self, fn, paired_col=['begins:date', 'note:jot', 'predecessors:reference']):
         print(f"Writing csv file {fn}")
+        ccols = self._get_csv_col(paired_col=paired_col)
+        return ccols
         with open(fn, 'w') as fp:
             writer = csv.writer(fp)
-            writer.writerow(self.columns)
+            writer.writerow(ccols)
             for entry in ['milestones', 'timelines', 'tasks', 'notes']:
                 for this in getattr(self, entry).values():
                     row = []
-                    for cols in self.columns:
+                    for cols in ccols:
                         added = False
                         for col in cols.split(':'):
                             try:
