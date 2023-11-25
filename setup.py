@@ -7,13 +7,13 @@ from setuptools import setup
 import glob
 
 setup_args = {
-    'name': "ddgantt",
-    'description': "simple gantt",
+    'name': "ddproject",
+    'description': "Project tracking.",
     'license': "BSD",
     'author': "David DeBoer",
     'author_email': "david.r.deboer@gmail.com",
     'version': '0.1',
-    'packages': ['ddgantt']
+    'packages': ['ddproject']
     #'install_requires': ['pyyaml', 'json']
 }
 
