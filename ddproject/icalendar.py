@@ -2,6 +2,7 @@ import vobject
 import datetime
 from copy import copy
 import matplotlib.pyplot as plt
+from ddproject import ddproject, components
 from my_utils import time_data_tools as tdt
 import pytz
 
@@ -79,6 +80,25 @@ class iCal:
             del self.events['upcoming'][next_event]
 
     def ical_plot(self, eras = ['future', 'upcoming', 'next', 'current'], no_text=False):
+        iplot = ddproject.Project(self.icsfn)
+        for era in eras:
+            for event in sorted(self.events[era]):
+                if not len(self.events[era][event]['summary']):
+                    continue
+                if self.events[era][event]['summary'][0] == '|':
+                    clr = 'y'
+                else:
+                    clr = self.era_colors[era]
+                if 'description' in self.events[era][event]['event'].contents:
+                    if self.events[era][event]['event'].contents['description'][0].value == '?':
+                        clr = 'c'
+                iplot.add_entry(components.Timeline(name=self.events[era][event]['summary'],
+                                                    begins=self.events[era][event]['dtstart'],
+                                                    ends=self.events[era][event]['dtend'],
+                                                    color=clr))
+        iplot.chart()
+
+    def ical_plot_DEPR(self, eras = ['future', 'upcoming', 'next', 'current'], no_text=False):
         # Get limits
         early = to_dtz(datetime.datetime(year=2030, month=12, day=31))
         late = to_dtz(datetime.datetime(year=2010, month=1, day=1))

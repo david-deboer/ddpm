@@ -1,7 +1,7 @@
 from copy import copy
 from . import plotting
 from . import util
-from ddgantt import components
+from . import components
 import datetime
 from argparse import Namespace
 import csv

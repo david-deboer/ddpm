@@ -143,14 +143,14 @@ def datetimedelta(date, key=None, fmt=['%Y-%m-%d', '%y/%m/%d', '%Y-%m-%d %H:%M']
         except (TypeError, ValueError):
             return None
     if date == 'now':
-        return datetime.datetime.now()
+        return datetime.datetime.now().astimezone()
     if isinstance(date, datetime.datetime):
-        return date
+        return date.astimezone()
     if isinstance(date, str):
         for this_fmt in fmt:
             try:
                 dt = datetime.datetime.strptime(date, this_fmt)
-                return dt
+                return dt.astimezone()
             except ValueError:
                 pass
     raise ValueError(f"Invalid date format {type(date)} - {date}")
