@@ -1,7 +1,7 @@
 from copy import copy
 from . import plotting
 from . import util
-from ddgantt.components import *
+from ddgantt import components
 import datetime
 from argparse import Namespace
 import csv
@@ -11,13 +11,10 @@ class Project:
     """
     This is a collection of components (components.py) and handles them as an aggregate.
     """
-    chart_types = ['task', 'milestone', 'timeline']
-    event_types = ['task', 'milestone']
-    other_types = ['timeline', 'note']
 
     def __init__(self, name, organization=None):
-        self.entry_types = self.event_types + self.other_types
-        self.predecessor_types = copy(self.chart_types)
+        self.entry_types = components.event_types + components.other_types
+        self.predecessor_types = copy(components.chart_types)
         self.name = name
         self.organization = organization
         self.all_entries = {}
@@ -114,7 +111,7 @@ class Project:
 
     def _get_event_extrema(self):
         chkmin, chkmax = [], []
-        for event in self.chart_types:
+        for event in components.chart_types:
             if self.earliest[event] is not None:
                 chkmin.append(self.earliest[event])
             if self.latest[event] is not None:
@@ -149,7 +146,7 @@ class Project:
         self.gantt = plotting.Gantt(name = self.name)
         self.set_predecessors()
         if chart == 'all':
-            chart = self.chart_types
+            chart = components.chart_types
         elif isinstance(chart, str):
             chart = [chart]
         dates = []
@@ -269,8 +266,8 @@ class Project:
     def csvread(self, loc, verbose=False):
         fp = None
         print(f"Reading {loc}")
-        self.empty_classes = components_dict()  # defined in components.py
-        classdecl = {'milestone': Milestone, 'timeline': Timeline, 'task': Task}
+        self.empty_classes = components.components_dict()  # defined in components.py
+        classdecl = {'milestone': components.Milestone, 'timeline': components.Timeline, 'task': components.Task}
 
         if loc.startswith('http'):
             data = util.load_sheet_from_url(loc)
@@ -300,7 +297,7 @@ class Project:
                 if entry_type == 'note':
                     jot = copy(kwargs['jot'])
                     del kwargs['jot']
-                    this = Note(jot=jot, **kwargs)
+                    this = components.Note(jot=jot, **kwargs)
                 else:
                     name = copy(kwargs['name'])
                     del kwargs['name']

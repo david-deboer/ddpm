@@ -4,6 +4,11 @@ import hashlib
 from copy import copy
 
 
+chart_types = ['task', 'milestone', 'timeline']
+event_types = ['task', 'milestone']
+other_types = ['timeline', 'note']
+
+
 def components_dict():
     return {'entry': Entry(),
             'milestone': Milestone(None),

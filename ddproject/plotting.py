@@ -60,6 +60,20 @@ class Gantt:
             plt.fill_between([this_date, this_date + datetime.timedelta(days=2)], [ybound, ybound], -10, color=color)
             this_date += datetime.timedelta(days=7)
 
+    def plot_months(self, color='0.7'):
+        # ... months
+        plt.plot([self.now, self.now], [-10, ctr+10], 'c--', lw=3)
+        if early.day < 10:
+            first_day = datetime.datetime(year=early.year, month=early.month, day=1)
+            plt.plot([first_day, first_day], [-10, ctr+10], '--', color=color)
+        this_day = to_dtz(tdt.last_day_of_month(early, return_datetime=True)) + datetime.timedelta(days=1)
+        while this_day < late:
+            plt.plot([this_day, this_day], [-10, ctr+10], '--', color=color)
+            this_day = to_dtz(tdt.last_day_of_month(this_day, return_datetime=True)) + datetime.timedelta(days=1)
+        if late.day > 20:
+            this_day = to_dtz(tdt.last_day_of_month(late, return_datetime=True)) + datetime.timedelta(days=1)
+            plt.plot([this_day, this_day], [-10, ctr+10], '--', color=color)
+
     def assign_yvals_labels(self):
         """
         Assigned a yvalue to all ykeys (colinear thing...)

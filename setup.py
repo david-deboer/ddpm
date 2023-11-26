@@ -13,6 +13,7 @@ setup_args = {
     'author': "David DeBoer",
     'author_email': "david.r.deboer@gmail.com",
     'version': '0.1',
+    'scripts': glob.glob('scripts/*'),
     'packages': ['ddproject']
     #'install_requires': ['pyyaml', 'json']
 }
