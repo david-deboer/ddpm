@@ -81,6 +81,7 @@ class iCal:
 
     def ical_plot(self, eras = ['future', 'upcoming', 'next', 'current'], no_text=False):
         iplot = ddproject.Project(self.icsfn)
+        entry_labels = []
         for era in eras:
             for event in sorted(self.events[era]):
                 if not len(self.events[era][event]['summary']):
@@ -92,72 +93,19 @@ class iCal:
                 if 'description' in self.events[era][event]['event'].contents:
                     if self.events[era][event]['event'].contents['description'][0].value == '?':
                         clr = 'c'
-                iplot.add_entry(components.Timeline(name=self.events[era][event]['summary'],
+                this_entry = self.events[era][event]['summary']
+                if this_entry in entry_labels:
+                    entry_base = copy(this_entry)
+                    ctr = 1
+                    while this_entry in entry_labels:
+                        ctr += 1
+                        this_entry = f"{entry_base}-{ctr}"
+                entry_labels.append(this_entry)
+                iplot.add_entry(components.Timeline(name=this_entry,
                                                     begins=self.events[era][event]['dtstart'],
                                                     ends=self.events[era][event]['dtend'],
                                                     color=clr))
-        iplot.chart()
-
-    def ical_plot_DEPR(self, eras = ['future', 'upcoming', 'next', 'current'], no_text=False):
-        # Get limits
-        early = to_dtz(datetime.datetime(year=2030, month=12, day=31))
-        late = to_dtz(datetime.datetime(year=2010, month=1, day=1))
-        ctr = 0
-        for era in eras:
-            for i, event in enumerate(sorted(self.events[era], reverse=True)):
-                if self.events[era][event]['dtstart'] < early:
-                    early = copy(self.events[era][event]['dtstart'])
-                if self.events[era][event]['dtend'] > late:
-                    late = copy(self.events[era][event]['dtend'])
-                ctr += 1
-
-        # Paint calendar
-        plt.figure(self.icsfn)
-        # ... show weekends
-        first_sat = copy(early)
-        while first_sat.weekday() != 5:
-            first_sat += datetime.timedelta(days=1)
-        this_date = copy(first_sat)
-        while this_date < late:
-            plt.fill_between([this_date, this_date + datetime.timedelta(days=2)], [ctr+10, ctr+10], -10, color='lightcyan')
-            this_date += datetime.timedelta(days=7)
-        # ... months
-        plt.plot([self.now, self.now], [-10, ctr+10], 'c--', lw=3)
-        if early.day < 10:
-            first_day = datetime.datetime(year=early.year, month=early.month, day=1)
-            plt.plot([first_day, first_day], [-10, ctr+10], '--', color='0.7')
-        this_day = to_dtz(tdt.last_day_of_month(early, return_datetime=True)) + datetime.timedelta(days=1)
-        while this_day < late:
-            plt.plot([this_day, this_day], [-10, ctr+10], '--', color='0.7')
-            this_day = to_dtz(tdt.last_day_of_month(this_day, return_datetime=True)) + datetime.timedelta(days=1)
-        if late.day > 20:
-            this_day = to_dtz(tdt.last_day_of_month(late, return_datetime=True)) + datetime.timedelta(days=1)
-            plt.plot([this_day, this_day], [-10, ctr+10], '--', color='0.7')
-
-        # Include events
-        ctr = 0
-        for era in eras:
-            for i, event in enumerate(sorted(self.events[era], reverse=True)):
-                if not len(self.events[era][event]['summary']):
-                    continue
-                if self.events[era][event]['summary'][0] == '|':
-                    clr = 'y'
-                else:
-                    clr = self.era_colors[era]
-                if 'description' in self.events[era][event]['event'].contents:
-                    if self.events[era][event]['event'].contents['description'][0].value == '?':
-                        clr = 'c'
-                mdpt = self.events[era][event]['dtstart'] + (self.events[era][event]['dtend'] - self.events[era][event]['dtstart'])/2.0
-                plt.plot(mdpt, ctr, 's', color=clr)
-                plt.plot([self.events[era][event]['dtstart'], self.events[era][event]['dtend']], [ctr, ctr], clr, lw=8)
-                if self.events[era][event]['summary'][0] == '|':
-                    txt = self.events[era][event]['summary'][1:]
-                else:
-                    txt = self.events[era][event]['summary']
-                if not no_text:
-                    plt.text(self.events[era][event]['dtend'], ctr, txt[:80])
-                ctr += 1
-        plt.axis(ymin=-ctr/20, ymax=(ctr-1+ctr/20))
+        iplot.chart(show_weekends=True, show_months=True)
     
     def ical_text(self, eras=['current', 'next', 'upcoming', 'future'], strfmt='%m/%d/%y'):
         strfmt += 'T%H:%M'

@@ -13,6 +13,7 @@ import matplotlib.dates
 import numpy as np
 from ddproject.util import color_palette
 from copy import copy
+from my_utils import time_data_tools as tdt
 
 
 class Gantt:
@@ -26,7 +27,7 @@ class Gantt:
         dates : list
             each entry is a datetime pair (or end is None)
         plotpars : list
-            list of Namespaces containing the data for the chart
+            list of Namespaces (?) containing the data for the chart
         labels : list
             extra labels for entries
         ykeys : list
@@ -60,19 +61,18 @@ class Gantt:
             plt.fill_between([this_date, this_date + datetime.timedelta(days=2)], [ybound, ybound], -10, color=color)
             this_date += datetime.timedelta(days=7)
 
-    # def plot_months(self, color='0.7'):
-    #     # ... months
-    #     plt.plot([self.now, self.now], [-10, ctr+10], 'c--', lw=3)
-    #     if early.day < 10:
-    #         first_day = datetime.datetime(year=early.year, month=early.month, day=1)
-    #         plt.plot([first_day, first_day], [-10, ctr+10], '--', color=color)
-    #     this_day = to_dtz(tdt.last_day_of_month(early, return_datetime=True)) + datetime.timedelta(days=1)
-    #     while this_day < late:
-    #         plt.plot([this_day, this_day], [-10, ctr+10], '--', color=color)
-    #         this_day = to_dtz(tdt.last_day_of_month(this_day, return_datetime=True)) + datetime.timedelta(days=1)
-    #     if late.day > 20:
-    #         this_day = to_dtz(tdt.last_day_of_month(late, return_datetime=True)) + datetime.timedelta(days=1)
-    #         plt.plot([this_day, this_day], [-10, ctr+10], '--', color=color)
+    def plot_months(self, color='0.7'):
+        ybound = 1.1 * len(self.ykeys)
+        if self.extrema.min.day < 10:
+            first_day = datetime.datetime(year=self.extrema.min.year, month=self.extrema.min.month, day=1)
+            plt.plot([first_day, first_day], [-10, ybound], '--', color=color)
+        this_day = tdt.last_day_of_month(self.extrema.min, return_datetime=True) + datetime.timedelta(days=1)
+        while this_day.astimezone() < self.extrema.max:
+            plt.plot([this_day, this_day], [-10, ybound], '--', color=color)
+            this_day = tdt.last_day_of_month(this_day, return_datetime=True) + datetime.timedelta(days=1)
+        if self.extrema.max.day > 20:
+            this_day = tdt.last_day_of_month(self.extrema.max, return_datetime=True) + datetime.timedelta(days=1)
+            plt.plot([this_day, this_day], [-10, ybound], '--', color=color)
 
     def assign_yvals_labels(self):
         """
@@ -148,8 +148,11 @@ class Gantt:
         self.assign_yvals_labels()
         step = self.yticks[1] - self.yticks[0]
         show_weekends = False if 'show_weekends' not in kwargs else kwargs['show_weekends']
+        show_months = False if 'show_months' not in kwargs else kwargs['show_months']
         if show_weekends:
             self.plot_weekends()
+        if show_months:
+            self.plot_months()
 
         # Plot the data
         for i, dtlim in enumerate(self.dates):
