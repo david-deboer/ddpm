@@ -30,6 +30,6 @@ ical = icalendar.iCal(icsfn=args.file)
 ical.read_ics(upcoming=args.upcoming)
 if args.add is not None:
     ical.add(start=start, end=end, summary=summary)
-ical.ical_plot(eras=args.eras,  no_text=args.no_text, show_weekend=True, show_months=True)
+ical.ical_plot(eras=args.eras,  no_text=args.no_text)
 ical.ical_text(eras=args.eras_text)
 icalendar.plt.show()

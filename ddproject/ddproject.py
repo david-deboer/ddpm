@@ -154,8 +154,13 @@ class Project:
         labels = []
         plotpars = []
         ykeys = []  # keys lists the keys used, used to make the vertical axis including colinear
+        
         extrema = self._get_event_extrema()
+        if extrema.min is None or extrema.max is None:
+            print("No entries.")
+            return
         duration = extrema.max - extrema.min
+
         print(f"Duration = {util.pretty_duration(duration.total_seconds())}")
         for sortkey in self._sort_(chart, sortby):
             this = self.all_entries[sortkey]
