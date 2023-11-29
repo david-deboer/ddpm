@@ -52,7 +52,7 @@ class Gantt:
         color : str
             color to use for the weekends
         """
-        first_sat = copy(self.extrema.min)
+        first_sat = self.extrema.min - datetime.timedelta(days=6)
         while first_sat.weekday() != 5:
             first_sat += datetime.timedelta(days=1)
         ybound = 1.1 * len(self.ykeys)
