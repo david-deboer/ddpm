@@ -173,19 +173,18 @@ class Gantt:
         ----------
 
         """
-        defaults = {'colinear_delimiter': '|', 'show_weekends': False, 'show_months': False, 'grid': False, 'interval': None}
+        defaults = {'colinear_delimiter': '|', 'weekends': False, 'months': False, 'grid': False, 'interval': None}
         self.sv.update(defaults, kwargs)
         # Initialise plot
         fig1 = plt.figure(figsize=(12, 8), tight_layout=True)
         ax1 = fig1.add_subplot(111)
         ax1.axis(xmin=matplotlib.dates.date2num(self.extrema.min)-self.deltadate/10.0,
                  xmax=matplotlib.dates.date2num(self.extrema.max)+self.deltadate/10.0)
-        colinear_delimiter = '|' if 'colinear_delimiter' not in kwargs else kwargs['colinear_delimiter']
-        self.assign_yvals_labels(colinear_delimiter)
+        self.assign_yvals_labels(self.sv.colinear_delimiter)
         step = self.yticks[1] - self.yticks[0]
-        if self.sv.show_weekends:
+        if self.sv.weekends:
             self.plot_weekends()
-        if self.sv.show_months:
+        if self.sv.months:
             self.plot_months()
 
         # Plot the data
@@ -203,7 +202,7 @@ class Gantt:
         # Format the y-axis
         locsy, labelsy = plt.yticks(self.yticks, self.ylabels)
         plt.setp(labelsy, fontsize=14)
-        if self.sv.show_grid:
+        if self.sv.grid:
             plt.grid(color='0.6', linestyle=':')
 
         # Plot current time
