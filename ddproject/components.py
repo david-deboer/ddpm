@@ -231,11 +231,14 @@ class Milestone(Entry):
     #     return f"{self.key}:  {self.name}  {self.date} "
 
     def get_color(self):
+        print("COMPONENTS234:  ad hoc make date timezone aware")
+        self.date = self.date.astimezone()
+        now = datetime.datetime.now().astimezone()
         if self.color is None or self.color == 'auto':
             pass
         else:
             return self.color
-        if self.status != 'complete' and datetime.datetime.now() > self.date:
+        if self.status != 'complete' and now > self.date:
             return util.STATUS_COLOR['late']
         if self.status == 'complete' and self.complete is not None:
             if abs(self.complete) > 1.0:

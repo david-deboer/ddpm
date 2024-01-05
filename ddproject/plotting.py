@@ -15,10 +15,41 @@ from ddproject.util import color_palette
 from copy import copy
 from my_utils import time_data_tools as tdt
 
+class StateVariable:
+    time_formats = ['%Y-%m-%dT%H:%M:%S', '%Y-%m-%dT%H:%M', '%Y-%m-%d %H:%M:%S', '%Y-%m-%d %H:%M']
+    def __init__(self, kwargs={}, defaults={}):
+        self.update(kwargs, defaults)
+
+    def __repr__(self):
+        from tabulate import tabulate
+        table = []
+        for a in dir(self):
+            if a.startswith('__') or a == 'update':
+                continue
+            else:
+                val = str(getattr(self, a))
+                if len(val) > 50:
+                    val = val[:50] + '...'
+                table.append([a, val])
+        return tabulate(table, headers=['Variable', 'Value'])
+
+    def update(self, kwargs={}, defaults={}):
+        """
+        Process all of the keywords with provided defaults.
+        """
+        # Copy over defaults if not present
+        for key, val in defaults.items():
+            if key not in kwargs:
+                kwargs[key] = val
+
+        for key, value in kwargs.items():
+            setattr(self, key, value)
+
 
 class Gantt:
     def __init__(self, name=None):
         self.name = name
+        self.sv = StateVariable()
 
     def setup(self, dates, plotpars, labels, ykeys, extrema):
         """
@@ -74,7 +105,7 @@ class Gantt:
             this_day = tdt.last_day_of_month(self.extrema.max, return_datetime=True) + datetime.timedelta(days=1)
             plt.plot([this_day, this_day], [-10, ybound], '--', color=color)
 
-    def assign_yvals_labels(self):
+    def assign_yvals_labels(self, colinear_delimiter='\n'):
         """
         Assigned a yvalue to all ykeys (colinear thing...)
         """
@@ -97,27 +128,29 @@ class Gantt:
                 fnd_keys[ykey] = yval
             else:
                 self.yvals.append(fnd_keys[ykey])
-                self.ylabels[cmap[ykey]] += '|' + self.labels[i]
-            self.ylabels[cmap[ykey]] = self.ylabels[cmap[ykey]].strip('| ')
+                self.ylabels[cmap[ykey]] += colinear_delimiter + self.labels[i]
+            self.ylabels[cmap[ykey]] = self.ylabels[cmap[ykey]].strip(colinear_delimiter + ' ')
 
-    def date_ticks(self, interval):
+    def date_ticks(self, interval=None):
         interval_mmap = {1:1, 2:2, 3:3, 4:3, 5:6, 7:6, 8:6, 9:12, 10:12, 11:12}
         dyr = self.deltadate / 365.0
         self.itvmapper = matplotlib.dates.MONTHLY
         if interval is not None:
             try:
-                interval = float(interval)
+                interval = int(interval)
             except ValueError:
                 if interval.endswith('d'):
                     self.itvmapper = matplotlib.dates.DAILY
-                    interval = float(interval.strip('d'))
+                    interval = int(interval.strip('d'))
+                    self.fmttr = "(%a) %b/%d"
                 elif interval.endswith('m'):
-                    interval = float(interval.strip('m'))
+                    interval = int(interval.strip('m'))
+                    self.fmttr = "%b '%y"
                 else:
                     raise ValueError(f"Interval must be float[d/m], you provided {interval}")
         else:
             if self.deltadate > 300:
-                interval = interval_mmap[int(np.ceil(dyr * dyr / 6.0))]
+                interval = interval_mmap[int(np.ceil(dyr * dyr / 5.0))]
                 self.fmttr = "%b '%y"
             else:
                 self.itvmapper = matplotlib.dates.DAILY
@@ -140,18 +173,19 @@ class Gantt:
         ----------
 
         """
+        defaults = {'colinear_delimiter': '|', 'show_weekends': False, 'show_months': False, 'grid': False, 'interval': None}
+        self.sv.update(defaults, kwargs)
         # Initialise plot
         fig1 = plt.figure(figsize=(12, 8), tight_layout=True)
         ax1 = fig1.add_subplot(111)
         ax1.axis(xmin=matplotlib.dates.date2num(self.extrema.min)-self.deltadate/10.0,
                  xmax=matplotlib.dates.date2num(self.extrema.max)+self.deltadate/10.0)
-        self.assign_yvals_labels()
+        colinear_delimiter = '|' if 'colinear_delimiter' not in kwargs else kwargs['colinear_delimiter']
+        self.assign_yvals_labels(colinear_delimiter)
         step = self.yticks[1] - self.yticks[0]
-        show_weekends = False if 'show_weekends' not in kwargs else kwargs['show_weekends']
-        show_months = False if 'show_months' not in kwargs else kwargs['show_months']
-        if show_weekends:
+        if self.sv.show_weekends:
             self.plot_weekends()
-        if show_months:
+        if self.sv.show_months:
             self.plot_months()
 
         # Plot the data
@@ -169,8 +203,7 @@ class Gantt:
         # Format the y-axis
         locsy, labelsy = plt.yticks(self.yticks, self.ylabels)
         plt.setp(labelsy, fontsize=14)
-        show_grid = False if 'grid' not in kwargs else kwargs['grid']
-        if show_grid:
+        if self.sv.show_grid:
             plt.grid(color='0.6', linestyle=':')
 
         # Plot current time
@@ -187,8 +220,7 @@ class Gantt:
                 this_yr = datetime.datetime(year=yr, month=1, day=1)
                 plt.plot([this_yr, this_yr], [self.yticks[0]-step, self.yticks[-1]+step], 'k:')
         ax1.xaxis_date()  # Tell matplotlib that these are dates...
-        interval = None if 'interval' not in kwargs else kwargs['interval']
-        self.date_ticks(interval)
+        self.date_ticks(self.sv.interval)
         rule = matplotlib.dates.rrulewrapper(self.itvmapper, interval=self.interval)
         loc = matplotlib.dates.RRuleLocator(rule)
         formatter = matplotlib.dates.DateFormatter(self.fmttr)
