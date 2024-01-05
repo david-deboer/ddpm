@@ -231,8 +231,6 @@ class Milestone(Entry):
     #     return f"{self.key}:  {self.name}  {self.date} "
 
     def get_color(self):
-        print("COMPONENTS234:  ad hoc make date timezone aware")
-        self.date = self.date.astimezone()
         now = datetime.datetime.now().astimezone()
         if self.color is None or self.color == 'auto':
             pass

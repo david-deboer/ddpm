@@ -291,12 +291,16 @@ class Project:
                 continue
             kwargs = {}
             for hdrc, val in zip(header, row):
+                if not len(val.strip()):
+                    continue
                 for hdr in hdrc.split(':'):
+                    found_valid = False
                     if hdr.strip() in self.empty_classes[entry_type].parameters:
+                        found_valid = True
                         kwargs[hdr] = self._preproc_val(hdr, val)
                         break
-                    elif verbose:
-                        print(f"{hdr} not valid component.")
+                if not found_valid:
+                    print(f"No valid component:  {entry_type} -- {row}")
             if self.empty_classes[entry_type].valid_request(**kwargs):
                 if verbose:
                     print(f'Adding {entry_type}  {row}')
