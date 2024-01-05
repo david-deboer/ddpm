@@ -180,7 +180,7 @@ class Project:
             ykeys.append(this.key)
         ykeys = self._align_keys(ykeys)
         self.gantt.setup(dates=dates, plotpars=plotpars, labels=labels, ykeys=ykeys, extrema=extrema)
-        self.gantt.chart(interval=interval, grid=grid, show_weekends=show_weekends, show_months=show_months)
+        self.gantt.chart(interval=interval, grid=grid, weekends=show_weekends, months=show_months)
 
     def cumulative(self, step=1.0, show=True):
         """

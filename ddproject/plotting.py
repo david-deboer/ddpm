@@ -173,7 +173,7 @@ class Gantt:
         ----------
 
         """
-        defaults = {'colinear_delimiter': '|', 'weekends': False, 'months': False, 'grid': False, 'interval': None}
+        defaults = {'colinear_delimiter': '|', 'weekends': True, 'months': True, 'grid': True, 'interval': None}
         self.sv.update(defaults, kwargs)
         # Initialise plot
         fig1 = plt.figure(figsize=(12, 8), tight_layout=True)
