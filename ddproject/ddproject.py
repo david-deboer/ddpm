@@ -135,7 +135,7 @@ class Project:
                         self.all_entries[key].set_predecessor_timing(timing)
 
     def chart(self, chart='all', sortby=['begins', 'date', 'name', 'ends'], interval=None, grid=False,
-              show_weekends=True, show_months=True):
+              colinear_delimiter='|', weekends=True, months=True):
         """
         Make a gantt chart.
 
@@ -180,7 +180,7 @@ class Project:
             ykeys.append(this.key)
         ykeys = self._align_keys(ykeys)
         self.gantt.setup(dates=dates, plotpars=plotpars, labels=labels, ykeys=ykeys, extrema=extrema)
-        self.gantt.chart(interval=interval, grid=grid, weekends=show_weekends, months=show_months)
+        self.gantt.chart(interval=interval, grid=grid, colinear_delimiter=colinear_delimiter, weekends=weekends, months=months)
 
     def cumulative(self, step=1.0, show=True):
         """
