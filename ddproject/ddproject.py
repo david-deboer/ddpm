@@ -48,7 +48,7 @@ class Project:
         s += f"{tot:03d} Total Entries\n"
         return s
 
-    def add_entry(self, entry):
+    def add(self, entry):
         try:
             if entry.key in self.all_entries.keys():
                 print(f"Warning - not adding '{entry.type}': Key for {entry.name} already used ({entry.key}).")
