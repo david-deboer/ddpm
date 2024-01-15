@@ -39,7 +39,10 @@ class Entry:
         try:
             s = f"key: {self.key}\n"
             for par in self.parameters:
-                s += f"\t{par}: {getattr(self, par)}\n"
+                val = getattr(self, par)
+                if par in ['predecessors', 'colinear']:
+                    val = 'False' if val is None else 'True'
+                s += f"\t{par}: {val}\n"
             return s
         except AttributeError:
             return "Blank Entry"
@@ -48,7 +51,7 @@ class Entry:
         """Set all parameters to None and initialize 'updated' attribute to now."""
         for par in self.parameters:
             setattr(self, par, None)
-        self.updated = util.datetimedelta('now').astimezone()
+        self.updated = datetime.datetime.now().astimezone()
 
     def _update_parameters(self, **kwargs):
         """Update any parameter attributes with some baselevel checking."""
@@ -286,7 +289,6 @@ class Timeline(Entry):
                 predecessor_times.append(pred._predecessor_time)
             self.begins = max(predecessor_times) + self.lag
             provided_timing.add('begins')
-        self._predecessor_time = self.ends
 
         if 'duration' not in provided_timing:
             self.duration = self.ends - self.begins
@@ -294,6 +296,11 @@ class Timeline(Entry):
             self.ends = self.begins + self.duration
         elif 'begins' not in provided_timing:
             self.begins = self.ends - self.duration
+
+        if self.begins > self.ends:
+            print(f"Begins at: {self.begins} -- ends at:  {self.ends}")
+            raise ValueError(f"{self.type} begins after ending")
+        self._predecessor_time = self.ends
 
     def valid_request(self, **kwargs):
         return self._valid_request(**kwargs)

@@ -14,6 +14,7 @@ import numpy as np
 from ddproject.util import color_palette
 from copy import copy
 from my_utils import time_data_tools as tdt
+import matplotlib as mpl
 
 class StateVariable:
     time_formats = ['%Y-%m-%dT%H:%M:%S', '%Y-%m-%dT%H:%M', '%Y-%m-%d %H:%M:%S', '%Y-%m-%d %H:%M']
@@ -51,7 +52,7 @@ class Gantt:
         self.name = name
         self.sv = StateVariable()
 
-    def setup(self, dates, plotpars, labels, ykeys, extrema):
+    def setup(self, dates, plotpars, labels, ykeys, extrema, timezone=None):
         """
         Parameters
         ----------
@@ -73,6 +74,8 @@ class Gantt:
         self.extrema = extrema
         self.datemin, self.datemax = matplotlib.dates.date2num(extrema.min), matplotlib.dates.date2num(extrema.max)
         self.deltadate = self.datemax - self.datemin
+        self.timezone = timezone
+        self.adjust_offset = -1.0*(self.timezone.utcoffset(None) + datetime.datetime.now().astimezone().utcoffset())
 
     def plot_weekends(self, color='lightcyan'):
         """
@@ -87,7 +90,8 @@ class Gantt:
         while first_sat.weekday() != 5:
             first_sat += datetime.timedelta(days=1)
         ybound = 1.1 * len(self.ykeys)
-        this_date = copy(first_sat)
+        this_date = datetime.datetime(year=first_sat.year, month=first_sat.month, day=first_sat.day).astimezone(self.timezone)
+        this_date = self._adjust_date(this_date)
         while this_date < self.extrema.max:
             plt.fill_between([this_date, this_date + datetime.timedelta(days=2)], [ybound, ybound], -10, color=color)
             this_date += datetime.timedelta(days=7)
@@ -95,15 +99,18 @@ class Gantt:
     def plot_months(self, color='0.7'):
         ybound = 1.1 * len(self.ykeys)
         if self.extrema.min.day < 10:
-            first_day = datetime.datetime(year=self.extrema.min.year, month=self.extrema.min.month, day=1)
-            plt.plot([first_day, first_day], [-10, ybound], '--', color=color)
-        this_day = tdt.last_day_of_month(self.extrema.min, return_datetime=True) + datetime.timedelta(days=1)
-        while this_day.astimezone() < self.extrema.max:
-            plt.plot([this_day, this_day], [-10, ybound], '--', color=color)
-            this_day = tdt.last_day_of_month(this_day, return_datetime=True) + datetime.timedelta(days=1)
+            first_day = datetime.datetime(year=self.extrema.min.year, month=self.extrema.min.month, day=1).astimezone(self.timezone)
+            first_day = self._adjust_date(first_day)
+            plt.plot([first_day, first_day], [-10, ybound], '--', lw=2, color=color)
+        this_day = (tdt.last_day_of_month(self.extrema.min, return_datetime=True) + datetime.timedelta(days=1)).astimezone(self.timezone)
+        this_day = self._adjust_date(this_day)
+        while this_day < self.extrema.max:
+            plt.plot([this_day, this_day], [-10, ybound], '--', lw=2, color=color)
+            this_day = (tdt.last_day_of_month(this_day, return_datetime=True) + datetime.timedelta(days=1)).astimezone(self.timezone)
         if self.extrema.max.day > 20:
-            this_day = tdt.last_day_of_month(self.extrema.max, return_datetime=True) + datetime.timedelta(days=1)
-            plt.plot([this_day, this_day], [-10, ybound], '--', color=color)
+            this_day = (tdt.last_day_of_month(self.extrema.max, return_datetime=True) + datetime.timedelta(days=1)).astimezone(self.timezone)
+            this_day = self._adjust_date(this_day)
+            plt.plot([this_day, this_day], [-10, ybound], '--', lw=2, color=color)
 
     def assign_yvals_labels(self, colinear_delimiter='\n'):
         """
@@ -161,6 +168,18 @@ class Gantt:
                 self.fmttr = "(%a) %b/%d"
         self.interval = interval
 
+    def _adjust_date(self, dd):
+        """
+        This is the dumbest thing imaginable to make the grid match up with the dates.
+        That is, I shift ALL dates to match up to the (incorrect) grid...
+        """
+        if isinstance(dd, list):
+            d0 = dd[0] - self.adjust_offset
+            d1 = None if dd[1] is None else dd[1] - self.adjust_offset
+            return d0, d1
+        else:
+            return dd - datetime.timedelta(hours=6)
+
     def chart(self, **kwargs):
         """
         This will plot a gantt chart of items (ylabels) and dates.  If included, it will plot percent
@@ -179,10 +198,12 @@ class Gantt:
         # Initialise plot
         fig1 = plt.figure(figsize=(12, 8), tight_layout=True)
         ax1 = fig1.add_subplot(111)
+        plt.title(str(self.timezone))
         ax1.axis(xmin=matplotlib.dates.date2num(self.extrema.min)-self.deltadate/10.0,
                  xmax=matplotlib.dates.date2num(self.extrema.max)+self.deltadate/10.0)
         self.assign_yvals_labels(self.sv.colinear_delimiter)
         step = self.yticks[1] - self.yticks[0]
+
         if self.sv.weekends:
             self.plot_weekends()
         if self.sv.months:
@@ -190,12 +211,13 @@ class Gantt:
 
         # Plot the data
         for i, dtlim in enumerate(self.dates):
+            date0, date1 = self._adjust_date(dtlim)
             pp = self.plotpars[i]
-            start = matplotlib.dates.date2num(dtlim[0])
-            if dtlim[1] is None:  # Milestone
+            start = matplotlib.dates.date2num(date0)
+            if date1 is None:  # Milestone
                 plt.plot(start, self.yvals[i], pp.marker, color=pp.color, markersize=8)
             else:
-                stop = matplotlib.dates.date2num(dtlim[1])
+                stop = matplotlib.dates.date2num(date1)
                 plt.barh(self.yvals[i],  stop - start, left=start, height=0.3, align='center', color=pp.color, alpha=0.75)
                 if isinstance(pp.status, (float, int)):
                     plt.barh(self.yvals[i], pp.status*(stop - start)/100.0, left=start, height=0.1, align='center', color='k', alpha=0.75)
@@ -207,7 +229,7 @@ class Gantt:
             plt.grid(color='0.6', linestyle=':')
 
         # Plot current time
-        now = datetime.datetime.now().astimezone()
+        now = datetime.datetime.now().astimezone(self.timezone)
         if now >= self.extrema.min and now <= self.extrema.max:
             now_num = matplotlib.dates.date2num(now)
             plt.plot([now_num, now_num], [self.yticks[0]-step, self.yticks[-1]+step], '--', color=color_palette[3])
@@ -219,11 +241,11 @@ class Gantt:
             for yr in range(yr1, yr2+1):
                 this_yr = datetime.datetime(year=yr, month=1, day=1)
                 plt.plot([this_yr, this_yr], [self.yticks[0]-step, self.yticks[-1]+step], 'k:')
-        ax1.xaxis_date()  # Tell matplotlib that these are dates...
+        ax1.xaxis_date(tz=self.timezone)  # Tell matplotlib that these are dates...
         self.date_ticks(self.sv.interval)
         rule = matplotlib.dates.rrulewrapper(self.itvmapper, interval=self.interval)
-        loc = matplotlib.dates.RRuleLocator(rule)
-        formatter = matplotlib.dates.DateFormatter(self.fmttr)
+        loc = matplotlib.dates.RRuleLocator(rule, tz=self.timezone)
+        formatter = matplotlib.dates.DateFormatter(self.fmttr, tz=self.timezone)
         ax1.xaxis.set_major_locator(loc)
         ax1.xaxis.set_major_formatter(formatter)
         labelsx = ax1.get_xticklabels()

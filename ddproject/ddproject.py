@@ -22,6 +22,7 @@ class Project:
         self.colinear_map = {}
         self.earliest, self.latest = {}, {}
         self.updated = None
+        self.timezone = None
         for entry in self.entry_types:
             self.earliest[entry] = None
             self.latest[entry] = None
@@ -72,6 +73,13 @@ class Project:
         except AttributeError:
             pass
         getattr(self, f"{entry.type}s").append(entry.key)
+        if entry.timezone is not None and entry.timezone != self.timezone:
+            if self.timezone is None:
+                _tz = 'None'
+            else:
+                _tz = self.timezone.tzname(None)
+            print(f"Changing timezone from {_tz} to {entry.timezone.tzname(None)}")
+            self.timezone = entry.timezone
 
     def _sort_(self, entry_types, sortby):
         sort_key_dict = {}
@@ -158,7 +166,7 @@ class Project:
                 labels.append(this.name)
             ykeys.append(this.key)
         ykeys = self._align_keys(ykeys)
-        self.gantt.setup(dates=dates, plotpars=plotpars, labels=labels, ykeys=ykeys, extrema=extrema)
+        self.gantt.setup(dates=dates, plotpars=plotpars, labels=labels, ykeys=ykeys, extrema=extrema, timezone=self.timezone)
         self.gantt.chart(interval=interval, grid=grid, colinear_delimiter=colinear_delimiter, weekends=weekends, months=months)
 
     def cumulative(self, step=1.0, show=True):
