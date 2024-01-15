@@ -256,7 +256,8 @@ class Timeline(Entry):
     allowed_timing_sets = [{'begins', 'ends'},
                            {'begins', 'duration'},
                            {'ends', 'duration'},
-                           {'predecessors', 'duration'}]
+                           {'predecessors', 'duration'},
+                           {'predecessors', 'ends'}]
 
     def __init__(self, name, **kwargs):
         self.type = 'timeline'
