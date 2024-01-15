@@ -284,7 +284,7 @@ class Timeline(Entry):
                 provided_timing.add(key)
         if provided_timing not in self.allowed_timing_sets:
             raise ValueError("Timing information not in allowed timing sets.")
-        if provided_timing == {'predecessors', 'duration'} or provided_timing == {'predecessors', 'ends'}:
+        if 'predecessors' in provided_timing:
             self.predecessor_timing = True  # This flag will be looked for later in project
         else:
             if 'duration' not in provided_timing:
