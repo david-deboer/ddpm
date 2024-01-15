@@ -13,7 +13,7 @@ color_palette = [
     (0.5490196078431373, 0.33725490196078434, 0.29411764705882354, 1.0)
         ]
 
-DATE_FIELDS = ['date', 'begins', 'ends', 'updated', 'duration', 'tz', 'timezone']
+DATE_FIELDS = ['date', 'begins', 'ends', 'updated', 'duration', 'timezone']
 LIST_FIELDS = ['note', 'predecessors', 'groups', 'reference']
 PAST = datetime.datetime(year=2000, month=1, day=1)
 FUTURE = datetime.datetime(year=2050, month=12, day=31)
