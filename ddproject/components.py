@@ -52,12 +52,15 @@ class Entry:
 
     def _update_parameters(self, **kwargs):
         """Update any parameter attributes with some baselevel checking."""
+        if 'timezone' in kwargs:
+            self.timezone = util.datetimedelta(kwargs['timezone'], 'timezone')
+            del(kwargs['timezone'])
         for key, val in kwargs.items():
             if key not in self.parameters:
                 print(f"Invalid key '{key}' for {self.type}.")
                 continue
             if key in util.DATE_FIELDS:
-                setattr(self, key, util.datetimedelta(val, key))
+                setattr(self, key, util.datetimedelta(val, key, timezone=self.timezone))
             elif key in util.LIST_FIELDS and isinstance(val, str):
                 setattr(self, key, val.split(','))
             elif isinstance(val, str):
@@ -183,7 +186,7 @@ class Milestone(Entry):
         """
         self.type = 'milestone'
         self.parameters = ['name', 'date', 'owner', 'label', 'status', 'note', 'updated', 'complete',
-                           'predecessors', 'lag', 'groups', 'colinear', 'marker', 'color']
+                           'predecessors', 'lag', 'groups', 'colinear', 'marker', 'color', 'timezone']
         kwargs.update({'name': name})
         if name is None:
             pass
@@ -249,7 +252,7 @@ class Milestone(Entry):
 
 class Timeline(Entry):
     tl_parameters = ['name', 'begins', 'ends', 'duration', 'note', 'updated', 'colinear',
-                     'predecessors', 'lag', 'groups', 'label', 'color']
+                     'predecessors', 'lag', 'groups', 'label', 'color', 'timezone']
     allowed_timing_sets = [{'begins', 'ends'},
                            {'begins', 'duration'},
                            {'ends', 'duration'},
@@ -353,7 +356,7 @@ class Task(Timeline):
 
 
 class Note(Entry):
-    parameters = ['jot', 'date', 'reference']
+    parameters = ['jot', 'date', 'reference', 'timezone']
     def __init__(self, jot, date='now', reference=None):
         self.type = 'note'
         if jot is None:  # Just want the parameters
