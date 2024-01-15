@@ -128,7 +128,7 @@ def datedeltastr(val, fmt='%Y-%m-%d %H:%M'):
     else:
         return None
 
-def timezone(hours=None, name=None):
+def get_timezone(hours=None, name=None):
     if hours is None:
         return datetime.datetime.now().astimezone().tzinfo
     if name is None:
@@ -161,7 +161,7 @@ def datetimedelta(date, key=None, fmt=['%Y-%m-%d', '%y/%m/%d', '%Y-%m-%d %H:%M']
             name = str(date[1])
         else:
             hr = float(date)
-        return timezone(hours=hr, name=name)
+        return get_timezone(hours=hr, name=name)
     if date == 'now':
         return datetime.datetime.now().astimezone(timezone)
     if isinstance(date, datetime.datetime):
