@@ -13,7 +13,7 @@ color_palette = [
     (0.5490196078431373, 0.33725490196078434, 0.29411764705882354, 1.0)
         ]
 
-DATE_FIELDS = ['date', 'begins', 'ends', 'updated', 'duration', 'timezone']
+DATE_FIELDS = ['date', 'begins', 'ends', 'updated', 'duration', 'timezone', 'lag']
 LIST_FIELDS = ['note', 'predecessors', 'groups', 'reference']
 PAST = datetime.datetime(year=2000, month=1, day=1)
 FUTURE = datetime.datetime(year=2050, month=12, day=31)
@@ -147,7 +147,7 @@ def datetimedelta(date, key=None, fmt=['%Y-%m-%d', '%y/%m/%d', '%Y-%m-%d %H:%M']
     if isinstance(date, str):
         if date.lower() == 'none' or not len(date.strip()):
             return None
-    if key == 'duration':
+    if key in ['duration', 'lag']:
         if isinstance(date, datetime.timedelta):
             return date
         try:

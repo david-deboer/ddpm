@@ -14,7 +14,6 @@ class Project:
 
     def __init__(self, name, organization=None):
         self.entry_types = components.event_types + components.other_types
-        self.predecessor_types = copy(components.chart_types)
         self.name = name
         self.organization = organization
         self.all_entries = {}
@@ -26,9 +25,6 @@ class Project:
         for entry in self.entry_types:
             self.earliest[entry] = None
             self.latest[entry] = None
-        self.predecessor_timing_flags = {}
-        for pt in self.predecessor_types:
-            self.predecessor_timing_flags[pt] = False
 
     def __repr__(self):
         extrema = self._get_event_extrema()
@@ -71,13 +67,11 @@ class Project:
         elif late_date > self.latest[entry.type]:
             self.latest[entry.type] = late_date
         try:
-            if entry.colinear is not None and len(entry.colinear.strip()):
-                self.colinear_map[entry.key] = entry.colinear
+            if entry.colinear is not None:
+                self.colinear_map[entry.key] = entry.colinear.key
         except AttributeError:
             pass
         getattr(self, f"{entry.type}s").append(entry.key)
-        if entry.type in self.predecessor_timing_flags and entry.predecessor_timing:
-            self.predecessor_timing_flags[entry.type] = True
 
     def _sort_(self, entry_types, sortby):
         sort_key_dict = {}
@@ -120,20 +114,6 @@ class Project:
         chkmax = None if not len(chkmax) else max(chkmax)
         return Namespace(min=chkmin, max=chkmax)
 
-    def set_predecessors(self):
-        """
-        Set project predecessor timing.
-        """
-        for pt in self.predecessor_types:
-            timing = []
-            if self.predecessor_timing_flags[pt]:
-                for key in getattr(self, f"{pt}s"):
-                    if self.all_entries[key].predecessor_timing:
-                        for pkey in self.all_entries[key].predecessors:
-                            that = self.all_entries[pkey]
-                            timing.append(that.date if that.type == 'milestone' else that.ends)
-                        self.all_entries[key].set_predecessor_timing(timing)
-
     def chart(self, chart='all', sortby=['begins', 'date', 'name', 'ends'], interval=None, grid=False,
               colinear_delimiter='|', weekends=True, months=True):
         """
@@ -145,7 +125,6 @@ class Project:
            fields to sort by
         """
         self.gantt = plotting.Gantt(name = self.name)
-        self.set_predecessors()
         if chart == 'all':
             chart = components.chart_types
         elif isinstance(chart, str):
@@ -154,7 +133,7 @@ class Project:
         labels = []
         plotpars = []
         ykeys = []  # keys lists the keys used, used to make the vertical axis including colinear
-        
+
         extrema = self._get_event_extrema()
         if extrema.min is None or extrema.max is None:
             print("No entries.")
