@@ -225,7 +225,6 @@ class Gantt:
                 plt.plot([this_yr, this_yr], [self.yticks[0]-step, self.yticks[-1]+step], 'k:')
         ax1.xaxis_date(tz=self.timezone)  # Tell matplotlib that these are dates...
         if self.sv.set_time_axis:
-            print("PLOTTING247 - BEWARE THIS DOESN'T WORK")
             self.date_ticks(self.sv.interval)
             rule = matplotlib.dates.rrulewrapper(self.itvmapper, interval=self.interval)
             loc = matplotlib.dates.RRuleLocator(rule, tz=self.timezone)

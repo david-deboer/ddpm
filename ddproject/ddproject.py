@@ -125,7 +125,7 @@ class Project:
             print(self.all_entries[sortkey])
 
     def chart(self, chart='all', sortby=['begins', 'date', 'name', 'ends'], interval=None, grid=False,
-              colinear_delimiter='|', weekends=True, months=True):
+              colinear_delimiter='|', weekends=True, months=True, set_time_axis=True):
         """
         Make a gantt chart.
 
@@ -166,7 +166,7 @@ class Project:
             ykeys.append(this.key)
         ykeys = self._align_keys(ykeys)
         self.gantt.setup(dates=dates, plotpars=plotpars, labels=labels, ykeys=ykeys, extrema=extrema, timezone=self.timezone)
-        self.gantt.chart(interval=interval, grid=grid, colinear_delimiter=colinear_delimiter, weekends=weekends, months=months)
+        self.gantt.chart(interval=interval, grid=grid, colinear_delimiter=colinear_delimiter, weekends=weekends, months=months, set_time_axis=set_time_axis)
 
     def cumulative(self, step=1.0, show=True):
         """
