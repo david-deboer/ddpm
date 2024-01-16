@@ -2,6 +2,7 @@ import matplotlib.pyplot as plt
 import datetime
 import requests
 import csv
+from copy import copy
 
 
 color_palette = [
@@ -130,10 +131,10 @@ def datedeltastr(val, fmt='%Y-%m-%d %H:%M'):
 
 def get_timezone(hours=None, name=None):
     if hours is None:
-        return datetime.datetime.now().astimezone().tzinfo
+        return copy(datetime.datetime.now().astimezone().tzinfo)
     if name is None:
         sgn = '+' if float(hours) >= 0.0 else '-'
-        name = f"{sgn}{float(hours):.0f}"
+        name = f"UTC{sgn}{float(hours):.0f}"
     return datetime.timezone(datetime.timedelta(hours=float(hours)), name)
 
 def datetimedelta(date, key=None, fmt=['%Y-%m-%d', '%y/%m/%d', '%Y-%m-%d %H:%M'], timezone=None):
@@ -142,11 +143,21 @@ def datetimedelta(date, key=None, fmt=['%Y-%m-%d', '%y/%m/%d', '%Y-%m-%d %H:%M']
     -------
     A tz-aware datetime, a timedelta or a timezone
     """
+    if key == 'timezone':
+        name = None
+        if isinstance(date, (list, tuple)):
+            hr = date[0]
+            name = str(date[1])
+        else:
+            hr = date
+        return get_timezone(hours=hr, name=name)
+
     if date is None:
         return None
     if isinstance(date, str):
         if date.lower() == 'none' or not len(date.strip()):
             return None
+
     if key in ['duration', 'lag']:
         if isinstance(date, datetime.timedelta):
             return date
@@ -154,23 +165,16 @@ def datetimedelta(date, key=None, fmt=['%Y-%m-%d', '%y/%m/%d', '%Y-%m-%d %H:%M']
             return datetime.timedelta(days = float(date))
         except (TypeError, ValueError):
             return None
-    if key == 'timezone':
-        name = None
-        if isinstance(date, (list, tuple)):
-            hr = float(date[0])
-            name = str(date[1])
-        else:
-            hr = float(date)
-        return get_timezone(hours=hr, name=name)
+
     if date == 'now':
         return datetime.datetime.now().astimezone(timezone)
     if isinstance(date, datetime.datetime):
-        return date.astimezone(timezone)
+        return date.replace(timezone)
     if isinstance(date, str):
         for this_fmt in fmt:
             try:
                 dt = datetime.datetime.strptime(date, this_fmt)
-                return dt.astimezone(timezone)
+                return dt.replace(tzinfo=timezone)
             except ValueError:
                 pass
     raise ValueError(f"Invalid date format {type(date)} - {date}")

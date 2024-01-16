@@ -52,6 +52,7 @@ class Entry:
         for par in self.parameters:
             setattr(self, par, None)
         self.updated = datetime.datetime.now().astimezone()
+        self.timezone = copy(self.updated.tzinfo)
 
     def _update_parameters(self, **kwargs):
         """Update any parameter attributes with some baselevel checking."""
@@ -287,7 +288,7 @@ class Timeline(Entry):
             predecessor_times = []
             for pred in kwargs['predecessors']:
                 predecessor_times.append(pred._predecessor_time)
-            self.begins = max(predecessor_times) + self.lag
+            self.begins = (max(predecessor_times) + self.lag).astimezone(self.timezone)
             provided_timing.add('begins')
 
         if 'duration' not in provided_timing:

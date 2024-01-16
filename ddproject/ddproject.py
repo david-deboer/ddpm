@@ -12,7 +12,7 @@ class Project:
     This is a collection of components (components.py) and handles them as an aggregate.
     """
 
-    def __init__(self, name, organization=None):
+    def __init__(self, name, organization=None, timezone=None):
         self.entry_types = components.event_types + components.other_types
         self.name = name
         self.organization = organization
@@ -22,7 +22,7 @@ class Project:
         self.colinear_map = {}
         self.earliest, self.latest = {}, {}
         self.updated = None
-        self.timezone = None
+        self.timezone = util.datetimedelta(timezone, 'timezone')
         for entry in self.entry_types:
             self.earliest[entry] = None
             self.latest[entry] = None
@@ -54,11 +54,11 @@ class Project:
             return
         self.all_entries[entry.key] = copy(entry)
         if entry.type in ['milestone', 'note']:
-            early_date = copy(entry.date)
-            late_date = copy(entry.date)
+            early_date = copy(entry.date).astimezone(self.timezone)
+            late_date = copy(entry.date).astimezone(self.timezone)
         else:
-            early_date = copy(entry.begins)
-            late_date = copy(entry.ends)
+            early_date = copy(entry.begins).astimezone(self.timezone)
+            late_date = copy(entry.ends).astimezone(self.timezone)
         if self.earliest[entry.type] is None:
             self.earliest[entry.type] = early_date
         elif early_date < self.earliest[entry.type]:
@@ -73,13 +73,6 @@ class Project:
         except AttributeError:
             pass
         getattr(self, f"{entry.type}s").append(entry.key)
-        if entry.timezone is not None and entry.timezone != self.timezone:
-            if self.timezone is None:
-                _tz = 'None'
-            else:
-                _tz = self.timezone.tzname(None)
-            print(f"Changing timezone from {_tz} to {entry.timezone.tzname(None)}")
-            self.timezone = entry.timezone
 
     def _sort_(self, entry_types, sortby):
         sort_key_dict = {}
@@ -152,13 +145,13 @@ class Project:
         for sortkey in self._sort_(chart, sortby):
             this = self.all_entries[sortkey]
             if this.type == 'milestone':
-                dates.append([this.date, None])
+                dates.append([copy(this.date).astimezone(self.timezone), None])
                 plotpars.append(Namespace(color=this.get_color(), marker=this.marker, owner=this.owner))
             elif this.type == 'timeline':
-                dates.append([this.begins, this.ends])
+                dates.append([copy(this.begins).astimezone(self.timezone), copy(this.ends).astimezone(self.timezone)])
                 plotpars.append(Namespace(color=this.get_color(), status=None, owner=None))
             elif this.type == 'task':
-                dates.append([this.begins, this.ends])
+                dates.append([copy(this.begins).astimezone(self.timezone), copy(this.ends).astimezone(self.timezone)])
                 plotpars.append(Namespace(color=this.get_color(), status=this.status, owner=this.owner))
             if this.label is not None:
                 labels.append(this.label)
