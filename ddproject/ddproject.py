@@ -75,6 +75,11 @@ class Project:
         getattr(self, f"{entry.type}s").append(entry.key)
 
     def _sort_(self, entry_types, sortby):
+        if entry_types == 'all':
+            entry_types = components.chart_types
+        elif isinstance(entry_types, str):
+            entry_types = [entry_types]
+
         sort_key_dict = {}
         for entry_type in entry_types:
             for key in getattr(self, f"{entry_type}s"):
@@ -115,6 +120,10 @@ class Project:
         chkmax = None if not len(chkmax) else max(chkmax)
         return Namespace(min=chkmin, max=chkmax)
 
+    def list(self, chart='all', sortby=['begins', 'date', 'name', 'ends']):
+        for sortkey in self._sort_(chart, sortby):
+            print(self.all_entries[sortkey])
+
     def chart(self, chart='all', sortby=['begins', 'date', 'name', 'ends'], interval=None, grid=False,
               colinear_delimiter='|', weekends=True, months=True):
         """
@@ -124,12 +133,9 @@ class Project:
         ---------
         sortby : list or 'all' (chart_types)
            fields to sort by
+
         """
         self.gantt = plotting.Gantt(name = self.name)
-        if chart == 'all':
-            chart = components.chart_types
-        elif isinstance(chart, str):
-            chart = [chart]
         dates = []
         labels = []
         plotpars = []

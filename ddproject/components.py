@@ -37,12 +37,17 @@ class Entry:
 
     def __repr__(self):
         try:
-            s = f"key: {self.key}\n"
+            s = f"Name: {self.name}\n"
             for par in self.parameters:
+                if par == 'name':
+                    continue
                 val = getattr(self, par)
-                if par in ['predecessors', 'colinear']:
-                    val = 'False' if val is None else 'True'
+                if par  == 'colinear':
+                    val = 'No' if self.colinear is None else self.colinear.name
+                elif par == 'predecessors':
+                    val = 'No' if self.predecessors is None else ', '.join(x.name for x in self.predecessors)
                 s += f"\t{par}: {val}\n"
+            s += f"\tkey: {self.key}\n"
             return s
         except AttributeError:
             return "Blank Entry"
