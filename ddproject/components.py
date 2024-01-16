@@ -227,10 +227,12 @@ class Milestone(Entry):
         self._predecessor_time = self.date
 
     def valid_request(self, **kwargs):
-        """Check info in a Milestone, note that timing is handled as Errors in init_timing"""
+        """Check info in a Milestone"""
         if 'duration' in kwargs and len(kwargs['duration'].strip()):
             return False
         if 'name' not in kwargs or not isinstance(kwargs['name'], str) or not len(kwargs['name'].strip()):
+            return False
+        if 'date' not in kwargs or not len(kwargs['date']):
             return False
         return True
 
@@ -312,8 +314,14 @@ class Timeline(Entry):
         return self._valid_request(**kwargs)
 
     def _valid_request(self, **kwargs):
-        """Check info in a Timeline, note that timing is handled as Errors in init_timing"""
+        """Check info in a Timelineg"""
         if 'name' not in kwargs or not isinstance(kwargs['name'], str) or not len(kwargs['name'].strip()):
+            return False
+        provided_timing = set()
+        for key in ['begins', 'ends', 'duration', 'predecessors']:
+            if key in kwargs and len(str(kwargs[key])):
+                provided_timing.add(key)
+        if provided_timing not in self.allowed_timing_sets:
             return False
         return True
 

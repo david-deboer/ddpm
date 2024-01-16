@@ -298,7 +298,7 @@ class Project:
                     name = copy(kwargs['name'])
                     del kwargs['name']
                     this = classdecl[entry_type](name=name, **kwargs)
-                self.add_entry(this)
+                self.add(this)
             elif verbose:
                 print(f"Skipping invalid {entry_type}:  {row}.")
         if fp is not None:
