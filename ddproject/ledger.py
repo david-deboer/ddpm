@@ -7,48 +7,54 @@ from . import ledger_utils as LU
 
 
 class Ledger():
-    def __init__(self, designator, files, account_codes):
+    amount_types = ['budget', 'encumbrance', 'actual']
+
+    def __init__(self, fund, files):
         """
         Parameters
         ----------
-        designator : str
+        fund : str
             Project designation, generally a fund number
         files : list of str
-            List with the names of the files to be read in
-        account_codes : dict
-            Dictionary with budget fields as keys and account codes as values (list)
-        """
-        self.designator = designator
-        self.files = files
-        self.account_codes = account_codes
+            List with the names of the files to be read
 
-    def read_in_files(self, adjust={}):
+        """
+        self.fund = fund
+        self.files = files
+
+    def read(self, adjust={}):
         """
         Read in the datafiles to produce data dictionary
+
         """
         print("Reading in ledger files:", end=' ')
         self.data = {}
-        self.first_date = parse('2030/1/1')
+        self.first_date = parse('2040/1/1')
         self.last_date = parse('2000/1/1')
-        self.grand_total = {'budget': 0.0, 'encumbrance': 0.0, 'actual': 0.0}
+        self.grand_total = {}
+        for amtt in self.amount_types:
+            self.grand_total[amtt] =  0.0
         self.total_entries = 0
-        self.column_names = set()
+        self.columns = {}
         counters = {}
         for ledger_file, report_type in self.files.items():  # loop through files
+            fy = LU.get_fiscal_year(ledger_file)  # Will return the fiscal year if filename contains it
             this_file = pd.read_csv(ledger_file)
             columns = this_file.columns.to_list()
+            self.columns[ledger_file] = columns
             acct, column_map = settings.ledger_info(report_type)
             counters[ledger_file] = {'fy': 0, 'lines': 0}
             for row in this_file.values:  # loop through rows
                 counters[ledger_file]['lines'] += 1
                 this_account = LU.convert_value(acct['converter'], row[columns.index(acct['col'])])
-                self.data.setdefault(this_account, {'entries': [], 'budget': 0.0,
-                                                    'encumbrance': 0.0, 'actual': 0.0})
+                self.data.setdefault(this_account, {'entries': []})
+                for amtt in self.amount_types:
+                    self.data[this_account][amtt] = 0.0
                 this_entry = copy(settings.init_entry())
                 for icol, ncol in enumerate(columns):  # loop through columns
                     entry_name, col_converter = column_map[ncol]
                     this_entry[entry_name] = LU.convert_value(col_converter, row[icol])
-                    if entry_name in settings.amount_types and this_entry[entry_name] is None:
+                    if entry_name in self.amount_types and this_entry[entry_name] is None:
                         this_entry[entry_name] = 0.0
                     if entry_name in settings.date_types and this_entry[entry_name] is None:
                         this_entry['date'] = parse('2010/1/1')
@@ -61,18 +67,12 @@ class Ledger():
                     self.first_date = this_entry['date']
                 if this_entry['date'] > self.last_date:
                     self.last_date = this_entry['date']
-                if str(this_entry['fund']) != str(self.fund_number) and not self.override_fund_error:
-                    raise ValueError(f"Fund {this_entry['fund']} != {self.fund_number}")
-                # if fy.year is not None:  # check correct fiscal year
-                #     if this_entry['date'] < fy.start or this_entry['date'] > fy.stop:
-                #         if verbose:
-                #             print(f"{newline}\t{this_entry['date'].isoformat().split('T')[0]} is not in FY{fy.year}")
-                #         newline = ''
-                #         counters[ledger_file]['fy'] += 1
-            # if counters[ledger_file]['fy']:
-            #     out_of_date = counters[ledger_file]['fy'] / counters[ledger_file]['lines']
-            #     if out_of_date > 0.5:
-            #         print(f"Warning!  {out_of_date*100:.1f} is more than 50%.")
+                if str(this_entry['fund']) != str(self.fund):
+                    raise ValueError(f"Fund {this_entry['fund']} != {self.fund}")
+                if fy.year is not None:  # check correct fiscal year
+                    if this_entry['date'] < fy.start or this_entry['date'] > fy.stop:
+                        print(f"\t{this_entry['date'].isoformat().split('T')[0]} is not in FY{fy.year}")
+                        counters[ledger_file]['fy'] += 1
         table_data = []
         for lfile in sorted(counters):
             table_data.append([lfile, counters[lfile]['fy'], counters[lfile]['lines']])
@@ -90,3 +90,17 @@ class Ledger():
         #             self.data[account].setdefault(col, 0.0)
         #             self.data[account][col] += this_entry[col]
         #             self.grand_total[col] += this_entry[col]
+
+    def budget_categories(self, categories):
+        self.categories = categories
+        self.cat = {}
+        for this_cat, these_codes in categories.items():
+            self.cat[this_cat] = {}
+            for amtt in self.amount_types:
+                self.cat[this_cat][amtt] = 0.0
+            for this_code in these_codes:
+                for amtt in self.amount_types:
+                    try:
+                        self.cat[this_cat][amtt] += self.data[this_code][amtt]
+                    except KeyError:
+                        continue

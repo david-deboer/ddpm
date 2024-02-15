@@ -18,12 +18,13 @@ def get_qtr_year_from_datetime(dt):
 def get_fiscal_year(val, fy_month=7):
     fy = Namespace(year=None)
     if isinstance(val, str):
-        if val.upper().startswith('FY'):
+        if 'FY' in val.upper():
+            ind = val.upper().index('FY')
             try:
-                nval = int(val[2:6])
+                nval = int(val[ind+2:ind+6])
             except ValueError:
                 try:
-                    nval = int(val[2:4])
+                    nval = int(val[ind+2:ind+4])
                 except ValueError:
                     return fy
         else:
