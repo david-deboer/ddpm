@@ -1,0 +1,240 @@
+from argparse import Namespace
+import matplotlib.pyplot as plt
+import numpy as np
+import datetime
+import csv
+import os
+import locale
+from dateutil.parser import parse
+locale.setlocale(locale.LC_ALL, '')
+
+
+def get_qtr_year_from_datetime(dt):
+    for i, q in enumerate([[1, 2, 3], [4, 5, 6], [7, 8, 9], [10, 11, 12]]):
+        if dt.month in q:
+            return {'qtr': i+1, 'yr':dt.year}
+
+
+def get_fiscal_year(val, fy_month=7):
+    fy = Namespace(year=None)
+    if isinstance(val, str):
+        if val.upper().startswith('FY'):
+            try:
+                nval = int(val[2:6])
+            except ValueError:
+                try:
+                    nval = int(val[2:4])
+                except ValueError:
+                    return fy
+        else:
+            try:
+                nval = int(val)
+            except ValueError:
+                return fy
+    elif isinstance(val, (int, float)):
+        nval = int(val)
+    elif isinstance(val, datetime.datetime):
+        if val.mon < fy_month:
+            nval = val.year
+        else:
+            nval = val.year + 1
+    if nval < 1000:
+        fy.year = nval + 2000
+    else:
+        fy.year = nval
+    fy.start = datetime.datetime(year=fy.year-1, month=fy_month, day=1)
+    fy.stop = datetime.datetime(year=fy.year, month=fy_month, day=1) - datetime.timedelta(days=1)
+    return fy        
+
+def convert_value(func, val):
+    if isinstance(func, str):
+        if func == 'ludate':
+            v = parse(val)
+        elif func == 'lumoney':
+            v = get_amt(val)
+        else:
+            raise ValueError(str(func), val)
+    else:
+        v = func(val)
+    return v
+
+def print_money(amt, dollar_sign=True, cents=False):
+    if amt is None:
+        money = '$0'
+    else:
+        try:
+            amt = float(amt)
+        except ValueError:
+            return amt
+        money = locale.currency(amt, grouping=True)
+    if not dollar_sign:
+        money = money.replace('$', '')
+    if not cents:
+        money = money.split('.')[0]
+    return money
+
+
+def show_money(x, dollar_sign=True, cents=False):
+    namm = max([len(z) for z in x])
+    amtm = max([len(print_money(z, dollar_sign, cents)) for z in x.values()])
+    for name, amt in x.items():
+        pamt = print_money(amt, dollar_sign, cents)
+        print("{name:{maxn}s} {amt:>{amtn}s}".format(name=name, maxn=namm, amt=pamt, amtn=amtm))
+
+def get_amt(x):
+    """
+    Convert accounting formatted money to a float
+    """
+    if isinstance(x, (int, float)):
+        return float(x)
+    trial = x.replace("(", "-").replace("'", "").replace("$", "").replace(")", "").replace(",", "")
+    try:
+        return float(trial)
+    except ValueError:
+        return None
+
+def chart(x, y, label, width=0.65, chart_title=None, xlabel=None, ylabel=None,
+             add_legend=True, save_it=False):
+    ind = list(range(len(x)))
+    if isinstance(label, str):
+        if len(x) != len(y):
+            print("Dimensions wrong for bar chart.")
+            return
+        label = [label]
+        plty = [np.array(y)]
+    else:
+        if len(y) != len(label) or len(x) != len(y[0]):
+            print("Dimensions wrong for stacked bar chart.")
+            return
+        plty = []
+        for this_group in y:
+            plty.append(np.array(this_group))
+    sumy = np.zeros(len(x))
+
+    if chart_title is not None:
+        plt.figure(chart_title)
+        plt.title(chart_title)
+    else:
+        plt.figure("Chart")
+    for this_label, this_plot in zip(label, plty):
+        p1 = plt.bar(ind, this_plot, width, label=this_label, bottom=sumy)
+        sumy += this_plot
+
+    if xlabel is not None:
+        plt.xlabel(xlabel)
+    if ylabel is not None:
+        plt.ylabel(ylabel)
+    plt.xticks(ind, x)
+    if add_legend:
+        plt.legend()
+    if save_it:
+        if isinstance(save_it, str):
+            plt.savefit(save_it)
+        else:
+            plt.savefig('bar_chart.png')
+
+def augmented_slice(S):
+    """
+    Takes string of form:  :, n1:, :n2, n1:n2
+    and returns a slice, with stop augmented if n2<0
+    (i.e. -1 returns the whole thing, etc)
+    """
+    S = [x if len(x) else -1 for x in S.split(':')]
+    S = [int(x) + int(int(x) < 0) for x in S]
+    S[1] = None if not S[1] else S[1]
+    return slice(S[0], S[1])
+
+def scrub_csv(fn, legend_starts_with='Accounting Period', data_ends_with='Grand Total'):
+    os.rename(fn, 'test_x_csv.csv')
+    in_data = False
+    with open('test_x_csv.csv', 'r') as fp_in:
+        reader = csv.reader(fp_in)
+        with open(fn, 'w') as fp_out:
+            writer = csv.writer(fp_out)
+            for row in reader:
+                if row[0].strip().startswith(legend_starts_with):
+                    in_data = True
+                elif row[0].strip().startswith(data_ends_with):
+                    break
+                if in_data:
+                    writer.writerow(row)
+    os.remove('test_x_csv.csv')
+
+
+def get_fund_directories(path=None):
+    fund_to_dir = {}
+    files = os.listdir(path)
+    if path is None:
+        path = os.getcwd()
+    print(f"Checking {path} for fund directories.")
+    for this_dir in files:
+        try:
+            fundno = int(this_dir.split('_')[0])
+        except ValueError:
+            continue
+        print(f"\t Found {this_dir}")
+        fund_to_dir[fundno] = this_dir
+    return fund_to_dir
+
+
+def split_csv(fn):
+    funds = get_fund_directories()
+    files_to_write = {}
+    for fund, dirname in funds.items():
+        files_to_write[fund] = {'fn': os.path.join(dirname, fn)}
+        files_to_write[fund]['fp'] = open(files_to_write[fund]['fn'], 'w')
+        files_to_write[fund]['writer'] = csv.writer(files_to_write[fund]['fp'])
+        files_to_write[fund]['counter'] = 0
+
+    with open(fn, 'r') as fp_in:
+        reader = csv.reader(fp_in)
+        for i, row in enumerate(reader):
+            if not i:
+                for vals in files_to_write.values():
+                    vals['writer'].writerow(row)
+            else:
+                fundno = int(row[2].split()[0])
+                files_to_write[fundno]['writer'].writerow(row)
+                files_to_write[fundno]['counter'] += 1
+    
+    print(f"{i} total records.")
+
+    for fundno in sorted(files_to_write):
+        print(f"{files_to_write[fundno]['counter']:4d} entries to {files_to_write[fundno]['fn']}")
+        files_to_write[fundno]['fp'].close()
+
+def xls2csv(xlsfile, csvfile):
+    import pandas
+    read_file = pandas.read_excel(xlsfile)
+    read_file.to_csv(csvfile, index = None, header=True, date_format='%Y/%m/%d')
+
+def write_to_csv(csvout, data, header=None, **kwargs):
+    """
+    Write a csv file with header data and a header line
+    """
+    if not csvout.endswith('.csv'):
+        csvout += '.csv'
+    print("Writing {}".format(csvout))
+
+    if len(list(kwargs.keys())):
+        kw_hdr = [['Option settings']]
+    else:
+        kw_hdr = []
+    for kw in kwargs.keys():
+        kw_hdr.append([None, kw, kwargs[kw]])
+    if header is not None and len(kw_hdr):
+        csv_hdr = kw_hdr + [header]
+    elif header is not None:
+        csv_hdr = [header]
+    elif header is None and len(kw_hdr):
+        csv_hdr = kw_hdr
+    else:
+        csv_hdr = None
+
+    if csv_hdr is not None:
+        data = csv_hdr + data
+
+    with open(csvout, 'w') as fp:
+        writer = csv.writer(fp)
+        for d in data:
+            writer.writerow(d)
