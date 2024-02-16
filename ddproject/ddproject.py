@@ -155,7 +155,7 @@ class Project:
                 plotpars.append(Namespace(color=this.get_color(), marker=this.marker, owner=this.owner))
             elif this.type == 'timeline':
                 dates.append([copy(this.begins).astimezone(self.timezone), copy(this.ends).astimezone(self.timezone)])
-                plotpars.append(Namespace(color=this.get_color(), status=None, owner=None))
+                plotpars.append(Namespace(color=this.get_color(), owner=None))
             elif this.type == 'task':
                 dates.append([copy(this.begins).astimezone(self.timezone), copy(this.ends).astimezone(self.timezone)])
                 plotpars.append(Namespace(color=this.get_color(), status=this.status, owner=this.owner))

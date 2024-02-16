@@ -59,17 +59,21 @@ def convert_value(func, val):
         v = func(val)
     return v
 
-def print_money(amt, dollar_sign=True, cents=False):
+def print_money(amt, dollar_sign=False, cents=False, pad=False):
     if amt is None:
-        money = '$0'
+        money = '$0.00'
     else:
         try:
             amt = float(amt)
         except ValueError:
             return amt
         money = locale.currency(amt, grouping=True)
-    if not dollar_sign:
-        money = money.replace('$', '')
+    money = money.replace('$', '')
+    if pad:
+        deci = money.index('.')
+        money = (pad - deci) * ' ' + money
+    if dollar_sign:
+        money = '$' + money
     if not cents:
         money = money.split('.')[0]
     return money

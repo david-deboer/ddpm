@@ -354,7 +354,7 @@ class Task(Timeline):
     def get_color(self):
         if self.color is None or self.color == 'auto':
             if isinstance(self.status, float):
-                now = datetime.datetime.now()
+                now = datetime.datetime.now().astimezone()
                 if int(self.status) != 100 and now > self.ends:
                     return util.STATUS_COLOR['late']
                 if self.begins > now:

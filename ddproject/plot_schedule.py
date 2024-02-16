@@ -14,7 +14,7 @@ import numpy as np
 from ddproject.util import color_palette
 from copy import copy
 from my_utils import time_data_tools as tdt
-import matplotlib as mpl
+
 
 class StateVariable:
     time_formats = ['%Y-%m-%dT%H:%M:%S', '%Y-%m-%dT%H:%M', '%Y-%m-%d %H:%M:%S', '%Y-%m-%d %H:%M']
@@ -185,7 +185,10 @@ class Gantt:
         ax1.axis(xmin=matplotlib.dates.date2num(self.extrema.min)-self.deltadate/10.0,
                  xmax=matplotlib.dates.date2num(self.extrema.max)+self.deltadate/10.0)
         self.assign_yvals_labels(self.sv.colinear_delimiter)
-        step = self.yticks[1] - self.yticks[0]
+        try:
+            step = self.yticks[1] - self.yticks[0]
+        except IndexError:
+            step = 0.1
 
         if self.sv.weekends:
             self.plot_weekends()
