@@ -22,14 +22,12 @@ class Ledger():
         self.fund = fund
         self.files = files
 
-    def read(self, adjust={}):
+    def read(self):
         """
         Read in the datafiles to produce data dictionary
 
         """
         print("Reading in ledger files:", end=' ')
-        if not isinstance(adjust, dict):
-            adjust = {}
         self.data = {}
         self.first_date = parse('2040/1/1')
         self.last_date = parse('2000/1/1')
@@ -49,9 +47,11 @@ class Ledger():
             for row in this_file.values:  # loop through rows
                 counters[ledger_file]['lines'] += 1
                 this_account = LU.convert_value(acct['converter'], row[columns.index(acct['col'])])
-                self.data.setdefault(this_account, {'entries': []})
-                for amtt in self.amount_types:
-                    self.data[this_account][amtt] = 0.0
+                if this_account not in self.data:
+                    self.data[this_account] = {'entries': []}
+                    if not len(self.data[this_account]['entries']):
+                        for amtt in self.amount_types:
+                            self.data[this_account][amtt] = 0.0
                 this_entry = copy(settings.init_entry())
                 for icol, ncol in enumerate(columns):  # loop through columns
                     entry_name, col_converter = column_map[ncol]
@@ -80,18 +80,6 @@ class Ledger():
             table_data.append([lfile, counters[lfile]['fy'], counters[lfile]['lines']])
         print('\n' + tabulate(table_data, headers=['ledger file', 'out_of_fy', 'total']))
         self.total_months = (self.last_date - self.first_date).days / 30.42  # close enough
-        # if len(adjust):
-        #     this_date = tdt.datetime.datetime.now()
-        #     for account, val in adjust.items():
-        #         this_entry = settings.init_entry({'account': account, 'date': this_date,
-        #                                           'budget': 0.0, 'encumbrance': 0.0, 'actual': 0.0})
-        #         for col, amt in val.items():
-        #             this_entry[col] = amt
-        #         self.data[account] = {'entries': [this_entry]}
-        #         for col in settings.amount_types:
-        #             self.data[account].setdefault(col, 0.0)
-        #             self.data[account][col] += this_entry[col]
-        #             self.grand_total[col] += this_entry[col]
 
     def get_budget_categories(self, budget_categories):
         """
@@ -114,16 +102,15 @@ class Ledger():
         self.subtotals = {}
         if budget_categories is None:
             return
-        for this_cat, these_codes in budget_categories.items():
+        for this_cat, these_codes in self.budget_categories.items():
             self.subtotals[this_cat] = {}
             for amtt in self.amount_types:
                 self.subtotals[this_cat][amtt] = 0.0
             for this_code in these_codes:
+                if this_code not in self.data:
+                    continue
                 for amtt in self.amount_types:
-                    try:
-                        self.subtotals[this_cat][amtt] += self.data[this_code][amtt]
-                    except KeyError:
-                        continue
+                    self.subtotals[this_cat][amtt] += self.data[this_code][amtt]
 
     def get_budget_aggregates(self, budget_aggregates):
         """
@@ -173,6 +160,7 @@ class Budget:
         self.budget = budget
         self.categories = {}  # These are the budget categories (not aggregated as below)
         self.aggregates = {}  # These are aggregates of other budget categories
+        self.grand_total = 0.0
         for this_cat, amt in self.budget.items():
             nval = amt
             if isinstance(amt, str):
@@ -185,7 +173,27 @@ class Budget:
             else:
                 self.categories[this_cat] = copy(this_cat)
             self.budget[this_cat] = nval
+            try:
+                self.grand_total += nval
+            except ValueError:
+                print(nval)
+                continue
         for this_cat, cmps in self.aggregates.items():
             self.budget[this_cat] = 0.0
             for cmp in cmps:
                 self.budget[this_cat] += self.budget[cmp]
+
+    def adjust(self):
+        print("")
+        # if len(adjust):
+        #     this_date = tdt.datetime.datetime.now()
+        #     for account, val in adjust.items():
+        #         this_entry = settings.init_entry({'account': account, 'date': this_date,
+        #                                           'budget': 0.0, 'encumbrance': 0.0, 'actual': 0.0})
+        #         for col, amt in val.items():
+        #             this_entry[col] = amt
+        #         self.data[account] = {'entries': [this_entry]}
+        #         for col in settings.amount_types:
+        #             self.data[account].setdefault(col, 0.0)
+        #             self.data[account][col] += this_entry[col]
+        #             self.grand_total[col] += this_entry[col]

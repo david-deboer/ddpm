@@ -2,7 +2,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 
 
-def chart(x, y, label, width=0.65, chart_title=None, xlabel=None, ylabel=None,
+def chart(x, y, label, width=0.65,  xlabel=None, ylabel=None,
              add_legend=True, save_it=False):
     ind = list(range(len(x)))
     if isinstance(label, str):
@@ -20,11 +20,6 @@ def chart(x, y, label, width=0.65, chart_title=None, xlabel=None, ylabel=None,
             plty.append(np.array(this_group))
     sumy = np.zeros(len(x))
 
-    if chart_title is not None:
-        plt.figure(chart_title)
-        plt.title(chart_title)
-    else:
-        plt.figure("Chart")
     for this_label, this_plot in zip(label, plty):
         p1 = plt.bar(ind, this_plot, width, label=this_label, bottom=sumy)
         sumy += this_plot
