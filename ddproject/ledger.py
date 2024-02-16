@@ -28,6 +28,8 @@ class Ledger():
 
         """
         print("Reading in ledger files:", end=' ')
+        if not isinstance(adjust, dict):
+            adjust = {}
         self.data = {}
         self.first_date = parse('2040/1/1')
         self.last_date = parse('2000/1/1')
@@ -91,16 +93,99 @@ class Ledger():
         #             self.data[account][col] += this_entry[col]
         #             self.grand_total[col] += this_entry[col]
 
-    def budget_categories(self, categories):
-        self.categories = categories
-        self.cat = {}
-        for this_cat, these_codes in categories.items():
-            self.cat[this_cat] = {}
+    def get_budget_categories(self, budget_categories):
+        """
+        Budget categories are groups of account codes which get sub-totaled
+
+        Parameter
+        ---------
+        budget_categories : dict, None
+            keys are the budget_categories and values is a list of account codes
+
+        Attributes
+        ----------
+        budget_categories : dict, None
+            The budget_categories
+        subtotals : dict
+            Sub-totals for the budget categories
+
+        """
+        self.budget_categories = budget_categories
+        self.subtotals = {}
+        if budget_categories is None:
+            return
+        for this_cat, these_codes in budget_categories.items():
+            self.subtotals[this_cat] = {}
             for amtt in self.amount_types:
-                self.cat[this_cat][amtt] = 0.0
+                self.subtotals[this_cat][amtt] = 0.0
             for this_code in these_codes:
                 for amtt in self.amount_types:
                     try:
-                        self.cat[this_cat][amtt] += self.data[this_code][amtt]
+                        self.subtotals[this_cat][amtt] += self.data[this_code][amtt]
                     except KeyError:
                         continue
+
+    def get_budget_aggregates(self, budget_aggregates):
+        """
+        Budget aggregates are groups of budget_categories which get sub-totaled
+
+        Parameter
+        ---------
+        budget_aggregates : dict, None
+            keys are the budget_aggregates and values is a list of budget_categories
+
+        Attributes
+        ----------
+        budget_aggregates : dict, None
+            The budget_aggregates
+        subtotals : dict
+            Sub-totals for the budget categories
+
+        """
+        self.budget_aggregates = budget_aggregates
+        if budget_aggregates is None:
+            return
+        for this_cat, cmps in self.budget_aggregates.items():
+            self.subtotals[this_cat] = {}
+            for amtt in self.amount_types:
+                self.subtotals[this_cat][amtt] = 0.0
+                for cmp in cmps:
+                    self.subtotals[this_cat][amtt] += self.subtotals[cmp][amtt]
+
+class Budget:
+    def __init__(self, budget):
+        """
+        Make the sponsor budget.
+
+        Parameter
+        ---------
+        budget : dict
+            Budget items and amounts or subtotaling list
+        Attributes:
+            categories : dict
+                Budget categories, the value is just the same budget category.
+            aggregates : dict
+                Budget aggregates, the value is the list of comprising budget categories.
+            budget : dict
+                Dictionary of categories/aggregates with subtotals
+
+        """
+        self.budget = budget
+        self.categories = {}  # These are the budget categories (not aggregated as below)
+        self.aggregates = {}  # These are aggregates of other budget categories
+        for this_cat, amt in self.budget.items():
+            nval = amt
+            if isinstance(amt, str):
+                if amt[0] == '+':
+                    self.aggregates[this_cat] = amt.strip('+').split('+')
+                    continue
+                else:
+                    self.categories[this_cat] = copy(this_cat)
+                    nval = eval(amt)
+            else:
+                self.categories[this_cat] = copy(this_cat)
+            self.budget[this_cat] = nval
+        for this_cat, cmps in self.aggregates.items():
+            self.budget[this_cat] = 0.0
+            for cmp in cmps:
+                self.budget[this_cat] += self.budget[cmp]
