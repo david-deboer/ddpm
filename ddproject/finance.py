@@ -32,18 +32,6 @@ class Finance:
         # Pull out the complete set of categories and aggregates
         self.categories = sorted(set(list(self.budget.categories.keys()) + list(self.ledger.budget_categories.keys())))
         self.aggregates = sorted(set(list(self.budget.aggregates.keys()) + list(self.ledger.budget_aggregates.keys())))
-        # In fill as necessary so ledger/budget have complete categories/aggregates -- I don't think I need this...
-        # for cat, agg in zip(self.categories, self.aggregates):
-        #     if cat not in self.budget.categories:
-        #         self.budget.budget[cat] = 0.0
-        #     if agg not in self.budget.aggregates:
-        #         self.budget.budget[agg] = 0.0
-        #     if cat not in self.ledger.budget_categories:
-        #         for amtt in self.ledger.amount_types:
-        #             self.ledger.subtotals[cat][amtt] = 0.0
-        #     if agg not in self.ledger.budget_aggregates:
-        #         for amtt in self.ledger.amount_types:
-        #             self.ledger.subtotals[agg][amtt] = 0.0
 
     def dashboard(self, categories=None, aggregates=None, report=False):
         if categories is None:
