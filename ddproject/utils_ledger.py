@@ -1,49 +1,10 @@
-from argparse import Namespace
-import datetime
+
 import csv
 import os
 import locale
 from dateutil.parser import parse
 locale.setlocale(locale.LC_ALL, '')
-
-
-def get_qtr_year_from_datetime(dt):
-    for i, q in enumerate([[1, 2, 3], [4, 5, 6], [7, 8, 9], [10, 11, 12]]):
-        if dt.month in q:
-            return {'qtr': i+1, 'yr':dt.year}
-
-
-def get_fiscal_year(val, fy_month=7):
-    fy = Namespace(year=None)
-    if isinstance(val, str):
-        if 'FY' in val.upper():
-            ind = val.upper().index('FY')
-            try:
-                nval = int(val[ind+2:ind+6])
-            except ValueError:
-                try:
-                    nval = int(val[ind+2:ind+4])
-                except ValueError:
-                    return fy
-        else:
-            try:
-                nval = int(val)
-            except ValueError:
-                return fy
-    elif isinstance(val, (int, float)):
-        nval = int(val)
-    elif isinstance(val, datetime.datetime):
-        if val.mon < fy_month:
-            nval = val.year
-        else:
-            nval = val.year + 1
-    if nval < 1000:
-        fy.year = nval + 2000
-    else:
-        fy.year = nval
-    fy.start = datetime.datetime(year=fy.year-1, month=fy_month, day=1)
-    fy.stop = datetime.datetime(year=fy.year, month=fy_month, day=1) - datetime.timedelta(days=1)
-    return fy        
+    
 
 def convert_value(func, val):
     if isinstance(func, str):

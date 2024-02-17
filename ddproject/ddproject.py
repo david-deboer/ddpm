@@ -1,6 +1,7 @@
 from copy import copy
 from . import plot_schedule
-from . import util
+from . import utils_ddp as ud
+from . import utils_time as ut
 from . import components
 import datetime
 from argparse import Namespace
@@ -22,7 +23,7 @@ class Project:
         self.colinear_map = {}
         self.earliest, self.latest = {}, {}
         self.updated = None
-        self.timezone = util.datetimedelta(timezone, 'timezone')
+        self.timezone = ut.datetimedelta(timezone, 'timezone')
         for entry in self.entry_types:
             self.earliest[entry] = None
             self.latest[entry] = None
@@ -147,7 +148,7 @@ class Project:
             return
         duration = extrema.max - extrema.min
 
-        print(f"Duration = {util.pretty_duration(duration.total_seconds())}")
+        print(f"Duration = {ut.pretty_duration(duration.total_seconds())}")
         for sortkey in self._sort_(chart, sortby):
             this = self.all_entries[sortkey]
             if this.type == 'milestone':
@@ -221,7 +222,7 @@ class Project:
             print(f"{this.jot}  {this.date.strftime('%Y-%m-%d %H:%M')}  - ({', '.join(this.reference)})")
 
     def color_bar(self):
-        util.color_bar()
+        ud.color_bar()
 
     def _determine_entry_type(self, header, row):
         kwargs = {}
@@ -262,7 +263,7 @@ class Project:
         classdecl = {'milestone': components.Milestone, 'timeline': components.Timeline, 'task': components.Task}
 
         if loc.startswith('http'):
-            data = util.load_sheet_from_url(loc)
+            data = ud.load_sheet_from_url(loc)
             header = copy(data[0])
             reader = data[1:]
         else:
@@ -331,7 +332,7 @@ class Project:
             pcdict[f"v{col2[0]}"] = pcol
             pcdict[f"v{col2[1]}"] = pcol
 
-        entpar = util.components_parameters(show=False)
+        entpar = ud.components_parameters(show=False)
         for entry in self.entry_types:
             for p in entpar[entry]:
                 if p in pcdict:
@@ -363,9 +364,9 @@ class Project:
                                 val = getattr(this, col)
                                 if val is None:
                                     val = ''
-                                elif col in util.DATE_FIELDS:
-                                    val = util.datedeltastr(val)
-                                elif col in util.LIST_FIELDS:
+                                elif col in ud.DATE_FIELDS:
+                                    val = ud.datedeltastr(val)
+                                elif col in ud.LIST_FIELDS:
                                     val = '|'.join([str(_x) for _x in val])
                                 row.append(val)
                                 added = True

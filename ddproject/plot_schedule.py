@@ -12,8 +12,7 @@ import matplotlib.pyplot as plt
 import matplotlib.dates
 import numpy as np
 from ddproject.util import color_palette
-from copy import copy
-from my_utils import time_data_tools as tdt
+from . import utils_time as ut
 
 
 class StateVariable:
@@ -99,12 +98,12 @@ class Gantt:
         if self.extrema.min.day < 10:
             first_day = datetime.datetime(year=self.extrema.min.year, month=self.extrema.min.month, day=1).replace(tzinfo=self.timezone)
             plt.plot([first_day, first_day], [-10, ybound], '--', lw=2, color=color)
-        this_day = (tdt.last_day_of_month(self.extrema.min, return_datetime=True) + datetime.timedelta(days=1)).replace(tzinfo=self.timezone)
+        this_day = (ut.last_day_of_month(self.extrema.min, return_datetime=True) + datetime.timedelta(days=1)).replace(tzinfo=self.timezone)
         while this_day < self.extrema.max:
             plt.plot([this_day, this_day], [-10, ybound], '--', lw=2, color=color)
-            this_day = (tdt.last_day_of_month(this_day, return_datetime=True) + datetime.timedelta(days=1)).replace(tzinfo=self.timezone)
+            this_day = (ut.last_day_of_month(this_day, return_datetime=True) + datetime.timedelta(days=1)).replace(tzinfo=self.timezone)
         if self.extrema.max.day > 20:
-            this_day = (tdt.last_day_of_month(self.extrema.max, return_datetime=True) + datetime.timedelta(days=1)).replace(tzinfo=self.timezone)
+            this_day = (ut.last_day_of_month(self.extrema.max, return_datetime=True) + datetime.timedelta(days=1)).replace(tzinfo=self.timezone)
             plt.plot([this_day, this_day], [-10, ybound], '--', lw=2, color=color)
 
     def assign_yvals_labels(self, colinear_delimiter='\n'):

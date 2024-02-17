@@ -1,9 +1,8 @@
 import vobject
 import datetime
 from copy import copy
-import matplotlib.pyplot as plt
 from ddproject import ddproject, components
-from my_utils import time_data_tools as tdt
+from dateutil.parser import parse
 import pytz
 
 
@@ -114,8 +113,8 @@ class iCal:
                 print(f"{self.events[era][event]['dtstart'].strftime(strfmt)}  -  {self.events[era][event]['dtend'].strftime(strfmt)}   {self.events[era][event]['summary']}")
 
     def add(self, start, end, summary):
-        dtstart = to_dtz(tdt.get_datetime(start), '00:00')
-        dtend = to_dtz(tdt.get_datetime(end), '23:59')
+        dtstart = to_dtz(parse(start), '00:00')
+        dtend = to_dtz(parse(end), '23:59')
         era = get_era(self.now, dtstart, dtend, upcoming=self.upcoming)
         key = copy(dtstart)
         while key in self.events:

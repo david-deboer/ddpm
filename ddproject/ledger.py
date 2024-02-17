@@ -3,7 +3,8 @@ from copy import copy
 from tabulate import tabulate
 from dateutil.parser import parse
 from . import ledger_settings as settings
-from . import ledger_utils as LU
+from . import utils_ledger as ul
+from . import utils_time as ut
 
 
 class Ledger():
@@ -38,7 +39,7 @@ class Ledger():
         self.columns = {}
         counters = {}
         for ledger_file, report_type in self.files.items():  # loop through files
-            fy = LU.get_fiscal_year(ledger_file)  # Will return the fiscal year if filename contains it
+            fy = ut.get_fiscal_year(ledger_file)  # Will return the fiscal year if filename contains it
             this_file = pd.read_csv(ledger_file)
             columns = this_file.columns.to_list()
             self.columns[ledger_file] = columns
@@ -46,7 +47,7 @@ class Ledger():
             counters[ledger_file] = {'fy': 0, 'lines': 0}
             for row in this_file.values:  # loop through rows
                 counters[ledger_file]['lines'] += 1
-                this_account = LU.convert_value(acct['converter'], row[columns.index(acct['col'])])
+                this_account = ul.convert_value(acct['converter'], row[columns.index(acct['col'])])
                 if this_account not in self.data:
                     self.data[this_account] = {'entries': []}
                     if not len(self.data[this_account]['entries']):
@@ -55,7 +56,7 @@ class Ledger():
                 this_entry = copy(settings.init_entry())
                 for icol, ncol in enumerate(columns):  # loop through columns
                     entry_name, col_converter = column_map[ncol]
-                    this_entry[entry_name] = LU.convert_value(col_converter, row[icol])
+                    this_entry[entry_name] = ul.convert_value(col_converter, row[icol])
                     if entry_name in self.amount_types and this_entry[entry_name] is None:
                         this_entry[entry_name] = 0.0
                     if entry_name in settings.date_types and this_entry[entry_name] is None:

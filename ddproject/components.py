@@ -1,4 +1,5 @@
-from . import util
+from . import utils_ddp as ud
+from . import utils_time as ut
 import datetime
 import hashlib
 from copy import copy
@@ -62,15 +63,15 @@ class Entry:
     def _update_parameters(self, **kwargs):
         """Update any parameter attributes with some baselevel checking."""
         if 'timezone' in kwargs:
-            self.timezone = util.datetimedelta(kwargs['timezone'], 'timezone')
+            self.timezone = ut.datetimedelta(kwargs['timezone'], 'timezone')
             del(kwargs['timezone'])
         for key, val in kwargs.items():
             if key not in self.parameters:
                 print(f"Invalid key '{key}' for {self.type}.")
                 continue
-            if key in util.DATE_FIELDS:
-                setattr(self, key, util.datetimedelta(val, key, timezone=self.timezone))
-            elif key in util.LIST_FIELDS and isinstance(val, str):
+            if key in ud.DATE_FIELDS:
+                setattr(self, key, ut.datetimedelta(val, key, timezone=self.timezone))
+            elif key in ud.LIST_FIELDS and isinstance(val, str):
                 setattr(self, key, val.split(','))
             elif isinstance(val, str):
                 setattr(self, key, val.strip())
@@ -138,9 +139,9 @@ class Entry:
             val = getattr(self, par)
             if val is None or not len(str(val).strip()):
                 continue
-            if par in util.DATE_FIELDS:
-                val = util.datedeltastr(val)
-            elif par in util.LIST_FIELDS:
+            if par in ud.DATE_FIELDS:
+                val = ut.datedeltastr(val)
+            elif par in ud.LIST_FIELDS:
                 val = '|'.join([str(x).strip() for x in val])
             else:
                 try:
@@ -246,14 +247,14 @@ class Milestone(Entry):
         else:
             return self.color
         if self.status != 'complete' and now > self.date:
-            return util.STATUS_COLOR['late']
+            return ud.STATUS_COLOR['late']
         if self.status == 'complete' and self.complete is not None:
             if abs(self.complete) > 1.0:
-                return util.complete2rgb(self.complete)
-            return util.STATUS_COLOR['complete']
-        if self.status in util.STATUS_COLOR:
-            return util.STATUS_COLOR[self.status]
-        return util.STATUS_COLOR['other']
+                return ud.complete2rgb(self.complete)
+            return ud.STATUS_COLOR['complete']
+        if self.status in ud.STATUS_COLOR:
+            return ud.STATUS_COLOR[self.status]
+        return ud.STATUS_COLOR['other']
 
 
 class Timeline(Entry):
@@ -330,7 +331,7 @@ class Timeline(Entry):
 
     def get_color(self):
         if self.color is None or self.color == 'auto':
-            return util.color_palette[0]
+            return ud.color_palette[0]
         return self.color
 
     def add_note(self, note):
@@ -356,15 +357,15 @@ class Task(Timeline):
             if isinstance(self.status, float):
                 now = datetime.datetime.now().astimezone()
                 if int(self.status) != 100 and now > self.ends:
-                    return util.STATUS_COLOR['late']
+                    return ud.STATUS_COLOR['late']
                 if self.begins > now:
-                    return util.color_palette[0]
+                    return ud.color_palette[0]
                 if self.complete is not None:
-                    return util.complete2rgb(self.complete)
+                    return ud.complete2rgb(self.complete)
                 pc_elapsed = 100.0 * (now - self.begins) / self.duration
                 completed = pc_elapsed - self.status if pc_elapsed > self.status else 0.0
-                return util.complete2rgb((completed-50.0))
-            return util.color_palette[0]
+                return ud.complete2rgb((completed-50.0))
+            return ud.color_palette[0]
         return self.color
 
 
@@ -375,7 +376,7 @@ class Note(Entry):
         if jot is None:  # Just want the parameters
             pass
         elif self.valid_request(jot=jot):
-            self.date = util.datetimedelta(date)
+            self.date = ut.datetimedelta(date)
             self.jot = jot
             if reference is None:
                 self.reference = []

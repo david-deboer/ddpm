@@ -6,8 +6,8 @@ This provides the overall analysis for budget and ledger.  The input yaml define
 import yaml
 from . import account_code_list as acl
 from . import ledger
-from . import ledger_utils as lu
-from . import util
+from . import utils_ledger as ul
+from . import utils_time as ut
 from . import plot_finance as plot
 from tabulate import tabulate
 from ddproject import ddproject, components
@@ -42,14 +42,14 @@ class Finance:
         for cat in categories:
             bal = self.budget.budget[cat] - self.ledger.subtotals[cat]['actual']
             data = [self.budget.budget[cat], self.ledger.subtotals[cat]['actual'], bal, self.ledger.subtotals[cat]['budget'], self.ledger.subtotals[cat]['encumbrance']]
-            table_data.append([cat] + [lu.print_money(x) for x in data])
+            table_data.append([cat] + [ul.print_money(x) for x in data])
         for agg in aggregates:
             bal = self.budget.budget[agg] - self.ledger.subtotals[agg]['actual']
             data = [self.budget.budget[agg], self.ledger.subtotals[agg]['actual'], bal, self.ledger.subtotals[agg]['budget'], self.ledger.subtotals[agg]['encumbrance']]
-            table_data.append(['+'+agg] + [lu.print_money(x) for x in data])
+            table_data.append(['+'+agg] + [ul.print_money(x) for x in data])
         bal = self.budget.grand_total - self.ledger.grand_total['actual']
         data = [self.budget.grand_total, self.ledger.grand_total['actual'], bal, self.ledger.grand_total['budget'], self.ledger.grand_total['encumbrance']]
-        table_data.append(['Grand Total'] + [lu.print_money(x) for x in data])
+        table_data.append(['Grand Total'] + [ul.print_money(x) for x in data])
         pcremain = 100.0 * bal / self.budget.grand_total
         pcspent = 100.0 * self.ledger.grand_total['actual'] / self.budget.grand_total
         print(f"Percent spent: {pcspent:.1f}")
@@ -64,7 +64,7 @@ class Finance:
         plot.chart(self.categories, lamts, label='Ledger', width=0.4)
 
         self.project = ddproject.Project(self.yaml_data['fund'], organization='RAL')
-        duration = util.months_to_timedelta(self.yaml_data['start'], self.yaml_data['duration'])
+        duration = ut.months_to_timedelta(self.yaml_data['start'], self.yaml_data['duration'])
         task1 = components.Task(name='Period of Performance', begins=self.yaml_data['start'], duration=duration, status=pcspent, updated=datetime.now())
         print(f"\tStart: {task1.begins}")
         print(f"\tEnds: {task1.ends}")
