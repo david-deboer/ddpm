@@ -101,23 +101,27 @@ nsf = {'staff': Academic_Wages + Staff_Wages + Other_Employee_Compen + Retiremen
        'subs': Intercampus + C_G_Sub_Awards, 
        'indirect' : C_G_Spnsr_Indirect_Cost,
        'not_included': []}
-
-sra = Namespace(staff=Academic_Wages + Staff_Wages + Other_Employee_Compen + Retirement_Benefits,
-                equip=(Computer_Equip_Inven + Equip_Inventorial + Comp_Equip_Non_Inventor +
-                       Equip_Non_Inventorial),
-                travel=Conf_Mtgs_Training_Events + Travel,
-                other=(General_Supplies + Computing_Supplies + Comp_Serv_Software + Communications +
-                       Maint_Contract_Serv + Rents_Utilities + Publications_Media +
-                       Transportation + Other_Serv_Non_Computer + Misc_Expense_577XX +
-                       Pymts_Students_Stud_Aid + Impairment_of_Cap_Assets +
-                       C_G_Sponsor_Direct_Cost + Unallocated + Reappropriation +
-                       Fund_Advance_Unalloc + Recharge_Income + Control_Unit_Budget_Provisions),
-                contracts=Non_Employee_Payments,
-                subs=Intercampus + C_G_Sub_Awards,
-                indirect=C_G_Spnsr_Indirect_Cost,
-                not_included=[])
 gbmf = nsf
 si = nsf
-gift = Namespace(supplies=General_Supplies, meetings=Conf_Mtgs_Training_Events,
-                 domestic=Travel_Domestic, foreign=Travel_Foreign, other_travel=Travel_Other,
-                 not_included=[])
+
+
+sra = {'staff': Academic_Wages + Staff_Wages + Other_Employee_Compen + Retirement_Benefits,
+       'equip': Computer_Equip_Inven + Equip_Inventorial + Comp_Equip_Non_Inventor + Equip_Non_Inventorial,
+       'travel': Conf_Mtgs_Training_Events + Travel,
+       'other': (General_Supplies + Computing_Supplies + Comp_Serv_Software + Communications +
+                 Maint_Contract_Serv + Rents_Utilities + Publications_Media +
+                 Transportation + Other_Serv_Non_Computer + Misc_Expense_577XX +
+                 Pymts_Students_Stud_Aid + Impairment_of_Cap_Assets +
+                 C_G_Sponsor_Direct_Cost + Unallocated + Reappropriation +
+                 Fund_Advance_Unalloc + Recharge_Income + Control_Unit_Budget_Provisions),
+       'contracts': Non_Employee_Payments,
+       'subs': Intercampus + C_G_Sub_Awards,
+       'indirect': C_G_Spnsr_Indirect_Cost,
+       'not_included': []}
+
+gift = {'supplies': General_Supplies,
+        'meetings': Conf_Mtgs_Training_Events,
+        'domestic': Travel_Domestic,
+        'foreign': Travel_Foreign,
+        'other_travel': Travel_Other,
+        'not_included': []}

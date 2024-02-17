@@ -60,7 +60,7 @@ class Ledger():
                     if entry_name in self.amount_types and this_entry[entry_name] is None:
                         this_entry[entry_name] = 0.0
                     if entry_name in settings.date_types and this_entry[entry_name] is None:
-                        this_entry['date'] = parse('2010/1/1')
+                        this_entry['date'] = parse('2010/1/1')  # Make an outlier
                 self.data[this_account]['entries'].append(this_entry)
                 self.total_entries += 1
                 for col in settings.amount_types:

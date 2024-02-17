@@ -38,13 +38,6 @@ def print_money(amt, dollar_sign=False, cents=False, pad=False):
     return money
 
 
-def show_money(x, dollar_sign=True, cents=False):
-    namm = max([len(z) for z in x])
-    amtm = max([len(print_money(z, dollar_sign, cents)) for z in x.values()])
-    for name, amt in x.items():
-        pamt = print_money(amt, dollar_sign, cents)
-        print("{name:{maxn}s} {amt:>{amtn}s}".format(name=name, maxn=namm, amt=pamt, amtn=amtm))
-
 def get_amt(x):
     """
     Convert accounting formatted money to a float
@@ -67,6 +60,7 @@ def augmented_slice(S):
     S = [int(x) + int(int(x) < 0) for x in S]
     S[1] = None if not S[1] else S[1]
     return slice(S[0], S[1])
+
 
 def scrub_csv(fn, legend_starts_with='Accounting Period', data_ends_with='Grand Total'):
     os.rename(fn, 'test_x_csv.csv')
