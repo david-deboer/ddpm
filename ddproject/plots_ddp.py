@@ -173,13 +173,14 @@ class Gantt:
         ----------
 
         """
-        defaults = {'colinear_delimiter': '|', 'weekends': True, 'months': True, 'grid': True, 'interval': None, 'set_time_axis': False}
+        defaults = {'colinear_delimiter': '|', 'weekends': True, 'months': True, 'grid': True, 'interval': None, 'set_time_axis': False,
+                    'figsize': (12, 8), 'savefig': False}
         self.sv.update(kwargs, defaults)
 
         # Initialise plot
-        fig1 = plt.figure(figsize=(12, 8), tight_layout=True)
+        fig1 = plt.figure(figsize=self.sv.figsize, tight_layout=True)
         ax1 = fig1.add_subplot(111)
-        plt.title(str(self.timezone))
+        # plt.title(str(self.timezone))
         ax1.axis(xmin=matplotlib.dates.date2num(self.extrema.min)-self.deltadate/10.0,
                  xmax=matplotlib.dates.date2num(self.extrema.max)+self.deltadate/10.0)
         self.assign_yvals_labels(self.sv.colinear_delimiter)
@@ -240,6 +241,11 @@ class Gantt:
         ax1.axis(ymin=self.yticks[-1] + (step - 0.01), ymax=self.yticks[0] - (step - 0.01))
         fig1.autofmt_xdate()
         plt.tight_layout()
+        if self.sv.savefig:
+            if isinstance(self.sv.savefig, str):
+                plt.savefig(self.sv.savefig)
+            else:
+                plt.savefig('bar_chart.png')
 
 def cumulative_graph(dates, values, norm):
     datemin, datemax = matplotlib.dates.date2num(dates[0]), matplotlib.dates.date2num(dates[-1])

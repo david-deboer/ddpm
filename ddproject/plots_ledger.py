@@ -3,7 +3,7 @@ import numpy as np
 
 
 def chart(x, y, label, norm=1.0, width=0.65,  xlabel=None, ylabel=None,
-             add_legend=True, save_it=False):
+             add_legend=True, savefig=False):
     ind = list(range(len(x)))
     if isinstance(label, str):
         if len(x) != len(y):
@@ -31,8 +31,8 @@ def chart(x, y, label, norm=1.0, width=0.65,  xlabel=None, ylabel=None,
     plt.xticks(ind, x)
     if add_legend:
         plt.legend()
-    if save_it:
-        if isinstance(save_it, str):
-            plt.savefit(save_it)
+    if savefig:
+        if isinstance(savefig, str):
+            plt.savefig(savefig)
         else:
             plt.savefig('bar_chart.png')
