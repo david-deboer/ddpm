@@ -16,7 +16,6 @@ from . import utils_time as ut
 
 
 class StateVariable:
-    time_formats = ['%Y-%m-%dT%H:%M:%S', '%Y-%m-%dT%H:%M', '%Y-%m-%d %H:%M:%S', '%Y-%m-%d %H:%M']
     def __init__(self, kwargs={}, defaults={}):
         self.update(kwargs, defaults)
 
