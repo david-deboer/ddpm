@@ -1,30 +1,6 @@
 import matplotlib.pyplot as plt
-import datetime
 import requests
 import csv
-
-
-color_palette = [
-    (0.12156862745098039, 0.4666666666666667, 0.7058823529411765, 1.0),
-    (1.0, 0.4980392156862745, 0.054901960784313725, 1.0),
-    (0.17254901960784313, 0.6274509803921569, 0.17254901960784313, 1.0),
-    (0.8392156862745098, 0.15294117647058825, 0.1568627450980392, 1.0),
-    (0.5803921568627451, 0.403921568627451, 0.7411764705882353, 1.0),
-    (0.5490196078431373, 0.33725490196078434, 0.29411764705882354, 1.0)
-        ]
-
-DATE_FIELDS = ['date', 'begins', 'ends', 'updated', 'duration', 'timezone', 'lag']
-LIST_FIELDS = ['note', 'predecessors', 'groups', 'reference']
-PAST = datetime.datetime(year=2000, month=1, day=1)
-FUTURE = datetime.datetime(year=2050, month=12, day=31)
-STATUS_COLOR = {
-    'complete': color_palette[2],
-    'late': 'r',
-    'other': 'k',
-    'none': 'k',
-    'moved': color_palette[1],
-    'removed': color_palette[4]
-}
 
 
 def components_parameters(show=True):

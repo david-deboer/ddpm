@@ -1,5 +1,5 @@
 from copy import copy
-from . import plot_schedule
+from . import plots_ddp
 from . import utils_ddp as ud
 from . import utils_time as ut
 from . import components
@@ -136,7 +136,7 @@ class Project:
            fields to sort by
 
         """
-        self.gantt = plot_schedule.Gantt(name = self.name)
+        self.gantt = plots_ddp.Gantt(name = self.name)
         dates = []
         labels = []
         plotpars = []
@@ -202,7 +202,7 @@ class Project:
                     ctr += 1.0
             self.cdf.values.append(ctr)
         if show:
-            plot_schedule.cumulative_graph(self.cdf.dates, self.cdf.values, len(dates))
+            plots_ddp.cumulative_graph(self.cdf.dates, self.cdf.values, len(dates))
 
     def _eval_status_complete(self, status):
         if isinstance(status.status, str) and status.status.lower() == 'complete':
