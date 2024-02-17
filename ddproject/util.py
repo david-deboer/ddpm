@@ -3,6 +3,7 @@ import datetime
 import requests
 import csv
 from copy import copy
+from numpy import floor
 
 
 color_palette = [
@@ -26,6 +27,23 @@ STATUS_COLOR = {
     'moved': color_palette[1],
     'removed': color_palette[4]
 }
+
+
+def months_to_timedelta(starts, duration_mo):
+    starts = datetimedelta(starts)
+    int_mo = int(floor(duration_mo))
+    yr, mo = int_mo // 12, int_mo % 12
+    dy = (duration_mo - int_mo) * 30.42
+    new_month = starts.month + mo
+    new_year = starts.year + yr
+    new_day = starts.day + int(dy)
+
+    if new_month > 12:
+        new_month -= 12
+        new_year += 1
+    ends = datetime.datetime(year=new_year, month=new_month, day=new_day) - datetime.timedelta(days=1)
+    duration = ends - starts
+    return duration
 
 
 def components_parameters(show=True):
@@ -169,7 +187,7 @@ def datetimedelta(date, key=None, fmt=['%Y-%m-%d', '%y/%m/%d', '%Y-%m-%d %H:%M']
     if date == 'now':
         return datetime.datetime.now().astimezone(timezone)
     if isinstance(date, datetime.datetime):
-        return date.replace(timezone)
+        return date.replace(tzinfo=timezone)
     if isinstance(date, str):
         for this_fmt in fmt:
             try:

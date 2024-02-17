@@ -7,6 +7,7 @@ import yaml
 from . import account_code_list as acl
 from . import ledger
 from . import ledger_utils as lu
+from . import util
 from . import plot_finance as plot
 from tabulate import tabulate
 from ddproject import ddproject, components
@@ -75,7 +76,10 @@ class Finance:
         plot.chart(self.categories, lamts, label='Ledger', width=0.4)
 
         self.project = ddproject.Project(self.yaml_data['fund'], organization='RAL')
-        task1 = components.Task(name='Period of Performance', begins=self.yaml_data['start'], duration=self.yaml_data['duration'], status=pcremain, updated=datetime.now())
+        duration = util.months_to_timedelta(self.yaml_data['start'], self.yaml_data['duration'])
+        task1 = components.Task(name='Period of Performance', begins=self.yaml_data['start'], duration=duration, status=pcspent, updated=datetime.now())
+        print(f"\tStart: {task1.begins}")
+        print(f"\tEnds: {task1.ends}")
         self.project.add(task1)
         self.project.chart()
 
