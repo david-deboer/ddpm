@@ -132,7 +132,7 @@ class Gantt:
             self.ylabels[cmap[ykey]] = self.ylabels[cmap[ykey]].strip(colinear_delimiter + ' ')
 
     def date_ticks(self, interval=None):
-        interval_mmap = {1:1, 2:2, 3:3, 4:3, 5:6, 7:6, 8:6, 9:12, 10:12, 11:12}
+        interval_mmap = {1:1, 2:2, 3:3, 4:3, 5:6, 7:6, 8:6, 9:12, 10:12, 11:12, 12:12, 13:12}
         dyr = self.deltadate / 365.0
         self.itvmapper = matplotlib.dates.MONTHLY
         if interval is not None:

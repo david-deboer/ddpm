@@ -69,7 +69,7 @@ class Finance:
         print(f"\tStart: {task1.begins}")
         print(f"\tEnds: {task1.ends}")
         self.project.add(task1)
-        self.project.chart()
+        self.project.chart(weekends=False)
 
         if report:
             print("MAKE TEX REPORT")
