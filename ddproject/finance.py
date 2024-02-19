@@ -91,3 +91,4 @@ class Finance:
         print("Use <>.audit.filter.set(...) and <>.audit.detail(...)")
         print("Do see a budget category:")
         print("\t<>.audit.filter.set(account=<>.budget_category_accounts['staff'])")
+
