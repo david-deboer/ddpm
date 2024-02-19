@@ -4,11 +4,10 @@ from ddproject import finance
 
 ap = argparse.ArgumentParser()
 ap.add_argument('yaml', help="Name of input yaml file")
-ap.add_argument('-r', '--report', help="Flag to write report.", action='store_true')
 args = ap.parse_args()
 
 f = finance.Finance(args.yaml)
 f.get_finance()
-f.dashboard(report=args.report)
+f.get_audit()
+f.audit.detail()
 finance.plot.plt.show()
-
