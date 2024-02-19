@@ -231,31 +231,6 @@ class Audit():
             pl.cadences(self.cadence)
         return self.subtotal
 
-    def make_time_data(self, tag, color=None, intervals={'yearly': True, 'monthly': True, 'daily': True}):
-        """
-        Makes the data for plots of transactions
-
-        Parameters:
-        ------------
-        tag : str 
-            tag for time data
-        color : str or None
-            if specified color for tag
-        intervals : dict
-            intervals to use and infill settings
-        """
-        time, amt = [], []
-        for i, k in enumerate(sorted(self.account_dict.keys(), reverse=False)):
-            time.append(self.account_dict[k]['date'])
-            amt.append(self.account_dict[k]['amount'])
-        self.time_data[tag] = tdt.TimeData(time, amt, is_sorted=False)
-        if len(time):
-            self.time_data[tag] = tdt.TimeData(time, amt, is_sorted=False)
-            self.time_data[tag].make_cumrate()
-            for this_interval in intervals:
-                self.time_data[tag].make_interval(this_interval, infill=intervals[this_interval])
-            self.time_data[tag].color = color
-
     def total_accounts(self, accounts):
         print(f"Totaling {len(accounts)} for {self.using_amt}")
         tot = 0.0
