@@ -10,6 +10,7 @@ from . import utils_time as ut
 from . import plots_ledger as plot
 from . import reports_ledger as rl
 from . import ddproject, components, ledger
+from . import audit
 from tabulate import tabulate
 from datetime import datetime
 from copy import copy
@@ -22,7 +23,7 @@ class Finance:
             self.yaml_data = yaml.safe_load(fp)
         self.name = f"{self.yaml_data['name']} - {self.yaml_data['fund']}"
 
-    def get(self):
+    def get_finance(self):
         # Make the sponsor budget from yaml
         self.budget = ledger.Budget(self.yaml_data['budget'])
         # Setup the ledger
@@ -84,3 +85,9 @@ class Finance:
 
         if report:
             rl.tex_dashboard(self)
+
+    def get_audit(self):
+        self.audit = audit.Audit(self.ledger)
+        print("Use <>.audit.filter.set(...) and <>.audit.detail(...)")
+        print("Do see a budget category:")
+        print("\t<>.audit.filter.set(account=<>.budget_category_accounts['staff'])")

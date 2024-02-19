@@ -30,19 +30,20 @@ class Ledger():
         """
         print("Reading in ledger files:", end=' ')
         self.data = {}
-        self.first_date = parse('2040/1/1')
-        self.last_date = parse('2000/1/1')
+        self.first_date = parse('2040/1/1').astimezone()
+        self.last_date = parse('2000/1/1').astimezone()
         self.grand_total = {}
         for amtt in self.amount_types:
             self.grand_total[amtt] =  0.0
         self.total_entries = 0
-        self.columns = {}
+        self.columns_by_file = {}
+        self.columns_by_key = {}
         counters = {}
         for ledger_file, report_type in self.files.items():  # loop through files
             fy = ut.get_fiscal_year(ledger_file)  # Will return the fiscal year if filename contains it
             this_file = pd.read_csv(ledger_file)
             columns = this_file.columns.to_list()
-            self.columns[ledger_file] = columns
+            self.columns_by_file[ledger_file] = columns
             acct, column_map = settings.ledger_info(report_type)
             counters[ledger_file] = {'fy': 0, 'lines': 0}
             for row in this_file.values:  # loop through rows
@@ -56,11 +57,13 @@ class Ledger():
                 this_entry = copy(settings.init_entry())
                 for icol, ncol in enumerate(columns):  # loop through columns
                     entry_name, col_converter = column_map[ncol]
+                    self.columns_by_key.setdefault(entry_name, set())
+                    self.columns_by_key[entry_name].add(ncol)
                     this_entry[entry_name] = ul.convert_value(col_converter, row[icol])
                     if entry_name in self.amount_types and this_entry[entry_name] is None:
                         this_entry[entry_name] = 0.0
                     if entry_name in settings.date_types and this_entry[entry_name] is None:
-                        this_entry['date'] = parse('2010/1/1')  # Make an outlier
+                        this_entry['date'] = parse('2010/1/1').astimezone()  # Make an outlier
                 self.data[this_account]['entries'].append(this_entry)
                 self.total_entries += 1
                 for col in settings.amount_types:
@@ -76,6 +79,8 @@ class Ledger():
                     if this_entry['date'] < fy.start or this_entry['date'] > fy.stop:
                         print(f"\t{this_entry['date'].isoformat().split('T')[0]} is not in FY{fy.year}")
                         counters[ledger_file]['fy'] += 1
+        for key, val in self.columns_by_key.items():
+            self.columns_by_key[key] = list(val)
         table_data = []
         for lfile in sorted(counters):
             table_data.append([lfile, counters[lfile]['fy'], counters[lfile]['lines']])

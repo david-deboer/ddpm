@@ -36,3 +36,17 @@ def chart(x, y, label, norm=1.0, width=0.65,  xlabel=None, ylabel=None,
             plt.savefig(savefig)
         else:
             plt.savefig('bar_chart.png')
+
+def cadences(cadences, amount='actual'):
+    amount = amount.split('+')
+    plt.figure('Cadences')
+    for this_cadence in ['daily', 'monthly', 'quarterly', 'yearly']:
+        ordered_keys = sorted(cadences[this_cadence].keys())
+        ordered_amounts = []
+        for key in ordered_keys:
+            this_amt = 0.0
+            for amtt in amount:
+                this_amt += cadences[this_cadence][key][amtt]
+            ordered_amounts.append(this_amt)
+        plt.plot(ordered_keys, ordered_amounts, label=this_cadence)
+    plt.legend()

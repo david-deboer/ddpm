@@ -8,7 +8,7 @@ ap.add_argument('-r', '--report', help="Flag to write report.", action='store_tr
 args = ap.parse_args()
 
 fin = finance.Finance(args.yaml)
-fin.get()
+fin.get_finance()
 fin.dashboard(report=args.report)
 finance.plot.plt.show()
 

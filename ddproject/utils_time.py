@@ -3,6 +3,7 @@ import datetime
 from numpy import floor
 from dateutil.parser import parse
 from copy import copy
+from numpy import floor
 
 
 def quarters(dates):
@@ -15,18 +16,42 @@ def quarters(dates):
         umo = 9
     else:
         umo = 10
-    this_date = datetime.datetime(year=dates[0].year, month=umo, day=1)
+    this_date = datetime.datetime(year=dates[0].year, month=umo, day=1).astimezone()
     q = [this_date]
     while this_date < dates[-1]:
         ndt = this_date + datetime.timedelta(days=95)
-        this_date = datetime.datetime(year=ndt.year, month=ndt.month, day=1)
+        this_date = datetime.datetime(year=ndt.year, month=ndt.month, day=1).astimezone()
         q.append(this_date)
     return(q)
 
+def cadence_keys(cadence, date):
+    now = datetime.datetime.now()
+    if cadence == 'daily':
+        cdate = datetime.datetime(year=date.year, month=date.month, day=date.day, hour=23, minute=59)
+    if cadence == 'monthly':
+        nmon = date.month + 1
+        wrap = (nmon-1) // 12
+        cdate = datetime.datetime(year=date.year+wrap, month=nmon-12*wrap, day=1) - datetime.timedelta(days=1)
+    if cadence == 'quarterly':
+        qtr = int(floor((date.month-1)/3 + 1))
+        if qtr == 1:
+            cdate = datetime.datetime(year=date.year, month=3, day=31)
+        elif qtr == 2:
+            cdate = datetime.datetime(year=date.year, month=6, day=30)
+        elif qtr == 3:
+            cdate = datetime.datetime(year=date.year, month=9, day=30)
+        elif qtr == 4:
+            cdate = datetime.datetime(year=date.year, month=12, day=31)
+    if cadence == 'yearly':
+        cdate = datetime.datetime(year=date.year, month=12, day=31)
+    if cdate > now:
+        return now
+    return cdate
+
 
 def last_day_of_month(t, return_datetime=False):
-    next_mon = datetime.datetime(year=t.year, month=t.month, day=25) + datetime.timedelta(days=10)
-    ldom = datetime.datetime(year=next_mon.year, month=next_mon.month, day=1) - datetime.timedelta(days=1)
+    next_mon = datetime.datetime(year=t.year, month=t.month, day=25).astimezone() + datetime.timedelta(days=10)
+    ldom = datetime.datetime(year=next_mon.year, month=next_mon.month, day=1).astimezone() - datetime.timedelta(days=1)
     if return_datetime:
         return ldom
     return ldom.day
@@ -125,13 +150,13 @@ def get_fiscal_year(val, fy_month=7):
         fy.year = nval + 2000
     else:
         fy.year = nval
-    fy.start = datetime.datetime(year=fy.year-1, month=fy_month, day=1)
-    fy.stop = datetime.datetime(year=fy.year, month=fy_month, day=1) - datetime.timedelta(days=1)
+    fy.start = datetime.datetime(year=fy.year-1, month=fy_month, day=1).astimezone()
+    fy.stop = datetime.datetime(year=fy.year, month=fy_month, day=1).astimezone() - datetime.timedelta(days=1)
     return fy
 
 
 def months_to_timedelta(starts, duration_mo):
-    starts = parse(starts)
+    starts = parse(starts).astimezone()
     int_mo = int(floor(duration_mo))
     yr, mo = int_mo // 12, int_mo % 12
     dy = (duration_mo - int_mo) * 30.42
@@ -140,7 +165,7 @@ def months_to_timedelta(starts, duration_mo):
     if new_month > 12:
         new_month -= 12
         new_year += 1
-    ends = datetime.datetime(year=new_year, month=new_month, day=1) - datetime.timedelta(days=1) + datetime.timedelta(days=dy)
+    ends = datetime.datetime(year=new_year, month=new_month, day=1).astimezone() - datetime.timedelta(days=1) + datetime.timedelta(days=dy)
     duration = ends - starts
     return duration
 

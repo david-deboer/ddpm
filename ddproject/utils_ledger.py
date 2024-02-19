@@ -9,7 +9,7 @@ locale.setlocale(locale.LC_ALL, '')
 def convert_value(func, val):
     if isinstance(func, str):
         if func == 'ludate':
-            v = parse(val)
+            v = parse(val).astimezone()
         elif func == 'lumoney':
             v = get_amt(val)
         else:
