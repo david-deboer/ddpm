@@ -16,7 +16,7 @@ from datetime import datetime
 from copy import copy
 
 
-class Finance:
+class Manager:
     def __init__(self, yaml_file):
         self.yaml_file = yaml_file
         with open (self.yaml_file, 'r') as fp:
@@ -36,7 +36,16 @@ class Finance:
         self.categories = sorted(set(list(self.budget.categories.keys()) + list(self.ledger.budget_categories.keys())))
         self.aggregates = sorted(set(list(self.budget.aggregates.keys()) + list(self.ledger.budget_aggregates.keys())))
 
+    def get_schedule(self, status=None):
+        self.project = ddproject.Project(self.yaml_data['fund'], organization='RAL')
+        duration = ut.months_to_timedelta(self.yaml_data['start'], self.yaml_data['duration'])
+        task1 = components.Task(name='Period of Performance', begins=self.yaml_data['start'], duration=duration, status=status, updated=datetime.now())
+        print(f"\tStart: {task1.begins}")
+        print(f"\tEnds: {task1.ends}")
+        self.project.add(task1)
+
     def dashboard(self, categories=None, aggregates=None, report=False):
+        self.get_finance()
         if categories is None:
             categories = copy(self.categories)
             if 'not_included' in categories and abs(self.ledger.subtotals['not_included']['actual']) < 1.0:
@@ -62,8 +71,12 @@ class Finance:
         bal = self.budget.grand_total - self.ledger.grand_total['actual']
         data = [self.budget.grand_total, self.ledger.grand_total['actual'], bal, self.ledger.grand_total['budget'], self.ledger.grand_total['encumbrance']]
         self.table_data.append(['Grand Total'] + [ul.print_money(x) for x in data])
-        pcremain = 100.0 * bal / self.budget.grand_total
-        pcspent = 100.0 * self.ledger.grand_total['actual'] / self.budget.grand_total
+        try:
+            pcremain = 100.0 * bal / self.budget.grand_total
+            pcspent = 100.0 * self.ledger.grand_total['actual'] / self.budget.grand_total
+        except ZeroDivisionError:
+            pcremain = 0.0
+            pcspent = 0.0
         print(f"Percent spent: {pcspent:.1f}")
         print(f"Percent remainint:  {pcremain:.1f}")
 
@@ -75,20 +88,14 @@ class Finance:
         lamts = [self.ledger.subtotals[cat]['actual'] for cat in categories]
         plot.chart(categories, lamts, label='Ledger', width=0.4, savefig=fig_chart)
 
-        self.project = ddproject.Project(self.yaml_data['fund'], organization='RAL')
-        duration = ut.months_to_timedelta(self.yaml_data['start'], self.yaml_data['duration'])
-        task1 = components.Task(name='Period of Performance', begins=self.yaml_data['start'], duration=duration, status=pcspent, updated=datetime.now())
-        print(f"\tStart: {task1.begins}")
-        print(f"\tEnds: {task1.ends}")
-        self.project.add(task1)
+        self.get_schedule(status=pcspent)
         self.project.chart(weekends=False, months=False, figsize=(6, 2), savefig=fig_ddp)
 
         if report:
             rl.tex_dashboard(self)
 
-    def get_audit(self):
+    def start_audit(self):
+        self.get_finance()
         self.audit = audit.Audit(self.ledger)
-        print("Use <>.audit.filter.set(...) and <>.audit.detail(...)")
-        print("Do see a budget category:")
-        print("\t<>.audit.filter.set(account=<>.budget_category_accounts['staff'])")
+
 

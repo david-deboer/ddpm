@@ -9,7 +9,7 @@ from . import utils_ledger as ul
 from . import utils_time as ut
 from . import plots_ledger as pl
 from dateutil.parser import parse
-from datetime import datetime
+from datetime import datetime, timedelta
 
 
 class Filter:
@@ -152,7 +152,31 @@ class Audit():
     def reset(self):
         self.filter.reset()
 
-    def detail(self, sort_by='actual,account,date', show_table=True, show_plot=True, sort_reverse=False, csv=False, cols_to_show='all'):
+    def in_fill_cadence(self):
+        for this_cadence in ['daily', 'monthly']:
+            ordered_keys = sorted(self.cadence[this_cadence].keys())
+            this_time = copy(ordered_keys[0])
+            while this_time < ordered_keys[-1]:
+                if this_cadence == 'daily':
+                    dt = timedelta(days=1)
+                elif this_cadence == 'monthly':
+                    nmon = this_time.month + 2
+                    wrap = (nmon-1) // 12
+                    cdate = datetime(year=this_time.year+wrap, month=nmon-12*wrap, day=1).astimezone() - timedelta(days=1)
+                    dt = cdate - this_time
+                this_time += dt
+                if this_time in ordered_keys:
+                    pass
+                else:
+                    self.cadence[this_cadence][this_time] = {}
+                    for amtt in ['actual', 'budget', 'encumbrance']:
+                        self.cadence[this_cadence][this_time][amtt] = 0.0
+        for this_cadence in ['monthly', 'quarterly', 'yearly']:
+            self.cadence[this_cadence][self.ledger.first_date] = {}
+            for amtt in ['actual', 'budget', 'encumbrance']:
+                self.cadence[this_cadence][self.ledger.first_date][amtt] = 0.0
+
+    def detail(self, sort_by='account,date,actual', sort_reverse=False, cols_to_show='all', csv=False):
         """
         Look at detail in a svticular account with various filters and options.
 
@@ -166,10 +190,15 @@ class Audit():
             if supplied,  uses 'str' as filename, if True uses default
 
         """
-        if isinstance(sort_by, str):
-            sort_by = sort_by.split(',')
+        if isinstance(sort_by, list):
+            sort_by = ','.join(sort_by)
+        use_absval = True if '|' in sort_by else False
+        sort_by = sort_by.replace('|', '').split(',')
+                
         if cols_to_show == 'all':
             cols_to_show = list(self.ledger.columns_by_key.keys())
+        elif isinstance(cols_to_show, str):
+            cols_to_show = cols_to_show.split(',')
 
         total_lines = 0
         self.rows = {}
@@ -196,6 +225,8 @@ class Audit():
                     val = row[sb]
                     try:
                         val = int(float(val) * 100.0)
+                        if use_absval:
+                            val = abs(val)
                     except (ValueError, TypeError, KeyError):
                         pass
                     key.append(val)
@@ -208,10 +239,10 @@ class Audit():
                     self.cadence[cad].setdefault(ceys[cad], {'actual': 0.0, 'budget': 0.0, 'encumbrance': 0.0})
                     for amtt in ['actual', 'budget', 'encumbrance']:
                         self.cadence[cad][ceys[cad]][amtt] += row[amtt]
+        self.header = [self.ledger.columns_by_key[x][0] for x in cols_to_show]
+        self.table_data = []
         if not len(self.rows):
-            return 0.0
-        header = [self.ledger.columns_by_key[x][0] for x in cols_to_show]
-        table_data = []
+            return 
         for key in sorted(self.rows.keys(), reverse=sort_reverse):
             row = []
             for this_key in cols_to_show:
@@ -219,12 +250,14 @@ class Audit():
                     row.append(self.rows[key][this_key].strftime('%Y-%m-%d'))
                 else:
                     row.append(self.rows[key][this_key])
-            table_data.append(row)
+            self.table_data.append(row)
         if csv:
-            ul.write_to_csv(csv, table_data, header)
-        if show_table:
-            print(tabulate(table_data, headers=header, floatfmt='.2f'))
-            print(f"\nSub-total:  actual: {self.subtotal['actual']:.2f}, budget: {self.subtotal['budget']:.2f}, encumbrance: {self.subtotal['encumbrance']:.2f}")
-        if show_plot:
-            pl.cadences(self.cadence)
-        return self.subtotal
+            ul.write_to_csv(csv, self.table_data, self.header)
+
+    def show_table(self):
+        print(tabulate(self.table_data, headers=self.header, floatfmt='.2f'))
+        print(f"\nSub-total:  actual: {self.subtotal['actual']:.2f}, budget: {self.subtotal['budget']:.2f}, encumbrance: {self.subtotal['encumbrance']:.2f}")
+
+    def show_plot(self, amounts):
+        self.in_fill_cadence()
+        pl.cadences(self.cadence, amount=amounts)

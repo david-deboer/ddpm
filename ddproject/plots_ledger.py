@@ -40,7 +40,7 @@ def chart(x, y, label, norm=1.0, width=0.65,  xlabel=None, ylabel=None,
 def cadences(cadences, amount='actual'):
     amount = amount.split('+')
     plt.figure('Cadences')
-    for this_cadence in ['daily', 'monthly', 'quarterly', 'yearly']:
+    for this_cadence in ['yearly', 'quarterly', 'monthly', 'daily']:
         ordered_keys = sorted(cadences[this_cadence].keys())
         ordered_amounts = []
         for key in ordered_keys:
@@ -48,5 +48,9 @@ def cadences(cadences, amount='actual'):
             for amtt in amount:
                 this_amt += cadences[this_cadence][key][amtt]
             ordered_amounts.append(this_amt)
-        plt.plot(ordered_keys, ordered_amounts, label=this_cadence)
+        if this_cadence == 'daily':
+            plt.fill_between(ordered_keys, ordered_amounts)
+            plt.plot(ordered_keys, ordered_amounts, 'k', label=this_cadence)
+        else:
+            plt.fill_between(ordered_keys, ordered_amounts, label=this_cadence)
     plt.legend()
