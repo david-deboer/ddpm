@@ -12,13 +12,14 @@ ap.add_argument('-t', '--hide_table', help="Don't show the table", action='store
 ap.add_argument('-p', '--hide_plot', help="Don't show the plot", action='store_true')
 ap.add_argument('--amounts', help="Type of amounts to use in plot", default='actual')
 ap.add_argument('--csv', help="Name of csv file to write", default=False)
-ap.add_argument('--col', help="Columns to show or 'all'", default='account,date,description,detailed_description,reference,actual,budget,encumbrance')
+ap.add_argument('--col', help="Columns to show or 'all'",
+                default='account,date,description,detailed_description,reference,actual,budget,encumbrance')
 args = ap.parse_args()
 
 mgr = manager.Manager(args.yaml)
 mgr.start_audit()
 if args.category != 'all':
-    mgr.audit.filter.set(account=f.budget_category_accounts[args.category])
+    mgr.audit.filter.set(account=mgr.budget_category_accounts[args.category])
 elif args.accounts is not None:
     args.accounts = args.accounts.split(',')
     mgr.audit.filter.set(account=args.accounts)
