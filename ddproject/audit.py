@@ -2,7 +2,6 @@
 This holds the time plots, detail lists etc. for ledger
 
 """
-import numpy as np
 from copy import copy
 from tabulate import tabulate
 from . import utils_ledger as ul
@@ -239,7 +238,7 @@ class Audit():
                     self.cadence[cad].setdefault(ceys[cad], {'actual': 0.0, 'budget': 0.0, 'encumbrance': 0.0})
                     for amtt in ['actual', 'budget', 'encumbrance']:
                         self.cadence[cad][ceys[cad]][amtt] += row[amtt]
-        self.header = [self.ledger.columns_by_key[x][0] for x in cols_to_show]
+        self.header = [self.ledger.columns_by_key[x] for x in cols_to_show]
         self.table_data = []
         if not len(self.rows):
             return 
@@ -255,6 +254,7 @@ class Audit():
             ul.write_to_csv(csv, self.table_data, self.header)
 
     def show_table(self):
+        print()
         print(tabulate(self.table_data, headers=self.header, floatfmt='.2f'))
         print(f"\nSub-total:  actual: {self.subtotal['actual']:.2f}, budget: {self.subtotal['budget']:.2f}, encumbrance: {self.subtotal['encumbrance']:.2f}")
 
