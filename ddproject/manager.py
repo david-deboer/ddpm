@@ -98,11 +98,8 @@ class Manager:
     def show_files(self):
         ul.show_ledger_files(self.ledger)
 
-    def start_audit(self):
-        self.get_finance(file_list='files')
-        self.audit = audit.Audit(self.ledger)
+    def start_audit(self, file_list='files', amount_types=['actual']):
+        self.get_finance(file_list=file_list)
+        self.audit = audit.Audit(self.ledger, amount_types=amount_types)
 
-    def get_summary(self):
-        self.get_finance(file_list='summary')
-        self.audit = audit.Audit(self.ledger)
 

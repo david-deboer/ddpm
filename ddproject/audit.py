@@ -9,7 +9,7 @@ from datetime import datetime, timedelta
 
 
 class Filter:
-    def __init__(self, ledger_keys):
+    def __init__(self, ledger_keys, date_keys, amount_keys):
         """
         Parameter
         ---------
@@ -18,6 +18,8 @@ class Filter:
 
         """
         self.ledger_keys = ledger_keys
+        self.date_keys = date_keys
+        self.amount_keys = amount_keys
         self.absval = {}
         self.amt_min = {}
         self.amt_max = {}
@@ -25,18 +27,18 @@ class Filter:
 
     def reset(self):
         self.set_account('all')
-        self.set_actual('all')
-        self.set_budget('all')
-        self.set_encumbrance('all')
+        for amtt in self.amount_keys:
+            setattr(self, f"set_{amtt}", 'all')
         self.set_date('all')
         self.set_exclude(None)
         self.other = {}
 
     def check(self, data):
-        if data['date'] < self.date_min or data['date'] > self.date_max:
-            return False
+        for this_date_key in self.date_keys:
+            if data[this_date_key] < self.date_min or data[this_date_key] > self.date_max:
+                return False
         this = {}
-        for amt in ['actual', 'budget', 'encumbrance']:
+        for amt in self.amount_keys:
             this[amt] = abs(data[amt]) if self.absval[amt] else data[amt]
             if this[amt] < self.amt_min[amt] or this[amt] > self.amt_max[amt]:
                 return False
@@ -141,9 +143,12 @@ class Audit():
     null_account = '-x-'
     report_type_indicator = '++++++'
 
-    def __init__(self, ledger):
+    def __init__(self, ledger, amount_types_in_audit):
         self.ledger = ledger
-        self.filter = Filter(list(ledger.data.keys()))
+        self.amount_types_in_audit = amount_types_in_audit
+        self.filter = Filter(ledger_keys=list(ledger.data.keys()),
+                             date_keys=list(ledger.date_types_by_key.keys()),
+                             amount_keys=list(ledger.amount_types_by_key.keys()))
 
     def reset(self):
         self.filter.reset()
@@ -165,7 +170,7 @@ class Audit():
                     pass
                 else:
                     self.cadence[this_cadence][this_time] = {}
-                    for amtt in ['actual', 'budget', 'encumbrance']:
+                    for amtt in self.ledger.amount_types_by_key:
                         self.cadence[this_cadence][this_time][amtt] = 0.0
         for this_cadence in ['monthly', 'quarterly', 'yearly']:
             self.cadence[this_cadence][self.ledger.first_date] = {}
@@ -198,7 +203,9 @@ class Audit():
 
         total_lines = 0
         self.rows = {}
-        self.subtotal = {'actual': 0.0, 'budget': 0.0, 'encumbrance': 0.0}
+        self.subtotal = {}
+        for amtt in self.ledger.amount_types_by_key:
+            self.subtotal[amtt] = 0.0
         self.cadence = {'daily': {}, 'monthly': {}, 'quarterly': {}, 'yearly': {}}
         ceys = {}
         for account in self.filter.account:
@@ -210,7 +217,7 @@ class Audit():
             if account not in self.ledger.data.keys():
                 continue
             for row in self.ledger.data[account]['entries']:
-                for amtt in ['actual', 'budget', 'encumbrance']:
+                for amtt in self.ledger.amount_types_by_key:
                     self.subtotal[amtt] += row[amtt]
                 if not self.filter.check(row):
                     continue
@@ -232,8 +239,11 @@ class Audit():
                 # Get cadences
                 for cad in self.cadence.keys():
                     ceys[cad] = ut.cadence_keys(cad, row['date'])
-                    self.cadence[cad].setdefault(ceys[cad], {'actual': 0.0, 'budget': 0.0, 'encumbrance': 0.0})
-                    for amtt in ['actual', 'budget', 'encumbrance']:
+                    if ceys[cad] not in self.cadence[cad]:
+                        self.cadence[cad][ceys[cad]]= {}
+                        for amtt in self.ledger.amount_types_by_key:
+                            self.cadence[cad][ceys[cad]][amtt] = 0.0
+                    for amtt in self.ledger.amount_types_by_key:
                         self.cadence[cad][ceys[cad]][amtt] += row[amtt]
         self.header = [self.ledger.columns_by_key[x] for x in cols_to_show]
         self.table_data = []
@@ -242,7 +252,7 @@ class Audit():
         for key in sorted(self.rows.keys(), reverse=sort_reverse):
             row = []
             for this_key in cols_to_show:
-                if this_key == 'date':
+                if this_key in self.ledger.date_types_by_key:
                     row.append(self.rows[key][this_key].strftime('%Y-%m-%d'))
                 else:
                     row.append(self.rows[key][this_key])
@@ -253,7 +263,9 @@ class Audit():
     def show_table(self):
         print()
         print(tabulate(self.table_data, headers=self.header, floatfmt='.2f'))
-        print(f"\nSub-total:  actual: {self.subtotal['actual']:.2f}, budget: {self.subtotal['budget']:.2f}, encumbrance: {self.subtotal['encumbrance']:.2f}")
+        print(f"\nSub-total:") 
+        for amtt in self.ledger.amount_types_by_key:
+            print(f"\t{amtt}:  {self.subtotal[amtt]:.2f}")
 
     def show_plot(self, amounts):
         self.in_fill_cadence()
