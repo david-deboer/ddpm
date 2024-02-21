@@ -23,11 +23,11 @@ class Manager:
             self.yaml_data = yaml.safe_load(fp)
         self.name = f"{self.yaml_data['name']} - {self.yaml_data['fund']}"
 
-    def get_finance(self):
+    def get_finance(self, file_list):
         # Make the sponsor budget from yaml
         self.budget = ledger.Budget(self.yaml_data['budget'])
         # Setup the ledger
-        self.ledger = ledger.Ledger(self.yaml_data['fund'], self.yaml_data['files'])  #start a ledger
+        self.ledger = ledger.Ledger(self.yaml_data['fund'], self.yaml_data[file_list])  #start a ledger
         self.ledger.read()  # read data for the ledger
         self.budget_category_accounts = getattr(acl, self.yaml_data['categories'])  # get the account codes for each budget category
         self.ledger.get_budget_categories(self.budget_category_accounts)  # subtotal the ledger into budget categories
@@ -39,6 +39,7 @@ class Manager:
     def get_schedule(self, status=None):
         self.project = ddproject.Project(self.yaml_data['fund'], organization='RAL')
         duration = ut.months_to_timedelta(self.yaml_data['start'], self.yaml_data['duration'])
+        print("END")
         task1 = components.Task(name='Period of Performance', begins=self.yaml_data['start'], duration=duration, status=status, updated=datetime.now())
         self.project.add(task1, attrname='task1')
 
@@ -98,8 +99,10 @@ class Manager:
         ul.show_ledger_files(self.ledger)
 
     def start_audit(self):
-        self.get_finance()
+        self.get_finance(file_list='files')
         self.audit = audit.Audit(self.ledger)
-    
 
+    def get_summary(self):
+        self.get_finance(file_list='summary')
+        self.audit = audit.Audit(self.ledger)
 

@@ -85,18 +85,20 @@ class Calanswers(BaseType):
         self._get_all()
 
 
-class FundSummary:
+class FundSummary(BaseType):
     def __init__(self, report_type, columns):
         self.report_type = report_type
         self.columns = columns
         self.key = 'Dept ID - Desc'
         self.key_ind = self.columns.index(self.key)
+        self.amount_types = ['actual', 'encumbrance', 'remaining']
+        self.date_types = []
         self.colmap = {'Dept ID - Desc': {'name': 'deptid', 'func': self.clean},
-                       'Fund - Desc': {'name': 'fund','func': self.clean},
+                       'Fund - Desc': {'name': 'fund','func': lambda x: self.cpliti(x, '-', 0)},
                        'Account Category': {'name': 'account', 'func': self.clean},
-                       'Authorized Budget Amount': {'name': 'budget', 'func': self.get_amt},
-                       'Actuals Amount': {'name': 'actual', 'func': self.get_amt},
-                       'Encumbrance Amount': {'name': 'encumbrance', 'func': self.get_amt},
-                       'Remaining Balance': {'name': 'remaining', 'func': self.get_amt}
+                       'Authorized Budget Amount': {'name': 'budget', 'func': self.make_amt},
+                       'Actuals Amount': {'name': 'actual', 'func': self.make_amt},
+                       'Encumbrance Amount': {'name': 'encumbrance', 'func': self.make_amt},
+                       'Remaining Balance': {'name': 'remaining', 'func': self.make_amt}
                        }
         self._get_all()
