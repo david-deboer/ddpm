@@ -15,6 +15,10 @@ class Filter:
         ---------
         ledger_keys : list
             Full list of ledger keys (accounts)
+        date_keys : list or dict
+            List of keys intrepreted as dates
+        amount_keys : list or dict
+            List of keys interpreted as amounts
 
         """
         self.ledger_keys = ledger_keys
@@ -147,8 +151,8 @@ class Audit():
         self.ledger = ledger
         self.amount_types_in_audit = amount_types_in_audit
         self.filter = Filter(ledger_keys=list(ledger.data.keys()),
-                             date_keys=list(ledger.date_types_by_key.keys()),
-                             amount_keys=list(ledger.amount_types_by_key.keys()))
+                             date_keys=list(ledger.dateby_key['date_types'].keys()),
+                             amount_keys=list(ledger.by_key['amount_types'].keys()))
 
     def reset(self):
         self.filter.reset()
@@ -170,7 +174,7 @@ class Audit():
                     pass
                 else:
                     self.cadence[this_cadence][this_time] = {}
-                    for amtt in self.ledger.amount_types_by_key:
+                    for amtt in self.ledger.by_key['amount_types']:
                         self.cadence[this_cadence][this_time][amtt] = 0.0
         for this_cadence in ['monthly', 'quarterly', 'yearly']:
             self.cadence[this_cadence][self.ledger.first_date] = {}
@@ -197,14 +201,14 @@ class Audit():
         sort_by = sort_by.replace('|', '').split(',')
                 
         if cols_to_show == 'all':
-            cols_to_show = list(self.ledger.columns_by_key.keys())
+            cols_to_show = list(self.ledger.by_key['columns'].keys())
         elif isinstance(cols_to_show, str):
             cols_to_show = cols_to_show.split(',')
 
         total_lines = 0
         self.rows = {}
         self.subtotal = {}
-        for amtt in self.ledger.amount_types_by_key:
+        for amtt in self.ledger.by_key['amount_types']:
             self.subtotal[amtt] = 0.0
         self.cadence = {'daily': {}, 'monthly': {}, 'quarterly': {}, 'yearly': {}}
         ceys = {}
@@ -217,7 +221,7 @@ class Audit():
             if account not in self.ledger.data.keys():
                 continue
             for row in self.ledger.data[account]['entries']:
-                for amtt in self.ledger.amount_types_by_key:
+                for amtt in self.ledger.by_key['amount_types']:
                     self.subtotal[amtt] += row[amtt]
                 if not self.filter.check(row):
                     continue
@@ -241,18 +245,18 @@ class Audit():
                     ceys[cad] = ut.cadence_keys(cad, row['date'])
                     if ceys[cad] not in self.cadence[cad]:
                         self.cadence[cad][ceys[cad]]= {}
-                        for amtt in self.ledger.amount_types_by_key:
+                        for amtt in self.ledger.by_key['amount_types']:
                             self.cadence[cad][ceys[cad]][amtt] = 0.0
-                    for amtt in self.ledger.amount_types_by_key:
+                    for amtt in self.ledger.by_key['amount_types']:
                         self.cadence[cad][ceys[cad]][amtt] += row[amtt]
-        self.header = [self.ledger.columns_by_key[x] for x in cols_to_show]
+        self.header = [self.ledger.by_key['columns'][x] for x in cols_to_show]
         self.table_data = []
         if not len(self.rows):
             return 
         for key in sorted(self.rows.keys(), reverse=sort_reverse):
             row = []
             for this_key in cols_to_show:
-                if this_key in self.ledger.date_types_by_key:
+                if this_key in self.ledger.dateby_key['date_types']:
                     row.append(self.rows[key][this_key].strftime('%Y-%m-%d'))
                 else:
                     row.append(self.rows[key][this_key])
@@ -264,7 +268,7 @@ class Audit():
         print()
         print(tabulate(self.table_data, headers=self.header, floatfmt='.2f'))
         print(f"\nSub-total:") 
-        for amtt in self.ledger.amount_types_by_key:
+        for amtt in self.ledger.by_key['amount_types']:
             print(f"\t{amtt}:  {self.subtotal[amtt]:.2f}")
 
     def show_plot(self, amounts):

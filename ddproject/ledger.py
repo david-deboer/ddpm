@@ -15,6 +15,9 @@ class Ledger():
         files : list of str
             List with the names of the files to be read
 
+        Attributes
+        ----------
+        Same as Parameters
         """
         self.fund = fund
         self.files = files
@@ -23,6 +26,21 @@ class Ledger():
         """
         Read in the datafiles to produce data dictionary
 
+        Attributes
+        ----------
+        data : dict
+            The ledger dictionary, generally keyed on account, then 'entries' and amount_types data['50000'] = {'entries': [], 'actual': 4567.8, ...}
+        first_date/last_date : datetime
+            Earliest and latest data entries
+        grand_total : dict
+            Totals of the various amount_types
+        total_entries : int
+            Total number of entries
+        report_class : dict
+            The per file report class, keyed on filename
+        by_key : dict
+            The column keys used for 'columns', 'amount_types', 'date_types', with the column headers as values
+            
         """
         print("Reading in ledger files:", end=' ')
         self.data = {}
@@ -33,19 +51,17 @@ class Ledger():
         self.total_entries = 0
         self.report_class = {}  # File report_type classes
         counters = {}  # out-of-fy and line counters for each file
-        self.columns_by_key = {}  # Map data key to column heading
-        self.amount_types_by_key = {}  # Map data key to column heading
-        self.date_types_by_key = {}  # Map data key to column heading
+        self.by_key = {'columns': {}, 'amount_types': {}, 'data_types': {}}
         for ledger_file, report_type in self.files.items():  # loop through files
             fy = ut.get_fiscal_year(ledger_file)  # Will return the fiscal year if filename contains it
             this_file = pd.read_csv(ledger_file)
             L = settings.ledger_info(report_type, this_file.columns.to_list())
             for key, value in L.reverse_map.items():  # Just in case there are multiple file types, etc
-                self.columns_by_key[key] = value
+                self.by_key['columns'][key] = value
                 if key in L.amount_types:
-                    self.amount_types_by_key[key] = value
+                    self.by_key['amount_types'][key] = value
                 if key in L.date_types:
-                    self.date_types_by_key[key] = value
+                    self.by_key['date_types'][key] = value
             for amtt in L.amount_types:
                 if amtt not in self.grand_total:
                     self.grand_total[amtt] = 0.0
@@ -83,11 +99,10 @@ class Ledger():
         for lfile in sorted(counters):
             table_data.append([lfile, counters[lfile]['fy'], counters[lfile]['lines']])
         print('\n' + tabulate(table_data, headers=['ledger file', 'out_of_fy', 'total']))
-        self.total_months = (self.last_date - self.first_date).days / 30.42  # close enough
 
     def get_budget_categories(self, budget_categories):
         """
-        Budget categories are groups of account codes which get sub-totaled
+        Budget categories are groups of account codes which get sub-totaled.
 
         Parameter
         ---------
@@ -97,9 +112,9 @@ class Ledger():
         Attributes
         ----------
         budget_categories : dict, None
-            The budget_categories
+            The budget_categories, budget_categories['staff'] = ['56789', ...]
         subtotals : dict
-            Sub-totals for the budget categories
+            Sub-totals for the budget categories, subtotals['staff']['actual'] = 12345.6
 
         """
         self.budget_categories = budget_categories
@@ -128,9 +143,9 @@ class Ledger():
         Attributes
         ----------
         budget_aggregates : dict, None
-            The budget_aggregates
+            The budget_aggregates, budget_aggregates['project_total'] = ['staff', 'equipment', ...]
         subtotals : dict
-            Sub-totals for the budget categories
+            Sub-totals for the budget categories, subtotals['project_total']['actual'] = 123.0
 
         """
         self.budget_aggregates = budget_aggregates
@@ -146,19 +161,21 @@ class Ledger():
 class Budget:
     def __init__(self, budget):
         """
-        Make the sponsor budget.
+        Make the sponsor budget, generally from budget key in the yaml file
 
         Parameter
         ---------
         budget : dict
             Budget items and amounts or subtotaling list
-        Attributes:
-            categories : dict
-                Budget categories, the value is just the same budget category.
-            aggregates : dict
-                Budget aggregates, the value is the list of comprising budget categories.
-            budget : dict
-                Dictionary of categories/aggregates with subtotals
+
+        Attributes
+        ----------
+        categories : dict
+            Budget categories, the value is just the same budget category.
+        aggregates : dict
+            Budget aggregates, the value is the list of comprising budget categories.
+        budget : dict
+            Dictionary of categories/aggregates with subtotals
 
         """
         self.budget = budget
