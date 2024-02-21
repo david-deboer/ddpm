@@ -35,10 +35,13 @@ class Ledger():
         self.total_entries = 0
         self.report_class = {}
         counters = {}
+        self.columns_by_key = {}
         for ledger_file, report_type in self.files.items():  # loop through files
             fy = ut.get_fiscal_year(ledger_file)  # Will return the fiscal year if filename contains it
             this_file = pd.read_csv(ledger_file)
             L = settings.ledger_info(report_type, this_file.columns.to_list())
+            for key, value in L.reverse_map.items():  # Just in case there are multiple file types
+                self.columns_by_key[key] = value
             for amtt in L.amount_types:
                 if amtt not in self.grand_total:
                     self.grand_total[amtt] = 0.0
