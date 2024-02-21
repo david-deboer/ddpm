@@ -8,6 +8,12 @@ def ledger_info(report_type, columns):
         return FundSummary(report_type, columns)
 
 class BaseType:
+    def __repr__(self):
+        s = f"  {self.report_type}: key = {self.key}\n"
+        for key, val in self.reverse_map.items():
+            s += f"\t{key}: {val}\n"
+        return s
+
     def set_columns(self, value):
         self.columns = value
 

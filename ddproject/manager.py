@@ -94,8 +94,12 @@ class Manager:
         if report:
             rl.tex_dashboard(self)
 
+    def show_files(self):
+        ul.show_ledger_files(self.ledger)
+
     def start_audit(self):
         self.get_finance()
         self.audit = audit.Audit(self.ledger)
+    
 
 

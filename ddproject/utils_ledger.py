@@ -24,6 +24,10 @@ def print_money(amt, dollar_sign=False, cents=False, pad=False):
         money = money.split('.')[0]
     return money
 
+def show_ledger_files(ledger):
+    for fname, rc in ledger.report_class.items():
+        print(f"File: {fname}")
+        print(rc)
 
 def augmented_slice(S):
     """

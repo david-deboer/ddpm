@@ -1,7 +1,4 @@
-"""
-This holds the time plots, detail lists etc. for ledger
 
-"""
 from copy import copy
 from tabulate import tabulate
 from . import utils_ledger as ul
