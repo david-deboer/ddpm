@@ -1,20 +1,5 @@
 from dateutil.parser import parse
 
-# Give a lot of forgiving variants...
-def_amt_choice = {'actual': ['actual'],
-                  'a': ['actual'],
-                  'actual+encumbrance': ['actual', 'encumbrance'],
-                  'a+e': ['actual', 'encumbrance'],
-                  'budget': ['budget'],
-                  'b': ['budget'],
-                  'encumbrance': ['encumbrance'],
-                  'e': ['encumbrance']
-                  }
-def amount_choices(sel):
-    if isinstance(sel, list):
-        return sel
-    if isinstance(sel, str):
-        return def_amt_choice[sel]
 
 def ledger_info(report_type, columns):
     if report_type == 'calanswers':
@@ -62,6 +47,8 @@ class BaseType:
             self.all.append(val['name'])
             self.reverse_map[val['name']] = key
 
+    def keygen(self, row):
+        return self.cpliti(row[self.key_ind], '-', 0)
 
 class Calanswers(BaseType):
     def __init__(self, report_type, columns):
@@ -91,9 +78,6 @@ class Calanswers(BaseType):
                        }
         self._get_all()
 
-    def keygen(self, row):
-        return self.cpliti(row[self.key_ind], '-', 0)
-
 
 class FundSummary:
     def __init__(self, report_type, columns):
@@ -110,7 +94,3 @@ class FundSummary:
                        'Remaining Balance': {'name': 'remaining', 'func': self.get_amt}
                        }
         self._get_all()
-
-    def keygen(self, row):
-        return self.cpliti(row[self.key_ind], '-', 0)
-

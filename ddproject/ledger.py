@@ -28,8 +28,9 @@ class Ledger():
         """
         print("Reading in ledger files:", end=' ')
         self.data = {}
-        self.first_date = parse('2040/1/1').astimezone()
-        self.last_date = parse('2000/1/1').astimezone()
+        base = settings.BaseType()
+        self.first_date = base.make_date('2040/1/1')
+        self.last_date = base.make_date('2000/1/1')
         self.grand_total = {}
         self.total_entries = 0
         self.report_class = {}
