@@ -1,24 +1,3 @@
-allowed_proc_options = {'using_amt': 'a',
-                        'override_fund_error': False,
-                        'make_plots': True,
-                        'make_report': True,
-                        'group_type': 'nsf',
-                        'groups_to_plot': 'all',
-                        'plot_time': True}
-
-ledger_entries_def = ['period', 'deptid', 'fund', 'account', 'date', 'docid',
-                      'description', 'detailed_description', 'reference',
-                      'approver', 'preparer', 'budget', 'encumbrance', 'actual']
-
-ledger_entries_ext = ['period', 'deptid', 'fund', 'cf1', 'cf2', 'program', 'account', 'date',
-                      'docid', 'description', 'detailed_description', 'reference',
-                      'approver', 'preparer', 'budget', 'encumbrance', 'actual']
-
-
-ledger_reduced = ['period', 'account', 'date', 'docid', 'description', 'detailed_description', 'actual']
-
-amount_types = ['budget', 'encumbrance', 'actual']
-
 date_types = ['date']
 
 # Give a lot of forgiving variants...
@@ -37,9 +16,12 @@ def amount_choices(sel):
     if isinstance(sel, str):
         return def_amt_choice[sel]
 
-def init_entry(seed_entry=None):
+def init_entry(report_type, seed_entry=None):
+    ledger_entries = []
+    for data in ledger_info(report_type=report_type).values():
+        ledger_entries.append(data[0])
     this_entry = {}
-    for entry in ledger_entries_ext:
+    for entry in ledger_entries:
         this_entry[entry] = ''
     if seed_entry is not None:
         this_entry.update(seed_entry)
@@ -79,21 +61,3 @@ def ledger_info(report_type='calanswers'):
                   }
     return key, colmap
 
-
-ledger_detail = {'sort_reverse': True,
-                 'filter_by_amt': '>=|1.0',
-                 'filter_by_date': None,
-                 'filter_by_value': None,
-                 'exclude_accounts': None,
-                 'accounts': None,
-                 'set_name': 'all',
-                 'use_keys': ledger_entries_ext,
-                 'csv': False
-                 }
-ledger_plot = {'cumul_fig_name': 'CumulativeEntries',
-               'daily_fig_name': 'Daily',
-               'rate_fig_name': 'Rate',
-               'rate_span': 90,
-               'rate_smoothing': 2,
-               'add_time_legend': True,
-               'add_chart_legend': True}

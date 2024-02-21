@@ -54,7 +54,7 @@ class Ledger():
                     if not len(self.data[this_account]['entries']):
                         for amtt in self.amount_types:
                             self.data[this_account][amtt] = 0.0
-                this_entry = copy(settings.init_entry())
+                this_entry = copy(settings.init_entry(report_type=report_type))
                 for icol, ncol in enumerate(columns):  # loop through columns
                     entry_name, col_converter = column_map[ncol]
                     self.columns_by_key.setdefault(entry_name, set())

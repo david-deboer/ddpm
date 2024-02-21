@@ -1,21 +1,25 @@
 #! /usr/bin/env python
 import argparse
-from ddproject import utils_ledgers as ul
+from ddproject import utils_ledger as ul
+from os import path
 
 ap = argparse.ArgumentParser(description="Perform xlsx -> csv actions based on 'file_indicator'.")
 ap.add_argument('file_indicator', help="File indicator: <FY> (int), 'summary', <file_name.tag> (str)")
+ap.add_argument('-d', '--directory', help="Directory with the xls file", default='~/Downloads')
 ap.add_argument('-t', '--file-type', dest='file_type', default='auto',
                 choices=['summary', 'detail', 'auto'])
 ap.add_argument('--split', help="Set if splitting funds out of a master file.", action='store_true')
 args = ap.parse_args()
 
+basedir = path.expanduser(args.directory)
+
 try:
     fy = int(args.file_indicator)
-    xlsin = "/Users/ddeboer/Downloads/General Ledger Detail.xlsx"
+    xlsin = path.join(basedir, "General Ledger Detail.xlsx")
     csvout = f"FY{fy}_General_Ledger_Detail.csv"
 except ValueError:
     if args.file_indicator == 'summary':
-        xlsin = "/Users/ddeboer/Downloads/General Ledger Summary.xlsx"
+        xlsin = path.join(basedir, "General Ledger Summary.xlsx")
         csvout = "General_Ledger_Summary.csv"
     else:
         if args.file_indicator.endswith(".xlsx"):
