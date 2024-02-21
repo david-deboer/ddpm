@@ -40,9 +40,7 @@ class Manager:
         self.project = ddproject.Project(self.yaml_data['fund'], organization='RAL')
         duration = ut.months_to_timedelta(self.yaml_data['start'], self.yaml_data['duration'])
         task1 = components.Task(name='Period of Performance', begins=self.yaml_data['start'], duration=duration, status=status, updated=datetime.now())
-        print(f"\tStart: {task1.begins}")
-        print(f"\tEnds: {task1.ends}")
-        self.project.add(task1)
+        self.project.add(task1, attrname='task1')
 
     def dashboard(self, categories=None, aggregates=None, report=False):
         self.get_finance()
@@ -89,6 +87,8 @@ class Manager:
         plot.chart(categories, lamts, label='Ledger', width=0.4, savefig=fig_chart)
 
         self.get_schedule(status=pcspent)
+        print(f"\tStart: {self.project.task1.begins}")
+        print(f"\tEnds: {self.project.task1.ends}")
         self.project.chart(weekends=False, months=False, figsize=(6, 2), savefig=fig_ddp)
 
         if report:

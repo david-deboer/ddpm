@@ -46,7 +46,7 @@ class Project:
         s += f"{tot:03d} Total Entries\n"
         return s
 
-    def add(self, entry):
+    def add(self, entry, attrname=None):
         try:
             if entry.key in self.all_entries.keys():
                 print(f"Warning - not adding '{entry.type}': Key for {entry.name} already used ({entry.key}).")
@@ -74,6 +74,8 @@ class Project:
         except AttributeError:
             pass
         getattr(self, f"{entry.type}s").append(entry.key)
+        if attrname is not None:
+            setattr(self, attrname, copy(entry))
 
     def _sort_(self, entry_types, sortby):
         if entry_types == 'all':

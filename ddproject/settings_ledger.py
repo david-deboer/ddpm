@@ -16,9 +16,16 @@ def amount_choices(sel):
     if isinstance(sel, str):
         return def_amt_choice[sel]
 
+def get_amount_types(report_type):
+    amount_types = []
+    for data in ledger_info(report_type=report_type)[1].values():
+        if data[1] == 'lumoney':
+            amount_types.append(data[0])
+    return amount_types
+
 def init_entry(report_type, seed_entry=None):
     ledger_entries = []
-    for data in ledger_info(report_type=report_type).values():
+    for data in ledger_info(report_type=report_type)[1].values():
         ledger_entries.append(data[0])
     this_entry = {}
     for entry in ledger_entries:

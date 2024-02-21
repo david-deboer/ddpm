@@ -66,7 +66,7 @@ class Ledger():
                         this_entry['date'] = parse('2010/1/1').astimezone()  # Make an outlier
                 self.data[this_account]['entries'].append(this_entry)
                 self.total_entries += 1
-                for col in settings.amount_types:
+                for col in settings.get_amount_types(report_type):
                     self.data[this_account][col] += this_entry[col]
                     self.grand_total[col] += this_entry[col]
                 if this_entry['date'] < self.first_date:
