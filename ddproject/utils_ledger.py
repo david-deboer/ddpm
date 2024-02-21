@@ -2,21 +2,8 @@
 import csv
 import os
 import locale
-from dateutil.parser import parse
 locale.setlocale(locale.LC_ALL, '')
-    
 
-def convert_value(func, val):
-    if isinstance(func, str):
-        if func == 'ludate':
-            v = parse(val).astimezone()
-        elif func == 'lumoney':
-            v = get_amt(val)
-        else:
-            raise ValueError(str(func), val)
-    else:
-        v = func(val)
-    return v
 
 def print_money(amt, dollar_sign=False, cents=False, pad=False):
     if amt is None:
@@ -37,18 +24,6 @@ def print_money(amt, dollar_sign=False, cents=False, pad=False):
         money = money.split('.')[0]
     return money
 
-
-def get_amt(x):
-    """
-    Convert accounting formatted money to a float
-    """
-    if isinstance(x, (int, float)):
-        return float(x)
-    trial = x.replace("(", "-").replace("'", "").replace("$", "").replace(")", "").replace(",", "")
-    try:
-        return float(trial)
-    except ValueError:
-        return None
 
 def augmented_slice(S):
     """

@@ -8,8 +8,6 @@ from . import utils_time as ut
 
 
 class Ledger():
-    amount_types = ['budget', 'encumbrance', 'actual']
-
     def __init__(self, fund, files):
         """
         Parameters
@@ -33,54 +31,46 @@ class Ledger():
         self.first_date = parse('2040/1/1').astimezone()
         self.last_date = parse('2000/1/1').astimezone()
         self.grand_total = {}
-        for amtt in self.amount_types:
-            self.grand_total[amtt] =  0.0
         self.total_entries = 0
-        self.columns_by_file = {}
-        self.columns_by_key = {}
+        self.report_class = {}
         counters = {}
         for ledger_file, report_type in self.files.items():  # loop through files
             fy = ut.get_fiscal_year(ledger_file)  # Will return the fiscal year if filename contains it
             this_file = pd.read_csv(ledger_file)
-            columns = this_file.columns.to_list()
-            self.columns_by_file[ledger_file] = columns
-            acct, column_map = settings.ledger_info(report_type)
+            L = settings.ledger_info(report_type, this_file.columns.to_list())
+            for amtt in L.amount_types:
+                if amtt not in self.grand_total:
+                    self.grand_total[amtt] = 0.0
+            self.report_class[ledger_file] = L
             counters[ledger_file] = {'fy': 0, 'lines': 0}
             for row in this_file.values:  # loop through rows
                 counters[ledger_file]['lines'] += 1
-                this_account = ul.convert_value(acct['converter'], row[columns.index(acct['col'])])
+                this_account = L.keygen(row)
                 if this_account not in self.data:
                     self.data[this_account] = {'entries': []}
-                    if not len(self.data[this_account]['entries']):
-                        for amtt in self.amount_types:
-                            self.data[this_account][amtt] = 0.0
-                this_entry = copy(settings.init_entry(report_type=report_type))
-                for icol, ncol in enumerate(columns):  # loop through columns
-                    entry_name, col_converter = column_map[ncol]
-                    self.columns_by_key.setdefault(entry_name, set())
-                    self.columns_by_key[entry_name].add(ncol)
-                    this_entry[entry_name] = ul.convert_value(col_converter, row[icol])
-                    if entry_name in self.amount_types and this_entry[entry_name] is None:
-                        this_entry[entry_name] = 0.0
-                    if entry_name in settings.date_types and this_entry[entry_name] is None:
-                        this_entry['date'] = parse('2010/1/1').astimezone()  # Make an outlier
+                    for amtt in L.amount_types:
+                        self.data[this_account][amtt] = 0.0
+                this_entry = L.init()
+                for icol, ncol in enumerate(L.columns):  # loop through columns
+                    H = L.colmap[ncol]
+                    this_entry[H['name']] = H['func'](row[icol])
                 self.data[this_account]['entries'].append(this_entry)
                 self.total_entries += 1
-                for col in settings.get_amount_types(report_type):
+                for col in L.amount_types:
                     self.data[this_account][col] += this_entry[col]
                     self.grand_total[col] += this_entry[col]
-                if this_entry['date'] < self.first_date:
-                    self.first_date = this_entry['date']
-                if this_entry['date'] > self.last_date:
-                    self.last_date = this_entry['date']
+                for date_type in L.date_types:
+                    if this_entry[date_type] < self.first_date:
+                        self.first_date = copy(this_entry[date_type])
+                    if this_entry[date_type] > self.last_date:
+                        self.last_date = copy(this_entry[date_type])
+                # These two are both "specialized" still
                 if str(this_entry['fund']) != str(self.fund):
                     raise ValueError(f"Fund {this_entry['fund']} != {self.fund}")
                 if fy.year is not None:  # check correct fiscal year
                     if this_entry['date'] < fy.start or this_entry['date'] > fy.stop:
                         print(f"\t{this_entry['date'].isoformat().split('T')[0]} is not in FY{fy.year}")
                         counters[ledger_file]['fy'] += 1
-        for key, val in self.columns_by_key.items():
-            self.columns_by_key[key] = list(val)
         table_data = []
         for lfile in sorted(counters):
             table_data.append([lfile, counters[lfile]['fy'], counters[lfile]['lines']])
@@ -110,12 +100,12 @@ class Ledger():
             return
         for this_cat, these_codes in self.budget_categories.items():
             self.subtotals[this_cat] = {}
-            for amtt in self.amount_types:
+            for amtt in self.grand_total:
                 self.subtotals[this_cat][amtt] = 0.0
             for this_code in these_codes:
                 if this_code not in self.data:
                     continue
-                for amtt in self.amount_types:
+                for amtt in self.grand_total:
                     self.subtotals[this_cat][amtt] += self.data[this_code][amtt]
 
     def get_budget_aggregates(self, budget_aggregates):
@@ -140,7 +130,7 @@ class Ledger():
             return
         for this_cat, cmps in self.budget_aggregates.items():
             self.subtotals[this_cat] = {}
-            for amtt in self.amount_types:
+            for amtt in self.grand_total:
                 self.subtotals[this_cat][amtt] = 0.0
                 for cmp in cmps:
                     self.subtotals[this_cat][amtt] += self.subtotals[cmp][amtt]

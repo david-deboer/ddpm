@@ -1,4 +1,4 @@
-date_types = ['date']
+from dateutil.parser import parse
 
 # Give a lot of forgiving variants...
 def_amt_choice = {'actual': ['actual'],
@@ -16,55 +16,101 @@ def amount_choices(sel):
     if isinstance(sel, str):
         return def_amt_choice[sel]
 
-def get_amount_types(report_type):
-    amount_types = []
-    for data in ledger_info(report_type=report_type)[1].values():
-        if data[1] == 'lumoney':
-            amount_types.append(data[0])
-    return amount_types
-
-def init_entry(report_type, seed_entry=None):
-    ledger_entries = []
-    for data in ledger_info(report_type=report_type)[1].values():
-        ledger_entries.append(data[0])
-    this_entry = {}
-    for entry in ledger_entries:
-        this_entry[entry] = ''
-    if seed_entry is not None:
-        this_entry.update(seed_entry)
-    return this_entry
-
-
-def ledger_info(report_type='calanswers'):
+def ledger_info(report_type, columns):
     if report_type == 'calanswers':
-        key = {'col': 'Account - Desc', 'converter': lambda x: x.split('-')[0].strip()}
-        colmap = {'Accounting Period - Desc': ['period', lambda x: str(x)],
-                  'Dept ID - Desc': ['deptid', lambda x: x.split('-')[0].strip()],
-                  'Fund - Desc': ['fund', lambda x: x.split('-')[0].strip()],
-                  'CF1 Code': ['cf1', lambda x: x.strip()],
-                  'CF2 Code': ['cf2', lambda x: x.strip()],
-                  'Program Code': ['program', lambda x: str(x).strip()],
-                  'Account - Desc': ['account', lambda x: str(x)],
-                  'Journal Date': ['date', 'ludate'],
-                  'Document ID': ['docid', lambda x: str(x)],
-                  'Description': ['description', lambda x: str(x)],
-                  'Detailed Description': ['detailed_description', lambda x: str(x)],
-                  'Reference': ['reference', lambda x: str(x)],
-                  'Approver Name': ['approver', lambda x: str(x)],
-                  'Preparer Name': ['preparer', lambda x: str(x)],
-                  'Authorized Budget Amount': ['budget', 'lumoney'],
-                  'Encumbrance Amount': ['encumbrance', 'lumoney'],
-                  'Actuals Amount': ['actual', 'lumoney']
-                  }
+        return Calanswers(report_type, columns)
     elif report_type == 'fund_summary':
-        key = {'col': 1, 'converter': lambda x: int(x.split('-')[0])}
-        colmap = {'Dept ID - Desc': ['deptid', lambda x: str(x)],
-                  'Fund - Desc': ['fund', lambda x: str(x)],
-                  'Account Category': ['account', lambda x: str(x)],
-                  'Authorized Budget Amount': ['budget', 'lumoney'],
-                  'Actuals Amount': ['actual', 'lumoney'],
-                  'Encumbrance Amount': ['encumbrance', 'lumoney'],
-                  'Remaining Balance': ['remaining', 'lumoney']
-                  }
-    return key, colmap
+        return FundSummary(report_type, columns)
+
+class BaseType:
+    def set_columns(self, value):
+        self.columns = value
+
+    def make_amt(self, x):
+        """
+        Convert accounting formatted money to a float
+        """
+        if isinstance(x, (int, float)):
+            return float(x)
+        trial = x.replace("(", "-").replace("'", "").replace("$", "").replace(")", "").replace(",", "")
+        try:
+            return float(trial)
+        except ValueError:
+            return 0.0
+
+    def make_date(self, x):
+        return parse(x).astimezone()
+
+    def clean(self, x):
+        return str(x).strip()
+
+    def cpliti(self, x, c, i):
+        return str(x).split(c)[i].strip()
+
+    def init(self, seed_entry=None):
+        this_entry = {}
+        for entry in self.all:
+            this_entry[entry] = ''
+        if seed_entry is not None:
+            this_entry.update(seed_entry)
+        return this_entry
+
+    def _get_all(self):
+        self.all = []
+        self.reverse_map = {}
+        for key, val in self.colmap.items():
+            self.all.append(val['name'])
+            self.reverse_map[val['name']] = key
+
+
+class Calanswers(BaseType):
+    def __init__(self, report_type, columns):
+        self.report_type = report_type
+        self.columns = columns
+        self.key = 'Account - Desc'
+        self.key_ind = self.columns.index(self.key)
+        self.date_types = ['date']
+        self.amount_types = ['actual', 'budget', 'encumbrance']
+        self.colmap = {'Accounting Period - Desc': {'name': 'period', 'func': self.clean},
+                       'Dept ID - Desc': {'name': 'deptid', 'func': lambda x: self.cpliti(x, '-', 0)},
+                       'Fund - Desc': {'name': 'fund', 'func': lambda x: self.cpliti(x, '-', 0)},
+                       'CF1 Code': {'name': 'cf1', 'func': self.clean},
+                       'CF2 Code': {'name': 'cf2', 'func': self.clean},
+                       'Program Code': {'name': 'program', 'func': self.clean},
+                       'Account - Desc': {'name': 'account', 'func': self.clean},
+                       'Journal Date': {'name': 'date', 'func': self.make_date},
+                       'Document ID': {'name': 'docid', 'func': self.clean},
+                       'Description': {'name': 'description', 'func': self.clean},
+                       'Detailed Description': {'name': 'detailed_description','func':  self.clean},
+                       'Reference': {'name': 'reference', 'func': self.clean},
+                       'Approver Name': {'name': 'approver', 'func': self.clean},
+                       'Preparer Name': {'name': 'preparer', 'func': self.clean},
+                       'Authorized Budget Amount': {'name': 'budget', 'func': self.make_amt},
+                       'Encumbrance Amount': {'name': 'encumbrance', 'func': self.make_amt},
+                       'Actuals Amount': {'name': 'actual','func':  self.make_amt}
+                       }
+        self._get_all()
+
+    def keygen(self, row):
+        return self.cpliti(row[self.key_ind], '-', 0)
+
+
+class FundSummary:
+    def __init__(self, report_type, columns):
+        self.report_type = report_type
+        self.columns = columns
+        self.key = 'Dept ID - Desc'
+        self.key_ind = self.columns.index(self.key)
+        self.colmap = {'Dept ID - Desc': {'name': 'deptid', 'func': self.clean},
+                       'Fund - Desc': {'name': 'fund','func': self.clean},
+                       'Account Category': {'name': 'account', 'func': self.clean},
+                       'Authorized Budget Amount': {'name': 'budget', 'func': self.get_amt},
+                       'Actuals Amount': {'name': 'actual', 'func': self.get_amt},
+                       'Encumbrance Amount': {'name': 'encumbrance', 'func': self.get_amt},
+                       'Remaining Balance': {'name': 'remaining', 'func': self.get_amt}
+                       }
+        self._get_all()
+
+    def keygen(self, row):
+        return self.cpliti(row[self.key_ind], '-', 0)
 
