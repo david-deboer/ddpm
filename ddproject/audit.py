@@ -9,61 +9,61 @@ from datetime import datetime, timedelta
 
 
 class Filter:
-    def __init__(self, ledger_keys, date_keys, amount_keys):
+    def __init__(self, ledger_accounts, dates, amounts):
         """
         Parameter
         ---------
-        ledger_keys : list
+        ledger_accounts : list
             Full list of ledger keys (accounts)
-        date_keys : list or dict
-            List of keys intrepreted as dates
-        amount_keys : list or dict
-            List of keys interpreted as amounts
+        dates : list
+            List of element types intrepreted as dates
+        amounts : list
+            List of element types interpreted as amounts
+
+        Attributes
+        ----------
+        same as above
+        absval : dict
+            Flag to use absolute value or not per amount_type
+        amount : dict
+            'type': amount_type keys, 'low'/'high': low/high values per amount_type key
+        date : dict
+            'type': date_type keys, 'start'/'stop': start/end values per date_type
 
         """
-        self.ledger_keys = ledger_keys
-        self.date_keys = date_keys
-        self.amount_keys = amount_keys
+        self.ledger_accounts = ledger_accounts
         self.absval = {}
-        self.amt_min = {}
-        self.amt_max = {}
+        self.amount = {'type': amounts, 'low': {}, 'high': {}}
+        self.date = {'type': dates, 'start': {}, 'stop': {}}
         self.reset()
 
     def reset(self):
-        self.set_account('all')
-        for amtt in self.amount_keys:
-            setattr(self, f"set_{amtt}", 'all')
-        self.set_date('all')
-        self.set_exclude(None)
+        self.set_account('account', 'all')
+        self.set_account('exclude', None)
+        for amtt in self.amount['type']:
+            self.set_amount(amtt, 'all')
+        for datt in self.date['type']:
+            self.set_date(datt, 'all')
         self.other = {}
 
-    def check(self, data):
-        for this_date_key in self.date_keys:
-            if data[this_date_key] < self.date_min or data[this_date_key] > self.date_max:
-                return False
-        this = {}
-        for amt in self.amount_keys:
-            this[amt] = abs(data[amt]) if self.absval[amt] else data[amt]
-            if this[amt] < self.amt_min[amt] or this[amt] > self.amt_max[amt]:
-                return False
-        for key, val in self.other.items():
-            if isinstance(val, list) and data[key] not in val:
-                return False
-            elif data[key] != val:
-                return False
-        return True
-
     def set(self, **kwargs):
+        """
+        You can call set_X directly, but generally use this general set command X=Y
+        """
         for key, value in kwargs.items():
-            try:
-                getattr(self, f"set_{key}")(value)
-            except AttributeError:
+            if key in self.amount['type']:
+                self.set_amount(key, value)
+            elif key in self.date['type']:
+                self.set_date(key, value)
+            elif key in ['account', 'exclude']:
+                self.set_account(key, value)
+            else:
                 self.other[key] = value
             
-    def _set_accounts(self,key, val):
+    def set_account(self ,key, val):
         if isinstance(val, str):
             if val.lower() == 'all':
-                setattr(self, key, self.ledger_keys)
+                setattr(self, key, self.ledger_accounts)
             elif val.lower() == 'none':
                 setattr(self, key, [])
             else:
@@ -72,17 +72,14 @@ class Filter:
             setattr(self, key, [str(x) for x in val])
         elif val is None:
             setattr(self, key, [])
-    
-    def set_account(self, val):
-        self._set_accounts('account', val)
 
-    def set_exclude(self, val):
-        self._set_accounts('exclude', val)
-
-    def set_date(self, val):
+    def set_date(self, key, val):
+        if key not in self.date['type']:
+            print(f"{key} not an allowed date type")
+            return
         val = 'all' if val is None else val
-        self.date_min = datetime(year=2000, month=1, day=1).astimezone()
-        self.date_max = datetime(year=2100, month=12, day=31).astimezone()
+        self.date['start'][key] = datetime(year=2000, month=1, day=1).astimezone()
+        self.date['stop'][key] = datetime(year=2100, month=12, day=31).astimezone()
         if val == 'all':
             return
         try:
@@ -90,19 +87,24 @@ class Filter:
         except parse.ParserError:
             pass
         if isinstance(val, datetime):
-            self.date_min = datetime(year=val.year, month=val.month, day=val.day, hour=0, minute=0, second=0).astimezone()
-            self.date_max = datetime(year=val.year, month=val.month, day=val.day, hour=23, minute=59, second=59).astimezone()
+            self.date['start'][key] = datetime(year=val.year, month=val.month, day=val.day, hour=0, minute=0, second=0).astimezone()
+            self.date['stop'][key] = datetime(year=val.year, month=val.month, day=val.day, hour=23, minute=59, second=59).astimezone()
         else:
-            self.date_min, self.date_max = [parse(x).astimezone() for x in val.split('_')]
+            self.date['start'][key], self.date['stop'][key] = [parse(x).astimezone() for x in val.split('_')]
 
-    def _set_amount(self, key, val):
+    def set_amount(self, key, val):
         """
 
         """
+        if key not in self.amount['type']:
+            print(f"{key} not an allowed amount type")
+            return
         self.absval[key] = False
-        self.amt_min[key] = -1E15
-        self.amt_max[key] = 1E15
+        self.amount['low'][key] = -1E15
+        self.amount['high'][key] = 1E15
         val = 'all' if val is None else val
+        if val == 'all':
+            return
         try:
             val = float(val)
         except ValueError:
@@ -115,25 +117,33 @@ class Filter:
                 self.absval[key] = True
                 val.replace('|', '')
             if val.startswith('<'):
-                self.amt_max[key] = float(val.replace(',', '').replace('$', '').replace('<', ''))
+                self.amount['high'][key] = float(val.replace(',', '').replace('$', '').replace('<', ''))
             elif val.startswith('>'):
-                self.amt_min[key] = float(val.replace(',', '').replace('$', '').replace('>', ''))
+                self.amount['low'][key] = float(val.replace(',', '').replace('$', '').replace('>', ''))
             elif '_' in val:
-                self.amt_min[key], self.amt_max[key] = [float(x.replace(',', '').replace('$', '')) for x in val.split('_')]
+                self.amount['low'][key], self.amount['hight'][key] = [float(x.replace(',', '').replace('$', '')) for x in val.split('_')]
         else:  # Within a dollar
-            self.amt_min[key] = val - 1.0
-            self.amt_max[key] = val + 1.0
+            self.amount['low'][key] = val - 1.0
+            self.amount['high'][key] = val + 1.0
 
+    def allow(self, data):
+        """
+        This currently only does "OR", i.e. if any fail it fails
 
-    def set_actual(self, val):
-        self._set_amount('actual', val)
-
-    def set_encumbrance(self, val):
-        self._set_amount('encumbrance', val)
-
-    def set_budget(self, val):
-        self._set_amount('budget', val)
-
+        """
+        for this_date_key in self.date['type']:
+            if data[this_date_key] < self.date['start'][this_date_key] or data[this_date_key] > self.date['stop'][this_date_key]:
+                return False
+        for this_amt_key in self.amount['type']:
+            this_one = abs(data[this_amt_key]) if self.absval[this_amt_key] else data[this_amt_key]
+            if this_one < self.amount['low'][this_amt_key] or this_one > self.amount['high'][this_amt_key]:
+                return False
+        for key, val in self.other.items():
+            if isinstance(val, list) and data[key] not in val:
+                return False
+            elif data[key] != val:
+                return False
+        return True
 
 class Audit():
     """
@@ -147,12 +157,21 @@ class Audit():
     null_account = '-x-'
     report_type_indicator = '++++++'
 
-    def __init__(self, ledger, amount_types_in_audit):
+    def __init__(self, ledger):
+        """
+        Parameters
+        ----------
+        ledger : Ledger instance
+
+        Attributes
+        ----------
+        Same as above
+        filter : Filter instance
+        """
         self.ledger = ledger
-        self.amount_types_in_audit = amount_types_in_audit
-        self.filter = Filter(ledger_keys=list(ledger.data.keys()),
-                             date_keys=list(ledger.dateby_key['date_types'].keys()),
-                             amount_keys=list(ledger.by_key['amount_types'].keys()))
+        self.filter = Filter(ledger_accounts=list(ledger.data.keys()),
+                             dates=list(ledger.by_key['date_types'].keys()),
+                             amounts=list(ledger.by_key['amount_types'].keys()))
 
     def reset(self):
         self.filter.reset()
@@ -191,13 +210,23 @@ class Audit():
             columns to sort by
         sort_reverse : bool
             reverse sorting
+        cols_to_show : str or list
+            column keys used
         csv:  save the table as a csv file <True/False/'str'>
             if supplied,  uses 'str' as filename, if True uses default
+
+        Attributes
+        ----------
+        rows : dict
+        subtotal : dict
+        cadence : dict
+        header : list
+        table_data : list
 
         """
         if isinstance(sort_by, list):
             sort_by = ','.join(sort_by)
-        use_absval = True if '|' in sort_by else False
+        use_absval = True if '|' in sort_by else False  # All or none at this time.
         sort_by = sort_by.replace('|', '').split(',')
                 
         if cols_to_show == 'all':
@@ -211,20 +240,19 @@ class Audit():
         for amtt in self.ledger.by_key['amount_types']:
             self.subtotal[amtt] = 0.0
         self.cadence = {'daily': {}, 'monthly': {}, 'quarterly': {}, 'yearly': {}}
-        ceys = {}
         for account in self.filter.account:
             if account in self.filter.exclude:
                 continue
             if not isinstance(account, str):
-                print(f"NOTICE - Accounts are usually str, {account} is {type(account)}")
+                print(f"NOTICE - Accounts are usually str, {account} is {type(account)} - converting to str (?!?)")
                 account = str(account)
             if account not in self.ledger.data.keys():
                 continue
             for row in self.ledger.data[account]['entries']:
+                if not self.filter.allow(row):
+                    continue
                 for amtt in self.ledger.by_key['amount_types']:
                     self.subtotal[amtt] += row[amtt]
-                if not self.filter.check(row):
-                    continue
                 total_lines += 1
                 # Get row
                 key = []
@@ -241,6 +269,7 @@ class Audit():
                 key = tuple(key)
                 self.rows[key] = copy(row)
                 # Get cadences
+                ceys = {}
                 for cad in self.cadence.keys():
                     ceys[cad] = ut.cadence_keys(cad, row['date'])
                     if ceys[cad] not in self.cadence[cad]:
@@ -256,7 +285,7 @@ class Audit():
         for key in sorted(self.rows.keys(), reverse=sort_reverse):
             row = []
             for this_key in cols_to_show:
-                if this_key in self.ledger.dateby_key['date_types']:
+                if this_key in self.ledger.by_key['date_types']:
                     row.append(self.rows[key][this_key].strftime('%Y-%m-%d'))
                 else:
                     row.append(self.rows[key][this_key])
@@ -272,5 +301,8 @@ class Audit():
             print(f"\t{amtt}:  {self.subtotal[amtt]:.2f}")
 
     def show_plot(self, amounts):
+        """
+        Get rid of the amounts and use amount_types_in_audit...
+        """
         self.in_fill_cadence()
         pl.cadences(self.cadence, amount=amounts)

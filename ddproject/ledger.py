@@ -18,6 +18,7 @@ class Ledger():
         Attributes
         ----------
         Same as Parameters
+
         """
         self.fund = fund
         self.files = files
@@ -51,23 +52,24 @@ class Ledger():
         self.total_entries = 0
         self.report_class = {}  # File report_type classes
         counters = {}  # out-of-fy and line counters for each file
-        self.by_key = {'columns': {}, 'amount_types': {}, 'data_types': {}}
+        self.by_key = {'columns': {}, 'amount_types': {}, 'date_types': {}}
         for ledger_file, report_type in self.files.items():  # loop through files
             fy = ut.get_fiscal_year(ledger_file)  # Will return the fiscal year if filename contains it
             this_file = pd.read_csv(ledger_file)
             L = settings.ledger_info(report_type, this_file.columns.to_list())
+            # Get overall info and initialize
             for key, value in L.reverse_map.items():  # Just in case there are multiple file types, etc
                 self.by_key['columns'][key] = value
                 if key in L.amount_types:
                     self.by_key['amount_types'][key] = value
+                    if key not in self.grand_total:
+                        self.grand_total[key] = 0.0
                 if key in L.date_types:
                     self.by_key['date_types'][key] = value
-            for amtt in L.amount_types:
-                if amtt not in self.grand_total:
-                    self.grand_total[amtt] = 0.0
             self.report_class[ledger_file] = copy(L)
             counters[ledger_file] = {'fy': 0, 'lines': 0}
-            for row in this_file.values:  # loop through rows
+            # Loop over rows in the file
+            for row in this_file.values:
                 counters[ledger_file]['lines'] += 1
                 this_account = L.keygen(row)
                 if this_account not in self.data:

@@ -2,7 +2,6 @@
 This provides the overall analysis for budget and ledger.  The input yaml defines the parameters
 
 """
-
 import yaml
 from . import account_code_list as acl
 from . import utils_ledger as ul
@@ -18,16 +17,34 @@ from copy import copy
 
 class Manager:
     def __init__(self, yaml_file):
+        """
+        Parameter
+        ---------
+        yaml_file : str
+            Name of Yaml file
+        Attributes
+        ----------
+        same as above
+        name : str
+        """
         self.yaml_file = yaml_file
         with open (self.yaml_file, 'r') as fp:
             self.yaml_data = yaml.safe_load(fp)
         self.name = f"{self.yaml_data['name']} - {self.yaml_data['fund']}"
 
     def get_finance(self, file_list):
+        """
+        Parameter
+        ---------
+        file_list : str, list
+            key to use from the Yaml file for budget is str, else list of filenames
+
+        """
         # Make the sponsor budget from yaml
         self.budget = ledger.Budget(self.yaml_data['budget'])
         # Setup the ledger
-        self.ledger = ledger.Ledger(self.yaml_data['fund'], self.yaml_data[file_list])  #start a ledger
+        use_files = file_list if isinstance(file_list, list) else self.yaml_data[file_list]
+        self.ledger = ledger.Ledger(self.yaml_data['fund'], use_files)  #start a ledger
         self.ledger.read()  # read data for the ledger
         self.budget_category_accounts = getattr(acl, self.yaml_data['categories'])  # get the account codes for each budget category
         self.ledger.get_budget_categories(self.budget_category_accounts)  # subtotal the ledger into budget categories
@@ -37,18 +54,39 @@ class Manager:
         self.aggregates = sorted(set(list(self.budget.aggregates.keys()) + list(self.ledger.budget_aggregates.keys())))
 
     def get_schedule(self, status=None):
+        """
+        Parameter
+        ---------
+        status : float, None
+
+        """
         self.project = ddproject.Project(self.yaml_data['fund'], organization='RAL')
         duration = ut.months_to_timedelta(self.yaml_data['start'], self.yaml_data['duration'])
-        print("END")
+        print("ADD END IN ADDITION TO DURATION")
         task1 = components.Task(name='Period of Performance', begins=self.yaml_data['start'], duration=duration, status=status, updated=datetime.now())
         self.project.add(task1, attrname='task1')
 
     def dashboard(self, categories=None, aggregates=None, report=False):
-        self.get_finance()
+        """
+        Parameters
+        ----------
+        categories : str or None
+            Categories to use, None uses all
+        aggregates : str o None
+            Aggregates to use, None uses all
+        report : bool
+            Write the pdf report
+
+        """
+        self.get_finance('files')
         if categories is None:
             categories = copy(self.categories)
-            if 'not_included' in categories and abs(self.ledger.subtotals['not_included']['actual']) < 1.0:
-                categories.remove('not_included')
+            if 'not_included' in categories:
+                asumt = 0.0
+                for amtt in self.ledger.by_key['amount_types']:
+                    asumt += abs(self.ledger.subtotals['not_included'][amtt])
+                if asumt < 1.0:
+                    categories.remove('not_included')
         if aggregates is None:
             aggregates = self.aggregates
         if report:
@@ -98,8 +136,17 @@ class Manager:
     def show_files(self):
         ul.show_ledger_files(self.ledger)
 
-    def start_audit(self, file_list='files', amount_types=['actual']):
+    def start_audit(self, file_list='files'):
+        """
+        Parameters
+        ----------
+        file_list : str
+            key to use for list of files to use
+        amount_types : list
+            list of amount_types to use in the audit
+
+        """
         self.get_finance(file_list=file_list)
-        self.audit = audit.Audit(self.ledger, amount_types=amount_types)
+        self.audit = audit.Audit(self.ledger)
 
 

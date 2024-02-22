@@ -18,7 +18,7 @@ ap.add_argument('--col', help="Columns to show or 'all'",
 args = ap.parse_args()
 
 mgr = manager.Manager(args.yaml)
-mgr.start_audit(file_list=args.files, amounts=args.amounts.split(','))
+mgr.start_audit(file_list=args.files)
 if args.category != 'all':
     mgr.audit.filter.set(account=mgr.budget_category_accounts[args.category])
 elif args.accounts is not None:
