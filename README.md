@@ -1,4 +1,4 @@
-DD Project has three project domains:  schedule, ledger, budget
+Data Detail Project Management (DDPM) has three project domains:  schedule, ledger, budget
 
 A root level yaml file contains the overall summary (data + file references)
 
