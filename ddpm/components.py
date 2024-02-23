@@ -1,4 +1,4 @@
-from . import settings_proj as sd
+from . import settings_proj as settings
 from . import utils_ddp as ud
 from . import utils_time as ut
 import datetime
@@ -70,9 +70,9 @@ class Entry:
             if key not in self.parameters:
                 print(f"Invalid key '{key}' for {self.type}.")
                 continue
-            if key in sd.DATE_FIELDS:
+            if key in settings.DATE_FIELDS:
                 setattr(self, key, ut.datetimedelta(val, key, timezone=self.timezone))
-            elif key in sd.LIST_FIELDS and isinstance(val, str):
+            elif key in settings.LIST_FIELDS and isinstance(val, str):
                 setattr(self, key, val.split(','))
             elif isinstance(val, str):
                 setattr(self, key, val.strip())
@@ -140,9 +140,9 @@ class Entry:
             val = getattr(self, par)
             if val is None or not len(str(val).strip()):
                 continue
-            if par in sd.DATE_FIELDS:
+            if par in settings.DATE_FIELDS:
                 val = ut.datedeltastr(val)
-            elif par in sd.LIST_FIELDS:
+            elif par in settings.LIST_FIELDS:
                 val = '|'.join([str(x).strip() for x in val])
             else:
                 try:
@@ -248,14 +248,14 @@ class Milestone(Entry):
         else:
             return self.color
         if self.status != 'complete' and now > self.date:
-            return sd.STATUS_COLOR['late']
+            return settings.STATUS_COLOR['late']
         if self.status == 'complete' and self.complete is not None:
             if abs(self.complete) > 1.0:
                 return ud.complete2rgb(self.complete)
-            return sd.STATUS_COLOR['complete']
-        if self.status in sd.STATUS_COLOR:
-            return sd.STATUS_COLOR[self.status]
-        return sd.STATUS_COLOR['other']
+            return settings.STATUS_COLOR['complete']
+        if self.status in settings.STATUS_COLOR:
+            return settings.STATUS_COLOR[self.status]
+        return settings.STATUS_COLOR['other']
 
 
 class Timeline(Entry):
@@ -358,15 +358,15 @@ class Task(Timeline):
             if isinstance(self.status, float):
                 now = datetime.datetime.now().astimezone()
                 if int(self.status) != 100 and now > self.ends:
-                    return sd.STATUS_COLOR['late']
+                    return settings.STATUS_COLOR['late']
                 if self.begins > now:
-                    return sd.color_palette[0]
+                    return settings.color_palette[0]
                 if self.complete is not None:
                     return ud.complete2rgb(self.complete)
                 pc_elapsed = 100.0 * (now - self.begins) / self.duration
                 completed = pc_elapsed - self.status if pc_elapsed > self.status else 0.0
                 return ud.complete2rgb((completed-50.0))
-            return sd.color_palette[0]
+            return settings.color_palette[0]
         return self.color
 
 
