@@ -8,7 +8,7 @@ from . import utils_ledger as ul
 from . import utils_time as ut
 from . import plots_ledger as plot
 from . import reports_ledger as rl
-from . import ddproject, components, ledger
+from . import project, components, ledger
 from . import audit
 from tabulate import tabulate
 from datetime import datetime
@@ -62,7 +62,7 @@ class Manager:
 
         """
         now = datetime.now().astimezone()
-        self.project = ddproject.Project(self.yaml_data['fund'], organization='RAL')
+        self.project = project.Project(self.yaml_data['fund'], organization='RAL')
         if 'stop' in self.yaml_data:
             task1 = components.Task(name='Period of Performance', begins=self.yaml_data['start'], ends=self.yaml_data['stop'], status=status, updated=now)
         elif 'duration' in self.yaml_data:

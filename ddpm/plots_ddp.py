@@ -11,7 +11,7 @@ import datetime
 import matplotlib.pyplot as plt
 import matplotlib.dates
 import numpy as np
-from ddproject.util import color_palette
+from ddpm.util import color_palette
 from . import utils_time as ut
 
 

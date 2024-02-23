@@ -1,6 +1,6 @@
 #! /usr/bin/env python
 
-from ddproject import icalendar
+from ddpm import icalendar
 import argparse
 
 ap = argparse.ArgumentParser()

@@ -1,6 +1,6 @@
 #! /usr/bin/env python
 import argparse
-from ddproject import utils_ledger as ul
+from ddpm import utils_ledger as ul
 from os import path
 
 ap = argparse.ArgumentParser(description="Perform xlsx -> csv actions based on 'file_indicator'.")

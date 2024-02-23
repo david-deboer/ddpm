@@ -1,6 +1,6 @@
 #! /usr/bin/env python
 import argparse
-from ddproject import manager
+from ddpm import manager
 
 ap = argparse.ArgumentParser()
 ap.add_argument('yaml', help="Name of input yaml file")

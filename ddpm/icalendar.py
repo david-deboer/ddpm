@@ -1,7 +1,7 @@
 import vobject
 import datetime
 from copy import copy
-from ddproject import ddproject, components
+from ddpm import project, components
 from dateutil.parser import parse
 import pytz
 
@@ -79,7 +79,7 @@ class iCal:
             del self.events['upcoming'][next_event]
 
     def ical_plot(self, eras = ['future', 'upcoming', 'next', 'current'], no_text=False):
-        iplot = ddproject.Project(self.icsfn)
+        iplot = project.Project(self.icsfn)
         entry_labels = []
         for era in eras:
             for event in sorted(self.events[era]):
