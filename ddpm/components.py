@@ -1,4 +1,4 @@
-from . import settings_ddp as sd
+from . import settings_proj as sd
 from . import utils_ddp as ud
 from . import utils_time as ut
 import datetime
