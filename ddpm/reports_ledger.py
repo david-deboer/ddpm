@@ -1,12 +1,12 @@
 from . import utils_ledger as ul
 
-def tex_dashboard(dashboard):
+def tex_dashboard(dashboard, name_date_format='%Y-%m-%d'):
     from pylatex import Document, Table, Tabular, Figure, Center, Command, VerticalSpace
     from pylatex.utils import bold, NoEscape
     from datetime import datetime
 
     pofp = dashboard.project.all_entries[dashboard.project.tasks[0]]
-    now = datetime.now().isoformat(timespec='minutes').replace(':', '')
+    now = datetime.now().strftime(name_date_format)
     geometry_options = {"tmargin": "1.5cm", "lmargin": "2cm",
                         "bmargin": "1.5cm", "rmargin": "2cm"}
     doc = Document(geometry_options=geometry_options)
@@ -16,8 +16,8 @@ def tex_dashboard(dashboard):
     doc.append(NoEscape(r'\maketitle'))
     doc.append(VerticalSpace(NoEscape('-1cm')))
     # Summary
-    _money = ul.print_money(dashboard.ledger.grand_total['actual'])
-    _diff = dashboard.budget.grand_total - dashboard.ledger.grand_total['actual']
+    # _money = ul.print_money(dashboard.ledger.grand_total['actual'])
+    # _diff = dashboard.budget.grand_total - dashboard.ledger.grand_total['actual']
     #doc.append(NoEscape("\vspace{-2cm}"))
     #doc.append(f"This report summarizes budgets for {dashboard.ledger.fund} with a balance of {ul.print_money(_diff)}.")
     #doc.append(f"Total expenditures in all categories is {_money}.")
