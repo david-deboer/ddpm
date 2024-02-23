@@ -216,7 +216,7 @@ class Gantt:
         now = datetime.datetime.now().astimezone(self.timezone)
         if now >= self.extrema.min and now <= self.extrema.max:
             now_num = matplotlib.dates.date2num(now)
-            plt.plot([now_num, now_num], [self.yticks[0]-step, self.yticks[-1]+step], '--', color=settings_ddp.palette[3])
+            plt.plot([now_num, now_num], [self.yticks[0]-step, self.yticks[-1]+step], '--', color=settings_ddp.color_palette[3])
         if int(self.deltadate) > 400:  # plot year markers
             yr1 = self.extrema.min.year
             yr2 = self.extrema.max.year
