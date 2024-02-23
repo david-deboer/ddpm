@@ -12,6 +12,7 @@ from . import ddproject, components, ledger
 from . import audit
 from tabulate import tabulate
 from datetime import datetime
+from dateutil.parser import parse
 from copy import copy
 
 
@@ -60,11 +61,28 @@ class Manager:
         status : float, None
 
         """
+        now = datetime.now().astimezone()
         self.project = ddproject.Project(self.yaml_data['fund'], organization='RAL')
-        duration = ut.months_to_timedelta(self.yaml_data['start'], self.yaml_data['duration'])
-        print("ADD END IN ADDITION TO DURATION")
-        task1 = components.Task(name='Period of Performance', begins=self.yaml_data['start'], duration=duration, status=status, updated=datetime.now())
+        if 'stop' in self.yaml_data:
+            task1 = components.Task(name='Period of Performance', begins=self.yaml_data['start'], ends=self.yaml_data['stop'], status=status, updated=now)
+        elif 'duration' in self.yaml_data:
+            duration = ut.months_to_timedelta(self.yaml_data['start'], self.yaml_data['duration'])
+            task1 = components.Task(name='Period of Performance', begins=self.yaml_data['start'], duration=duration, status=status, updated=now)
         self.project.add(task1, attrname='task1')
+        if 'schedule' in self.yaml_data:
+            if 'milestone' in self.yaml_data['schedule']:
+                ctr = 1
+                for mdate, mstatement in self.yaml_data['schedule']['milestone'].items():
+                    ms = components.Milestone(name=mstatement, date=mdate, updated=now)
+                    self.project.add(ms, attrname=f"ms{ctr}")
+                    ctr += 1
+            if 'task' in self.yaml_data['schedule']:
+                ctr = 1
+                for mdate, mstatement in self.yaml_data['schedule']['task'].items():
+                    mstart, mstop = [parse(x) for x in mdate.split('_')]
+                    tk = components.Task(name=mstatement, begins=mstart, ends=mstop, updated=now)
+                    self.project.add(tk, attrname=f"task{ctr}")
+                    ctr += 1
 
     def dashboard(self, categories=None, aggregates=None, report=False):
         """

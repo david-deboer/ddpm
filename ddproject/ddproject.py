@@ -14,6 +14,32 @@ class Project:
     """
 
     def __init__(self, name, organization=None, timezone=None):
+        """
+        Parameters
+        ----------
+        name : str
+            Name of project (heading)
+        organization : str, None
+            Name of organization
+        timezone : interpretable as ut.datetimedelta.timezone, None
+            Preferred timezone
+        Attributes
+        ----------
+        self.all_entries : dict
+            copy of the component entry
+        self.colinear_map : dict
+            keep track of Gantt chart colinear entries
+        self.earliest : dict
+            earliest date per component type
+        self.latest : dict
+            latest date per component type
+        self.updated : datetime, None
+            updated datetime
+        self.timezone : same as Parameter
+        self.listed_component_names : list
+            if a preferred attribute name is passed, gets added to this list as well
+                   
+        """
         self.entry_types = components.event_types + components.other_types
         self.name = name
         self.organization = organization
@@ -24,6 +50,7 @@ class Project:
         self.earliest, self.latest = {}, {}
         self.updated = None
         self.timezone = ut.datetimedelta(timezone, 'timezone')
+        self.listed_component_names = []
         for entry in self.entry_types:
             self.earliest[entry] = None
             self.latest[entry] = None
@@ -47,6 +74,15 @@ class Project:
         return s
 
     def add(self, entry, attrname=None):
+        """
+        Parameters
+        ----------
+        entry : component instance
+            see components.py
+        attrname : str or None
+            if str, will make a project attribute of that name and add to self.listed_component_names
+
+        """
         try:
             if entry.key in self.all_entries.keys():
                 print(f"Warning - not adding '{entry.type}': Key for {entry.name} already used ({entry.key}).")
@@ -76,6 +112,7 @@ class Project:
         getattr(self, f"{entry.type}s").append(entry.key)
         if attrname is not None:
             setattr(self, attrname, copy(entry))
+            self.listed_component_names.append(attrname)
 
     def _sort_(self, entry_types, sortby):
         if entry_types == 'all':

@@ -173,10 +173,11 @@ class Audit():
                              dates=list(ledger.by_key['date_types'].keys()),
                              amounts=list(ledger.by_key['amount_types'].keys()))
 
-    def reset(self):
-        self.filter.reset()
-
     def in_fill_cadence(self):
+        """
+        In-fill days and months that don't have data with a 0.0; quarterly/yearly are skipped,although the last/first dates are added.
+
+        """
         for this_cadence in ['daily', 'monthly']:
             ordered_keys = sorted(self.cadence[this_cadence].keys())
             this_time = copy(ordered_keys[0])

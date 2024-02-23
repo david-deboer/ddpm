@@ -152,7 +152,7 @@ class Entry:
                 except ValueError:
                     val = str(val).strip()
                     is_num = False
-            if len(val):
+            if len(str(val)):
                 sp = '' if is_num else "'"
                 kwlist.append(f"{par}={sp}{val}{sp}")
         s = f"{self.type}{ctr} = ddp.{self.type.capitalize}({', '.join(kwlist)})\n"
@@ -234,7 +234,7 @@ class Milestone(Entry):
             return False
         if 'name' not in kwargs or not isinstance(kwargs['name'], str) or not len(kwargs['name'].strip()):
             return False
-        if 'date' not in kwargs or not len(kwargs['date']):
+        if 'date' not in kwargs or not len(str(kwargs['date'])):
             return False
         return True
 

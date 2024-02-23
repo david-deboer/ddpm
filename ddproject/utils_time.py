@@ -108,8 +108,10 @@ def datetimedelta(date, key=None, timezone=None):
         return datetime.datetime.now().astimezone(timezone)
 
     if isinstance(date, str):
-        date = parse(date)
+        date = parse(date).astimezone()
 
+    if isinstance(date, datetime.date):
+        date = datetime.datetime.combine(date, datetime.time())
     if date.tzinfo is None:
         date = date.replace(tzinfo=timezone)
 
