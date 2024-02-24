@@ -42,8 +42,10 @@ class Manager:
 
         """
         # Make the sponsor budget from yaml
-        self.budget = ledger.Budget(self.yaml_data['budget'])
+        self.budget = ledger.Budget(data=self.yaml_data)
         # Setup the ledger
+        if file_list is None:
+            return
         use_files = file_list if isinstance(file_list, list) else self.yaml_data[file_list]
         self.ledger = ledger.Ledger(self.yaml_data['fund'], use_files)  #start a ledger
         self.ledger.read()  # read data for the ledger

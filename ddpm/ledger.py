@@ -3,6 +3,7 @@ from copy import copy
 from tabulate import tabulate
 from . import settings_ledger as settings
 from . import utils_time as ut
+from . import utils_ledger as ul
 
 
 class Ledger():
@@ -54,6 +55,8 @@ class Ledger():
         counters = {}  # out-of-fy and line counters for each file
         self.by_key = {'columns': {}, 'amount_types': {}, 'date_types': {}}
         for ledger_file, report_type in self.files.items():  # loop through files
+            if report_type == 'none':
+                continue
             fy = ut.get_fiscal_year(ledger_file)  # Will return the fiscal year if filename contains it
             this_file = pd.read_csv(ledger_file)
             L = settings.ledger_info(report_type, this_file.columns.to_list())
@@ -161,7 +164,7 @@ class Ledger():
                     self.subtotals[this_cat][amtt] += self.subtotals[cmp][amtt]
 
 class Budget:
-    def __init__(self, budget):
+    def __init__(self, data):
         """
         Make the sponsor budget, generally from budget key in the yaml file
 
@@ -180,21 +183,21 @@ class Budget:
             Dictionary of categories/aggregates with subtotals
 
         """
-        self.budget = budget
-        self.categories = {}  # These are the budget categories (not aggregated as below)
+        self.budget = data['budget']
+        self.categories = []  # These are the budget categories (not aggregated as below)
         self.aggregates = {}  # These are aggregates of other budget categories
         self.grand_total = 0.0
         for this_cat, amt in self.budget.items():
             nval = amt
             if isinstance(amt, str):
-                if amt[0] == '+':
+                if amt[0] == '+':  # An aggregate
                     self.aggregates[this_cat] = amt.strip('+').split('+')
                     continue
+                elif amt[0] == '=':  # Total from key amt
+                    nval = ul.sumup(data[amt[1:]])
                 else:
-                    self.categories[this_cat] = copy(this_cat)
                     nval = eval(amt)
-            else:
-                self.categories[this_cat] = copy(this_cat)
+            self.categories.append(this_cat)
             self.budget[this_cat] = nval
             try:
                 self.grand_total += nval

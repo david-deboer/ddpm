@@ -40,6 +40,15 @@ def augmented_slice(S):
     S[1] = None if not S[1] else S[1]
     return slice(S[0], S[1])
 
+def sumup(adict):
+    """
+    Sumup the values in a dictionary.
+
+    """
+    sum = 0.0
+    for v in adict.values():
+        sum += eval(str(v))
+    return sum
 
 def scrub_csv(fn, legend_starts_with='Accounting Period', data_ends_with='Grand Total'):
     os.rename(fn, 'test_x_csv.csv')

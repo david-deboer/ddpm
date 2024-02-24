@@ -165,7 +165,7 @@ class Project:
             print(self.all_entries[sortkey])
 
     def chart(self, chart='all', sortby=['begins', 'date', 'name', 'ends'], interval=None, grid=False,
-              colinear_delimiter='|', weekends=True, months=True, set_time_axis=True, figsize=(12, 8),
+              colinear_delimiter='|', weekends=False, months=False, set_time_axis=True, figsize=(12, 8),
               savefig=False):
         """
         Make a gantt chart.
