@@ -124,3 +124,7 @@ gift = {'supplies': General_Supplies,
         'foreign': Travel_Foreign,
         'other_travel': Travel_Other,
         'not_included': []}
+
+energy = ['energy']
+other = ['other']
+boa = {'energy': energy, 'other': other}

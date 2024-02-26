@@ -6,6 +6,8 @@ def ledger_info(report_type, columns):
         return Calanswers(report_type, columns)
     elif report_type == 'fund_summary':
         return FundSummary(report_type, columns)
+    elif report_type == 'boa':
+        return BankOfAmerica(report_type, columns)
 
 class BaseType:
     def __repr__(self):
@@ -55,6 +57,22 @@ class BaseType:
 
     def keygen(self, row):
         return self.cpliti(row[self.key_ind], '-', 0)
+
+
+class BankOfAmerica(BaseType):
+    def __init__(self, report_type, columns):
+        self.report_type = report_type
+        self.columns = columns
+        self.key = 'Account'
+        self.key_ind = self.columns.index(self.key)
+        self.date_types = ['date']
+        self.amount_types = ['amount']
+        self.colmap = {'Date': {'name': 'date', 'func': self.make_date},
+                       'Description': {'name': 'description', 'func': self.clean},
+                       'Amount': {'name': 'amount', 'func': self.make_amt},
+                       'Account': {'name': 'account', 'func': self.clean}
+                       }
+        self._get_all()
 
 class Calanswers(BaseType):
     def __init__(self, report_type, columns):

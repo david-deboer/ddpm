@@ -50,6 +50,7 @@ def sumup(adict):
         sum += eval(str(v))
     return sum
 
+
 def scrub_csv(fn, legend_starts_with='Accounting Period', data_ends_with='Grand Total'):
     os.rename(fn, 'test_x_csv.csv')
     in_data = False

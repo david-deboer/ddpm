@@ -94,8 +94,11 @@ class Ledger():
                     if this_entry[date_type] > self.last_date:
                         self.last_date = copy(this_entry[date_type])
                 # These two are both "specialized" still
-                if str(this_entry['fund']) != str(self.fund):
-                    raise ValueError(f"Fund {this_entry['fund']} != {self.fund}")
+                try:
+                    if str(this_entry['fund']) != str(self.fund):
+                        raise ValueError(f"Fund {this_entry['fund']} != {self.fund}")
+                except (KeyError, TypeError):
+                    pass
                 if fy.year is not None:  # check correct fiscal year
                     if this_entry['date'] < fy.start or this_entry['date'] > fy.stop:
                         print(f"\t{this_entry['date'].isoformat().split('T')[0]} is not in FY{fy.year}")
@@ -104,6 +107,39 @@ class Ledger():
         for lfile in sorted(counters):
             table_data.append([lfile, counters[lfile]['fy'], counters[lfile]['lines']])
         print('\n' + tabulate(table_data, headers=['ledger file', 'out_of_fy', 'total']))
+
+    def update_account(self, shortcuts={}):
+        """
+        Go through ledger.data and change the key (account) if desired.
+
+        Parameter
+        ---------
+        shortcuts : dict or None
+
+        """
+        self.updated = {}
+        all_col = set()
+        for key in self.by_key['columns']:
+            all_col.add(key)
+        for account in self.data:
+            for entry in self.data[account]['entries']:
+                show = []
+                for col in all_col:
+                    if col in entry:
+                        show.append(str(entry[col]))
+                show = '| '.join(show) + ':  '
+                key = input(show)
+                if key == '-99':
+                    break
+                if not len(key):
+                    key = account
+                elif key in shortcuts:
+                    key = shortcuts[key]
+                self.updated.setdefault(key, {})
+                self.updated[key].setdefault('entries', [])
+                entry.update({'account': key})
+                self.updated[key]['entries'].append(entry)
+
 
     def get_budget_categories(self, budget_categories):
         """
@@ -184,7 +220,7 @@ class Budget:
 
         """
         self.budget = data['budget']
-        self.categories = []  # These are the budget categories (not aggregated as below)
+        self.categories = {}  # These are the budget categories (not aggregated as below)
         self.aggregates = {}  # These are aggregates of other budget categories
         self.grand_total = 0.0
         for this_cat, amt in self.budget.items():
@@ -197,7 +233,7 @@ class Budget:
                     nval = ul.sumup(data[amt[1:]])
                 else:
                     nval = eval(amt)
-            self.categories.append(this_cat)
+            self.categories[this_cat] = this_cat  # Just point to itself
             self.budget[this_cat] = nval
             try:
                 self.grand_total += nval
