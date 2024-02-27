@@ -1,7 +1,7 @@
 import datetime
 
 
-color_palette = [
+COLOR_PALETTE = [
     (0.12156862745098039, 0.4666666666666667, 0.7058823529411765, 1.0),
     (1.0, 0.4980392156862745, 0.054901960784313725, 1.0),
     (0.17254901960784313, 0.6274509803921569, 0.17254901960784313, 1.0),
@@ -15,11 +15,23 @@ LIST_FIELDS = ['note', 'predecessors', 'groups', 'reference']
 PAST = datetime.datetime(year=2000, month=1, day=1)
 FUTURE = datetime.datetime(year=2050, month=12, day=31)
 STATUS_COLOR = {
-    'complete': color_palette[2],
+    'complete': COLOR_PALETTE[2],
     'late': 'r',
     'other': 'k',
     'none': 'k',
-    'moved': color_palette[1],
-    'removed': color_palette[4]
+    'moved': COLOR_PALETTE[1],
+    'removed': COLOR_PALETTE[4]
 }
 
+
+# These are used in plot_proj.py and project.py "chart" 
+CHART_DEFAULTS = {
+    'colinear_delimiter': '|',
+    'weekends': True,
+    'months': True,
+    'grid': True,
+    'interval': None,
+    'set_time_axis': False,
+    'figsize': (12, 8),
+    'savefig': False
+}

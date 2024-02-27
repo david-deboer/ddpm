@@ -74,6 +74,7 @@ class BankOfAmerica(BaseType):
                        }
         self._get_all()
 
+
 class Calanswers(BaseType):
     def __init__(self, report_type, columns):
         self.report_type = report_type

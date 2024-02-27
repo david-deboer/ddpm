@@ -332,7 +332,7 @@ class Timeline(Entry):
 
     def get_color(self):
         if self.color is None or self.color == 'auto':
-            return ud.color_palette[0]
+            return ud.COLOR_PALETTE[0]
         return self.color
 
     def add_note(self, note):
@@ -360,13 +360,13 @@ class Task(Timeline):
                 if int(self.status) != 100 and now > self.ends:
                     return settings.STATUS_COLOR['late']
                 if self.begins > now:
-                    return settings.color_palette[0]
+                    return settings.COLOR_PALETTE[0]
                 if self.complete is not None:
                     return ud.complete2rgb(self.complete)
                 pc_elapsed = 100.0 * (now - self.begins) / self.duration
                 completed = pc_elapsed - self.status if pc_elapsed > self.status else 0.0
                 return ud.complete2rgb((completed-50.0))
-            return settings.color_palette[0]
+            return settings.COLOR_PALETTE[0]
         return self.color
 
 

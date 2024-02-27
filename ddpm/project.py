@@ -1,5 +1,6 @@
 from copy import copy
 from . import plots_proj as plots
+from . import settings_proj as settings
 from . import utils_ddp as ud
 from . import utils_time as ut
 from . import components
@@ -164,18 +165,21 @@ class Project:
         for sortkey in self._sort_(chart, sortby):
             print(self.all_entries[sortkey])
 
-    def chart(self, chart='all', sortby=['begins', 'date', 'name', 'ends'], interval=None, grid=False,
-              colinear_delimiter='|', weekends=False, months=False, set_time_axis=True, figsize=(12, 8),
-              savefig=False):
+    def chart(self, chart='all', sortby=['begins', 'date', 'name', 'ends'], **kwargs):
+
         """
         Make a gantt chart.
 
         Parameter
         ---------
+        chart : 
         sortby : list or 'all' (chart_types)
            fields to sort by
+        kwargs parameters, see settings.CHART_DEFAULTS
+            'colinear_delimiter', 'weekends', 'months', 'grid', 'interval', 'set_time_axis', 'figsize', 'savefig'
 
         """
+        kwargs = copy(settings.CHART_DEFAULTS).update(kwargs)
         self.gantt = plots.Gantt(name = self.name)
         dates = []
         labels = []
@@ -193,10 +197,10 @@ class Project:
             this = self.all_entries[sortkey]
             if this.type == 'milestone':
                 dates.append([copy(this.date).astimezone(self.timezone), None])
-                plotpars.append(Namespace(color=this.get_color(), marker=this.marker, owner=this.owner))
+                plotpars.append(Namespace(color=this.get_color(), marker=this.marker, status=None, owner=this.owner))
             elif this.type == 'timeline':
                 dates.append([copy(this.begins).astimezone(self.timezone), copy(this.ends).astimezone(self.timezone)])
-                plotpars.append(Namespace(color=this.get_color(), owner=None))
+                plotpars.append(Namespace(color=this.get_color(), status=None, owner=None))
             elif this.type == 'task':
                 dates.append([copy(this.begins).astimezone(self.timezone), copy(this.ends).astimezone(self.timezone)])
                 plotpars.append(Namespace(color=this.get_color(), status=this.status, owner=this.owner))
@@ -206,9 +210,8 @@ class Project:
                 labels.append(this.name)
             ykeys.append(this.key)
         ykeys = self._align_keys(ykeys)
-        self.gantt.setup(dates=dates, plotpars=plotpars, labels=labels, ykeys=ykeys, extrema=extrema, timezone=self.timezone)
-        self.gantt.chart(interval=interval, grid=grid, colinear_delimiter=colinear_delimiter, weekends=weekends, months=months, set_time_axis=set_time_axis,
-                         savefig=savefig, figsize=figsize)
+        self.gantt.setup(dates=dates, info=plotpars, labels=labels, ykeys=ykeys, extrema=extrema, timezone=self.timezone)
+        self.gantt.chart(**kwargs)
 
     def cumulative(self, step=1.0, show=True):
         """

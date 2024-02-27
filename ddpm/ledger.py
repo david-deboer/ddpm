@@ -42,6 +42,8 @@ class Ledger():
             The per file report class, keyed on filename
         by_key : dict
             The column keys used for 'columns', 'amount_types', 'date_types', with the column headers as values
+        columns/amount_types/date_types : list
+            The net set of columns/amount_types/date_types
             
         """
         print("Reading in ledger files:", end=' ')
@@ -56,25 +58,30 @@ class Ledger():
         self.by_key = {'columns': {}, 'amount_types': {}, 'date_types': {}}
         for key in self.by_key:
             setattr(self, key, set())
-        print("GO AHEAD AND GET SUPERSET OF ABOVE INSTEAD OF DOING IT LATER (E.G. UPDATE_ACCOUNTS AND OTHERS(?))")
 
+        # Read in ledger files
         for ledger_file, report_type in self.files.items():  # loop through files
             if report_type == 'none':
                 continue
             fy = ut.get_fiscal_year(ledger_file)  # Will return the fiscal year if filename contains it
             this_file = pd.read_csv(ledger_file)
             L = settings.ledger_info(report_type, this_file.columns.to_list())
+
             # Get overall info and initialize
             for key, value in L.reverse_map.items():  # Just in case there are multiple file types, etc
-                self.by_key['columns'][key] = value
+                self.by_key['columns'][key] = key
+                self.columns.add(key)
                 if key in L.amount_types:
-                    self.by_key['amount_types'][key] = value
+                    self.by_key['amount_types'][key] = key
+                    self.amount_types.add(value)
                     if key not in self.grand_total:
                         self.grand_total[key] = 0.0
                 if key in L.date_types:
-                    self.by_key['date_types'][key] = value
+                    self.by_key['date_types'][key] = key
+                    self.date_types.add(value)
             self.report_class[ledger_file] = copy(L)
             counters[ledger_file] = {'fy': 0, 'lines': 0}
+
             # Loop over rows in the file
             for row in this_file.values:
                 counters[ledger_file]['lines'] += 1
@@ -97,7 +104,8 @@ class Ledger():
                         self.first_date = copy(this_entry[date_type])
                     if this_entry[date_type] > self.last_date:
                         self.last_date = copy(this_entry[date_type])
-                # These two are both "specialized" still
+
+                # A few specific checks
                 try:
                     if str(this_entry['fund']) != str(self.fund):
                         raise ValueError(f"Fund {this_entry['fund']} != {self.fund}")
@@ -119,16 +127,15 @@ class Ledger():
         Parameter
         ---------
         shortcuts : dict or None
+            Shortcuts to apply.
 
         """
         self.updated = {}
-        all_col = set()
-        for key in self.by_key['columns']:
-            all_col.add(key)
+        print("L134: STILL WORKING ON THIS")
         for account in self.data:
             for entry in self.data[account]['entries']:
                 show = []
-                for col in all_col:
+                for col in self.columns:
                     if col in entry:
                         show.append(str(entry[col]))
                 show = '| '.join(show) + ':  '
@@ -143,7 +150,6 @@ class Ledger():
                 self.updated[key].setdefault('entries', [])
                 entry.update({'account': key})
                 self.updated[key]['entries'].append(entry)
-
 
     def get_budget_categories(self, budget_categories):
         """

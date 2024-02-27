@@ -50,14 +50,14 @@ class Gantt:
         self.name = name
         self.sv = StateVariable()
 
-    def setup(self, dates, plotpars, labels, ykeys, extrema, timezone=None):
+    def setup(self, dates, info, labels, ykeys, extrema, timezone=None):
         """
         Parameters
         ----------
         dates : list
             each entry is a datetime pair (or end is None)
-        plotpars : list
-            list of Namespaces (?) containing the data for the chart
+        info : list
+            list of Namespaces containing the data for the chart
         labels : list
             extra labels for entries
         ykeys : list
@@ -66,7 +66,7 @@ class Gantt:
             min/max datetimes
         """
         self.dates = dates
-        self.plotpars = plotpars
+        self.info = info
         self.labels = labels
         self.ykeys = ykeys
         self.extrema = extrema
@@ -173,9 +173,7 @@ class Gantt:
         ----------
 
         """
-        defaults = {'colinear_delimiter': '|', 'weekends': True, 'months': True, 'grid': True, 'interval': None, 'set_time_axis': False,
-                    'figsize': (12, 8), 'savefig': False}
-        self.sv.update(kwargs, defaults)
+        self.sv.update(kwargs, settings.CHART_DEFAULTS)
 
         # Initialise plot
         fig1 = plt.figure(figsize=self.sv.figsize, tight_layout=True)
@@ -196,16 +194,16 @@ class Gantt:
 
         # Plot the data
         for i, dtlim in enumerate(self.dates):
-            pp = self.plotpars[i]
+            info = self.info[i]
             start = matplotlib.dates.date2num(dtlim[0])
             if dtlim[1] is None:  # Milestone
-                plt.plot(start, self.yvals[i], pp.marker, color=pp.color, markersize=8)
+                plt.plot(start, self.yvals[i], info.marker, color=info.color, markersize=8)
             else:
                 stop = matplotlib.dates.date2num(dtlim[1])
-                plt.barh(self.yvals[i],  stop - start, left=start, height=0.3, align='center', color=pp.color, alpha=0.75)
+                plt.barh(self.yvals[i],  stop - start, left=start, height=0.3, align='center', color=info.color, alpha=0.75)
                 try:
-                    if isinstance(pp.status, (float, int)):
-                        plt.barh(self.yvals[i], pp.status*(stop - start)/100.0, left=start, height=0.1, align='center', color='k', alpha=0.75)
+                    if isinstance(info.status, (float, int)):
+                        plt.barh(self.yvals[i], info.status*(stop - start)/100.0, left=start, height=0.1, align='center', color='k', alpha=0.75)
                 except AttributeError:
                     continue
 
@@ -219,7 +217,7 @@ class Gantt:
         now = datetime.datetime.now().astimezone(self.timezone)
         if now >= self.extrema.min and now <= self.extrema.max:
             now_num = matplotlib.dates.date2num(now)
-            plt.plot([now_num, now_num], [self.yticks[0]-step, self.yticks[-1]+step], '--', color=settings.color_palette[3])
+            plt.plot([now_num, now_num], [self.yticks[0]-step, self.yticks[-1]+step], '--', color=settings.COLOR_PALETTE[3])
         if int(self.deltadate) > 400:  # plot year markers
             yr1 = self.extrema.min.year
             yr2 = self.extrema.max.year
