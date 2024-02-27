@@ -54,6 +54,10 @@ class Ledger():
         self.report_class = {}  # File report_type classes
         counters = {}  # out-of-fy and line counters for each file
         self.by_key = {'columns': {}, 'amount_types': {}, 'date_types': {}}
+        for key in self.by_key:
+            setattr(self, key, set())
+        print("GO AHEAD AND GET SUPERSET OF ABOVE INSTEAD OF DOING IT LATER (E.G. UPDATE_ACCOUNTS AND OTHERS(?))")
+
         for ledger_file, report_type in self.files.items():  # loop through files
             if report_type == 'none':
                 continue

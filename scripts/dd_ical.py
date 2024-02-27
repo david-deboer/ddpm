@@ -2,6 +2,8 @@
 
 from ddpm import icalendar
 import argparse
+from matplotlib.pyplot import show
+
 
 ap = argparse.ArgumentParser()
 ap.add_argument('-f', '--file', help='Name of ics file', default='Hard Constraints.ics')
@@ -32,4 +34,4 @@ if args.add is not None:
     ical.add(start=start, end=end, summary=summary)
 ical.ical_plot(eras=args.eras,  no_text=args.no_text)
 ical.ical_text(eras=args.eras_text)
-icalendar.plt.show()
+show()

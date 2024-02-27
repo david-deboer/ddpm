@@ -100,11 +100,11 @@ class iCal:
                         ctr += 1
                         this_entry = f"{entry_base}-{ctr}"
                 entry_labels.append(this_entry)
-                iplot.add_entry(components.Timeline(name=this_entry,
-                                                    begins=self.events[era][event]['dtstart'],
-                                                    ends=self.events[era][event]['dtend'],
-                                                    color=clr))
-        iplot.chart(show_weekends=True, show_months=True)
+                iplot.add(components.Timeline(name=this_entry,
+                                              begins=self.events[era][event]['dtstart'],
+                                              ends=self.events[era][event]['dtend'],
+                                              color=clr))
+        iplot.chart(weekends=True, months=True)
     
     def ical_text(self, eras=['current', 'next', 'upcoming', 'future'], strfmt='%m/%d/%y'):
         strfmt += 'T%H:%M'

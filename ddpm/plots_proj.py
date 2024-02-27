@@ -203,8 +203,11 @@ class Gantt:
             else:
                 stop = matplotlib.dates.date2num(dtlim[1])
                 plt.barh(self.yvals[i],  stop - start, left=start, height=0.3, align='center', color=pp.color, alpha=0.75)
-                if isinstance(pp.status, (float, int)):
-                    plt.barh(self.yvals[i], pp.status*(stop - start)/100.0, left=start, height=0.1, align='center', color='k', alpha=0.75)
+                try:
+                    if isinstance(pp.status, (float, int)):
+                        plt.barh(self.yvals[i], pp.status*(stop - start)/100.0, left=start, height=0.1, align='center', color='k', alpha=0.75)
+                except AttributeError:
+                    continue
 
         # Format the y-axis
         locsy, labelsy = plt.yticks(self.yticks, self.ylabels)

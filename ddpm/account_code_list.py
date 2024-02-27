@@ -125,6 +125,9 @@ gift = {'supplies': General_Supplies,
         'other_travel': Travel_Other,
         'not_included': []}
 
-energy = ['energy']
+# Home
+energy = ['gas', 'solar', 'power']
+living = ['water', 'improvement', 'garbage', 'grocery', 'retail']
+entertainment = ['restaurant', 'movies', 'streaming']
 other = ['other']
-boa = {'energy': energy, 'other': other}
+boa = {'energy': energy, 'living': living, 'entertainment': entertainment, 'other': other}
