@@ -103,7 +103,7 @@ class Manager:
             categories = copy(self.categories)
             if 'not_included' in categories:
                 asumt = 0.0
-                for amtt in self.ledger.by_key['amount_types']:
+                for amtt in self.ledger.amount_types:
                     asumt += abs(self.ledger.subtotals['not_included'][amtt])
                 if asumt < 1.0:
                     categories.remove('not_included')

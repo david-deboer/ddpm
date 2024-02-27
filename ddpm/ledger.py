@@ -40,8 +40,6 @@ class Ledger():
             Total number of entries
         report_class : dict
             The per file report class, keyed on filename
-        by_key : dict
-            The column keys used for 'columns', 'amount_types', 'date_types', with the column headers as values
         columns/amount_types/date_types : list
             The net set of columns/amount_types/date_types
             
@@ -55,9 +53,8 @@ class Ledger():
         self.total_entries = 0
         self.report_class = {}  # File report_type classes
         counters = {}  # out-of-fy and line counters for each file
-        self.by_key = {'columns': {}, 'amount_types': {}, 'date_types': {}}
-        for key in self.by_key:
-            setattr(self, key, set())
+        for key in ['columns', 'amount_types', 'date_types']:
+            setattr(self, key, {})
 
         # Read in ledger files
         for ledger_file, report_type in self.files.items():  # loop through files
@@ -69,16 +66,13 @@ class Ledger():
 
             # Get overall info and initialize
             for key, value in L.reverse_map.items():  # Just in case there are multiple file types, etc
-                self.by_key['columns'][key] = key
-                self.columns.add(key)
+                self.columns[key] = value
                 if key in L.amount_types:
-                    self.by_key['amount_types'][key] = key
-                    self.amount_types.add(value)
+                    self.amount_types[key] = value
                     if key not in self.grand_total:
                         self.grand_total[key] = 0.0
                 if key in L.date_types:
-                    self.by_key['date_types'][key] = key
-                    self.date_types.add(value)
+                    self.date_types[key] = value
             self.report_class[ledger_file] = copy(L)
             counters[ledger_file] = {'fy': 0, 'lines': 0}
 
