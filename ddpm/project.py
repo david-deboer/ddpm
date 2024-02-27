@@ -179,7 +179,9 @@ class Project:
             'colinear_delimiter', 'weekends', 'months', 'grid', 'interval', 'set_time_axis', 'figsize', 'savefig'
 
         """
-        kwargs = copy(settings.CHART_DEFAULTS).update(kwargs)
+        kwargs2use = copy(settings.CHART_DEFAULTS)
+        kwargs2use.update(copy(kwargs))
+
         self.gantt = plots.Gantt(name = self.name)
         dates = []
         labels = []
@@ -211,7 +213,7 @@ class Project:
             ykeys.append(this.key)
         ykeys = self._align_keys(ykeys)
         self.gantt.setup(dates=dates, info=plotpars, labels=labels, ykeys=ykeys, extrema=extrema, timezone=self.timezone)
-        self.gantt.chart(**kwargs)
+        self.gantt.chart(**kwargs2use)
 
     def cumulative(self, step=1.0, show=True):
         """

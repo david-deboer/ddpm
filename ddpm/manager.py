@@ -116,21 +116,26 @@ class Manager:
             fig_ddp = False
             fig_chart = False
         self.table_data = []
-        self.headers = ['Category', 'Budget', 'Actual', 'Balance', 'Ledger Budget', 'Encumbrance']
+        print("M119 - ugly dashboard")
+        if 'actual' in self.ledger.subtotals[categories[0]]:
+            actual = 'actual'
+        else:
+            actual = list(self.ledger.amount_types.keys())[0]
+        self.headers = ['Category', 'Budget'] + [x for x in self.ledger.amount_types]
         for cat in categories:
-            bal = self.budget.budget[cat] - self.ledger.subtotals[cat]['actual']
-            data = [self.budget.budget[cat], self.ledger.subtotals[cat]['actual'], bal, self.ledger.subtotals[cat]['budget'], self.ledger.subtotals[cat]['encumbrance']]
+            bal = self.budget.budget[cat] - self.ledger.subtotals[cat][actual]
+            data = [self.budget.budget[cat]] + [self.ledger.subtotals[cat][x] for x in self.ledger.amount_types]
             self.table_data.append([cat] + [ul.print_money(x) for x in data])
         for agg in aggregates:
-            bal = self.budget.budget[agg] - self.ledger.subtotals[agg]['actual']
-            data = [self.budget.budget[agg], self.ledger.subtotals[agg]['actual'], bal, self.ledger.subtotals[agg]['budget'], self.ledger.subtotals[agg]['encumbrance']]
+            bal = self.budget.budget[agg] - self.ledger.subtotals[agg][actual]
+            data = [self.budget.budget[agg]] + [self.ledger.subtotals[agg][x] for x in self.ledger.amount_types]
             self.table_data.append(['+'+agg] + [ul.print_money(x) for x in data])
-        bal = self.budget.grand_total - self.ledger.grand_total['actual']
-        data = [self.budget.grand_total, self.ledger.grand_total['actual'], bal, self.ledger.grand_total['budget'], self.ledger.grand_total['encumbrance']]
+        bal = self.budget.grand_total - self.ledger.grand_total[actual]
+        data = [self.budget.grand_total] + [self.ledger.grand_total[x] for x in self.ledger.amount_types]
         self.table_data.append(['Grand Total'] + [ul.print_money(x) for x in data])
         try:
             pcremain = 100.0 * bal / self.budget.grand_total
-            pcspent = 100.0 * self.ledger.grand_total['actual'] / self.budget.grand_total
+            pcspent = 100.0 * self.ledger.grand_total[actual] / self.budget.grand_total
         except ZeroDivisionError:
             pcremain = 0.0
             pcspent = 0.0
@@ -142,13 +147,13 @@ class Manager:
         plot.plt.figure('Dashboard')
         bamts = [self.budget.budget[cat] for cat in categories]
         plot.chart(categories, bamts, label='Budget', width=0.7)
-        lamts = [self.ledger.subtotals[cat]['actual'] for cat in categories]
+        lamts = [self.ledger.subtotals[cat][actual] for cat in categories]
         plot.chart(categories, lamts, label='Ledger', width=0.4, savefig=fig_chart)
 
         self.get_schedule(status=pcspent)
         print(f"\tStart: {self.project.task1.begins}")
         print(f"\tEnds: {self.project.task1.ends}")
-        self.project.chart(weekends=False, months=False, figsize=(6, 2), savefig=fig_ddp)
+        self.project.chart(chart='all', sortby=['date'], weekends=False, months=False, figsize=(6, 2), savefig=fig_ddp)
 
         if report:
             rl.tex_dashboard(self)

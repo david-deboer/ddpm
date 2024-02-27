@@ -130,4 +130,4 @@ energy = ['gas', 'solar', 'power']
 living = ['water', 'improvement', 'garbage', 'grocery', 'retail']
 entertainment = ['restaurant', 'movies', 'streaming']
 other = ['other']
-boa = {'energy': energy, 'living': living, 'entertainment': entertainment, 'other': other}
+boa = {'energy': energy, 'living': living, 'entertainment': entertainment, 'other': other, 'not_included': []}
