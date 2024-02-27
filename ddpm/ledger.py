@@ -131,7 +131,7 @@ class Ledger():
 
         """
         self.updated = {}
-        print("L134: STILL WORKING ON THIS")
+        print("L134: STILL WORKING ON")
         for account in self.data:
             for entry in self.data[account]['entries']:
                 show = []
