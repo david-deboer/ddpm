@@ -24,9 +24,14 @@ class Ledger():
         self.fund = fund
         self.files = files
 
-    def read(self):
+    def read(self, invert=False):
         """
         Read in the datafiles to produce data dictionary
+
+        Parameter
+        ---------
+        invert : bool
+            Flag to invert the amount(s)
 
         Attributes
         ----------
@@ -55,6 +60,7 @@ class Ledger():
         counters = {}  # out-of-fy and line counters for each file
         for key in ['columns', 'amount_types', 'date_types']:
             setattr(self, key, {})
+        invert = -1.0 if invert else 1.0
 
         # Read in ledger files
         for ledger_file, report_type in self.files.items():  # loop through files
@@ -87,12 +93,15 @@ class Ledger():
                 this_entry = L.init()
                 for icol, ncol in enumerate(L.columns):  # loop through columns
                     H = L.colmap[ncol]
-                    this_entry[H['name']] = H['func'](row[icol])
+                    if H['name'] in L.amount_types:
+                        this_entry[H['name']] = invert * H['func'](row[icol])
+                    else:
+                        this_entry[H['name']] = H['func'](row[icol])
                 self.data[this_account]['entries'].append(this_entry)
                 self.total_entries += 1
                 for col in L.amount_types:
-                    self.data[this_account][col] += this_entry[col]
-                    self.grand_total[col] += this_entry[col]
+                    self.data[this_account][col] += invert * this_entry[col]
+                    self.grand_total[col] += invert * this_entry[col]
                 for date_type in L.date_types:
                     if this_entry[date_type] < self.first_date:
                         self.first_date = copy(this_entry[date_type])

@@ -32,6 +32,10 @@ class Manager:
         with open (self.yaml_file, 'r') as fp:
             self.yaml_data = yaml.safe_load(fp)
         self.name = f"{self.yaml_data['name']} - {self.yaml_data['fund']}"
+        if 'invert' in self.yaml_data:
+            self.invert = self.yaml_data['invert']
+        else:
+            self.invert = False
 
     def get_finance(self, file_list):
         """
@@ -48,7 +52,7 @@ class Manager:
             return
         use_files = file_list if isinstance(file_list, list) else self.yaml_data[file_list]
         self.ledger = ledger.Ledger(self.yaml_data['fund'], use_files)  #start a ledger
-        self.ledger.read()  # read data for the ledger
+        self.ledger.read(invert=self.invert)  # read data for the ledger
         self.budget_category_accounts = getattr(acl, self.yaml_data['categories'])  # get the account codes for each budget category
         self.ledger.get_budget_categories(self.budget_category_accounts)  # subtotal the ledger into budget categories
         self.ledger.get_budget_aggregates(self.budget.aggregates)  # add the budget category aggregates from sponsor to ledger
