@@ -114,36 +114,79 @@ class Ledger():
             table_data.append([lfile, counters[lfile]['fy'], counters[lfile]['lines']])
         print('\n' + tabulate(table_data, headers=['ledger file', 'out_of_fy', 'total']))
 
-    def update_account(self, shortcuts={}):
+    def update_account(self, accounts='all', shortcuts={}):
         """
         Go through ledger.data and change the key (account) if desired.
 
         Parameter
         ---------
+        accounts : str, list
+            Accounts to show for update
         shortcuts : dict or None
             Shortcuts to apply.
 
         """
+        import csv, yaml
+        from datetime import datetime
         self.updated = {}
-        print("L134: STILL WORKING ON")
+        if accounts == 'all':
+            accounts = None
+        elif isinstance(accounts, str):
+            accounts = accounts.split(',')
+        if isinstance(shortcuts, str):
+            with open(shortcuts, 'r') as fp:
+                shortcuts = yaml.safe_load(fp)
+        if len(shortcuts):
+            print("Using shortcuts:")
+            print(shortcuts)
+        ctr = 0
+        asking = True
         for account in self.data:
-            for entry in self.data[account]['entries']:
-                show = []
-                for col in self.columns:
-                    if col in entry:
-                        show.append(str(entry[col]))
-                show = '| '.join(show) + ':  '
-                key = input(show)
-                if key == '-99':
-                    break
-                if not len(key):
-                    key = account
-                elif key in shortcuts:
-                    key = shortcuts[key]
-                self.updated.setdefault(key, {})
-                self.updated[key].setdefault('entries', [])
-                entry.update({'account': key})
-                self.updated[key]['entries'].append(entry)
+            if accounts is None or account in accounts:
+                for entry in self.data[account]['entries']:
+                    use_entry = copy(entry)
+                    show = []
+                    for col in self.columns:
+                        if col in use_entry:
+                            show.append(str(use_entry[col]))
+                    show = '| '.join(show) + ':  '
+                    if asking:
+                        key = input(show)
+                    else:
+                        key = ''
+                    if key == '-9':
+                        print("Skipping the rest")
+                        key = account
+                        accounts = []
+                        asking = False
+                    if not len(key):
+                        key = account
+                    elif key in shortcuts:
+                        key = shortcuts[key]
+                    if key != account:
+                        ctr += 1
+                    self.updated.setdefault(key, {})
+                    self.updated[key].setdefault('entries', [])
+                    use_entry.update({'account': key})
+                    self.updated[key]['entries'].append(use_entry)
+            else:
+                self.updated.setdefault(account, {})
+                self.updated[account].setdefault('entries', [])
+                for entry in self.data[account]['entries']:
+                    self.updated[account]['entries'].append(copy(entry))
+        if ctr:
+            print(f"Made {ctr} updates -- writing 'updated.csv'.")
+            with open('updated.csv', 'w') as fp:
+                writer = csv.writer(fp)
+                for account, entries in self.updated.items():
+                    for entry in entries['entries']:
+                        this_row = []
+                        for col in self.columns:
+                            this_one = entry[col]
+                            if isinstance(this_one, datetime):
+                                this_one = this_one.strftime('%m/%d/%Y')
+                            this_row.append(this_one)
+                        writer.writerow(this_row)
 
     def get_budget_categories(self, budget_categories):
         """

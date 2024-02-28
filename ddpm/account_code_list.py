@@ -127,7 +127,10 @@ gift = {'supplies': General_Supplies,
 
 # Home
 energy = ['gas', 'solar', 'power']
-living = ['water', 'improvement', 'garbage', 'grocery', 'retail']
-entertainment = ['restaurant', 'movies', 'streaming']
-other = ['other']
-boa = {'energy': energy, 'living': living, 'entertainment': entertainment, 'other': other, 'not_included': []}
+living = ['water', 'garbage', 'grocery', 'retail', 'internet', 'auto']
+entertainment = ['restaurant', 'admission', 'subscription']
+other = ['other', 'dmv', 'rent', 'health', 'education', 'transportation']
+finance = ['transfer', 'credit', 'mortgage', 'salary', 'insurance', 'atm', 'loan', 'interest', 'tax']
+work = ['reimbursement']
+
+boa = {'energy': energy, 'living': living, 'entertainment': entertainment, 'other': other, 'finance': finance, 'work': work, 'not_included': []}

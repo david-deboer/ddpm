@@ -37,7 +37,7 @@ def chart(x, y, label, norm=1.0, width=0.65,  xlabel=None, ylabel=None,
         else:
             plt.savefig('bar_chart.png')
 
-def cadences(cadences, amount='actual'):
+def cadences(cadences, amount):
     amount = amount.split('+')
     plt.figure('Cadences')
     for this_cadence in ['yearly', 'quarterly', 'monthly', 'daily']:

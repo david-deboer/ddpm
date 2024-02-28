@@ -201,7 +201,7 @@ class Audit():
             for amtt in self.ledger.amount_types:
                 self.cadence[this_cadence][self.ledger.first_date][amtt] = 0.0
 
-    def detail(self, sort_by='account,date,actual', sort_reverse=False, cols_to_show='all', csv=False):
+    def detail(self, sort_by='account,date', sort_reverse=False, cols_to_show='all', csv=False):
         """
         Look at detail in a svticular account with various filters and options.
 
