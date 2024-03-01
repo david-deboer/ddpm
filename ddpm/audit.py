@@ -286,10 +286,11 @@ class Audit():
         for key in sorted(self.rows.keys(), reverse=sort_reverse):
             row = []
             for this_key in cols_to_show:
-                if this_key in self.ledger.date_types:
-                    row.append(self.rows[key][this_key].strftime('%Y-%m-%d'))
-                else:
-                    row.append(self.rows[key][this_key])
+                if this_key in self.rows[key][this_key]:
+                    if this_key in self.ledger.date_types:
+                        row.append(self.rows[key][this_key].strftime('%Y-%m-%d'))
+                    else:
+                        row.append(self.rows[key][this_key])
             self.table_data.append(row)
         if csv:
             ul.write_to_csv(csv, self.table_data, self.header)

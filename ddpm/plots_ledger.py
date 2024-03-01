@@ -46,7 +46,8 @@ def cadences(cadences, amount):
         for key in ordered_keys:
             this_amt = 0.0
             for amtt in amount:
-                this_amt += cadences[this_cadence][key][amtt]
+                if amtt in cadences[this_cadence][key]:
+                    this_amt += cadences[this_cadence][key][amtt]
             ordered_amounts.append(this_amt)
         if this_cadence == 'daily':
             plt.fill_between(ordered_keys, ordered_amounts)

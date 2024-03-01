@@ -11,11 +11,12 @@ ap.add_argument('-c', '--category', help="Category to show, or 'all'", default='
 ap.add_argument('-r', '--reverse', help="Flag to reverse the sort", action='store_true')
 ap.add_argument('-t', '--hide_table', help="Don't show the table", action='store_true')
 ap.add_argument('-p', '--hide_plot', help="Don't show the plot", action='store_true')
-ap.add_argument('--amounts', help="Type of amounts to use in audit", default='actual')
+ap.add_argument('--amounts', help="Type of amounts to use in audit", default='actual,amount')
 ap.add_argument('--csv', help="Name of csv file to write", default=False)
 ap.add_argument('--col', help="Columns to show or 'all'",
-                default='account,date,description,detailed_description,reference,actual,budget,encumbrance')
+                default='account,date,description,detailed_description,reference,actual,amount,budget,encumbrance')
 args = ap.parse_args()
+args.amounts = args.amounts.split(',')
 
 mgr = manager.Manager(args.yaml)
 mgr.start_audit(file_list=args.files)

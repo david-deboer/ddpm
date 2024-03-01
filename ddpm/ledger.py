@@ -50,6 +50,8 @@ class Ledger():
             
         """
         print("Reading in ledger files:", end=' ')
+        if invert:
+            print("Inverting amounts")
         self.data = {}
         base = settings.BaseType()
         self.first_date = base.make_date('2040/1/1')

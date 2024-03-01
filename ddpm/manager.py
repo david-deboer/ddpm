@@ -116,13 +116,13 @@ class Manager:
                     self.project.add(tk, attrname=f"task{ctr}")
                     ctr += 1
 
-    def _can_skip(self, cat, actual):
-        if abs(self.budget.budget[cat]) < 1.0 and abs(self.ledger.subtotals[cat][actual]) < 1.0:
-            print(f"Skipping {cat}-{actual} since no budget or expenditure")
+    def _can_skip(self, cat, amt2use):
+        if abs(self.budget.budget[cat]) < 1.0 and abs(self.ledger.subtotals[cat][amt2use]) < 1.0:
+            print(f"Skipping {cat}-{amt2use} since no budget or expenditure")
             return True
         return False
 
-    def dashboard(self, categories=None, aggregates=None, report=False):
+    def dashboard(self, categories=None, aggregates=None, report=False, amount2use=['actual', 'amount']):
         """
         Parameters
         ----------
@@ -132,6 +132,8 @@ class Manager:
             Aggregates to use, None uses all
         report : bool
             Write the pdf report
+        amount2use : list
+            List of types that should be used to show results -- uses first found that matches report type
 
         """
         self.get_finance('files')
@@ -150,34 +152,35 @@ class Manager:
         else:
             fig_ddp = False
             fig_chart = False
+
+        # Get the amount type you will use
+        for amt2use in self.ledger.amount_types:
+            if amt2use in amount2use:
+                break
+
         # Make table
         self.table_data = []
-        print("M119 - ugly dashboard actual 'logic'")
-        if 'actual' in self.ledger.subtotals[categories[0]]:
-            actual = 'actual'
-        else:
-            actual = list(self.ledger.amount_types.keys())[0]
         self.headers = ['Category', 'Budget'] + [x for x in self.ledger.amount_types]
         for cat in categories:
-            if self._can_skip(cat, actual):
+            if self._can_skip(cat, amt2use):
                 categories.remove(cat)
                 continue
-            bal = self.budget.budget[cat] - self.ledger.subtotals[cat][actual]
+            bal = self.budget.budget[cat] - self.ledger.subtotals[cat][amt2use]
             data = [self.budget.budget[cat]] + [self.ledger.subtotals[cat][x] for x in self.ledger.amount_types]
             self.table_data.append([cat] + [ul.print_money(x) for x in data])
         for agg in aggregates:
-            if self._can_skip(agg, actual):
+            if self._can_skip(agg, amt2use):
                 aggregates.remove(agg)
                 continue
-            bal = self.budget.budget[agg] - self.ledger.subtotals[agg][actual]
+            bal = self.budget.budget[agg] - self.ledger.subtotals[agg][amt2use]
             data = [self.budget.budget[agg]] + [self.ledger.subtotals[agg][x] for x in self.ledger.amount_types]
             self.table_data.append(['+'+agg] + [ul.print_money(x) for x in data])
-        bal = self.budget.grand_total - self.ledger.grand_total[actual]
+        bal = self.budget.grand_total - self.ledger.grand_total[amt2use]
         data = [self.budget.grand_total] + [self.ledger.grand_total[x] for x in self.ledger.amount_types]
         self.table_data.append(['Grand Total'] + [ul.print_money(x) for x in data])
         try:
             pcremain = 100.0 * bal / self.budget.grand_total
-            pcspent = 100.0 * self.ledger.grand_total[actual] / self.budget.grand_total
+            pcspent = 100.0 * self.ledger.grand_total[amt2use] / self.budget.grand_total
         except ZeroDivisionError:
             pcremain = 0.0
             pcspent = 0.0
@@ -191,13 +194,13 @@ class Manager:
             plot.plt.figure('Budget Category Dashboard')
             bamts = [self.budget.budget[cat] for cat in categories]
             plot.chart(categories, bamts, label='Budget', width=0.7)
-            lamts = [self.ledger.subtotals[cat][actual] for cat in categories]
+            lamts = [self.ledger.subtotals[cat][amt2use] for cat in categories]
             plot.chart(categories, lamts, label='Ledger', width=0.4, savefig=fig_chart)
         if len(aggregates):
             plot.plt.figure('Budget Aggregate Dashboard')
             bamts = [self.budget.budget[agg] for agg in aggregates]
             plot.chart(aggregates, bamts, label='Budget', width=0.7)
-            lamts = [self.ledger.subtotals[agg][actual] for agg in aggregates]
+            lamts = [self.ledger.subtotals[agg][amt2use] for agg in aggregates]
             plot.chart(aggregates, lamts, label='Ledger', width=0.4, savefig=fig_chart)
 
         self.get_schedule(status=pcspent)
