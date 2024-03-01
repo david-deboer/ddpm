@@ -220,15 +220,26 @@ class Ledger():
         self.subtotals = {}
         if budget_categories is None:
             return
+        self.all_account_codes_in_included_categories = set()
         for this_cat, these_codes in self.budget_categories.items():
             self.subtotals[this_cat] = {}
             for amtt in self.grand_total:
                 self.subtotals[this_cat][amtt] = 0.0
             for this_code in these_codes:
+                self.all_account_codes_in_included_categories.add(this_code)
                 if this_code not in self.data:
                     continue
                 for amtt in self.grand_total:
                     self.subtotals[this_cat][amtt] += self.data[this_code][amtt]
+        all_account_codes_in_data = set(list(self.data.keys()))
+        not_included = list(all_account_codes_in_data - self.all_account_codes_in_included_categories)
+        self.subtotals['not_included'] = {}
+        for amtt in self.grand_total:
+            self.subtotals['not_included'][amtt] = 0.0
+        self.budget_categories['not_included'] = not_included
+        for this_code in not_included:
+            for amtt in self.grand_total:
+                self.subtotals['not_included'][amtt] += self.data[this_code][amtt]
 
     def get_budget_aggregates(self, budget_aggregates):
         """

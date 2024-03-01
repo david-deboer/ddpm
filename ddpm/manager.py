@@ -45,20 +45,21 @@ class Manager:
             key to use from the Yaml file for budget is str, else list of filenames
 
         """
-        # Make the sponsor budget from yaml
+        # Make the sponsor budget from yaml and get account codes
         self.budget = ledger.Budget(data=self.yaml_data)
+        self.budget_category_accounts = getattr(acl, self.yaml_data['categories'])  # get the account codes for each budget category
+        self._check_and_set_categories()
+
         # Setup the ledger
         if file_list is None:
             return
         use_files = file_list if isinstance(file_list, list) else self.yaml_data[file_list]
         self.ledger = ledger.Ledger(self.yaml_data['fund'], use_files)  #start a ledger
         self.ledger.read(invert=self.invert)  # read data for the ledger
-        self.budget_category_accounts = getattr(acl, self.yaml_data['categories'])  # get the account codes for each budget category
-        self._check_categories_aggregates(self.budget, self.budget_category_accounts)
         self.ledger.get_budget_categories(self.budget.categories)  # subtotal the ledger into budget categories
         self.ledger.get_budget_aggregates(self.budget.aggregates)  # add the budget category aggregates from sponsor to ledger
 
-    def _check_categories(self, budget, cat_from_acl):
+    def _check_and_set_categories(self):
         """
         Check that all self.budget.categories are in account_code_list.
 
@@ -66,18 +67,24 @@ class Manager:
         Aggregates aren't checked here, since they will error out when reading the budget yaml
 
         """
-        # Do the checking here
-        # Make this, the two lines below and the get_budget_X above consistent
+        # Check and error if an included account is not in the account_code_list.py
         for category in self.budget.categories:
-            if category not in cat_from_acl:
+            if category not in self.budget_category_accounts:
                 raise ValueError(f"The category {category} from the budget yaml is not in account_code_list.py -- please add.")
-        if 'not_included' not in cat_from_acl:
-            cat_from_acl['not_included'] = []
-        for category in cat_from_acl:
+
+        # Check and add if the opposite...
+        for category in self.budget_category_accounts:
             if category not in self.budget.categories:
                 print(f"The category {category} in account_code_list.py is not in the budget -- adding with budget of 0")
-                self.budget.categories[category] = category
+                self.budget.categories[category] = []
                 self.budget.budget[category] = 0.0
+            else:
+                self.budget.categories[category] = self.budget_category_accounts[category]
+
+        # Include a "not_included" category
+        self.budget.categories['not_included'] = []
+        self.budget.budget['not_included'] = 0.0
+
 
     def get_schedule(self, status=None):
         """
@@ -130,14 +137,20 @@ class Manager:
         self.get_finance('files')
         if categories is None:
             categories = list(self.budget.categories.keys())
+        elif not isinstance(categories, list):
+            categories = []
         if aggregates is None:
             aggregates = list(self.budget.aggregates.keys())
+        elif not isinstance(aggregates, list):
+            aggregates = []
+
         if report:
             fig_ddp = 'fig_ddp.png'
             fig_chart = 'fig_chart.png'
         else:
             fig_ddp = False
             fig_chart = False
+        # Make table
         self.table_data = []
         print("M119 - ugly dashboard actual 'logic'")
         if 'actual' in self.ledger.subtotals[categories[0]]:
@@ -147,12 +160,14 @@ class Manager:
         self.headers = ['Category', 'Budget'] + [x for x in self.ledger.amount_types]
         for cat in categories:
             if self._can_skip(cat, actual):
+                categories.remove(cat)
                 continue
             bal = self.budget.budget[cat] - self.ledger.subtotals[cat][actual]
             data = [self.budget.budget[cat]] + [self.ledger.subtotals[cat][x] for x in self.ledger.amount_types]
             self.table_data.append([cat] + [ul.print_money(x) for x in data])
         for agg in aggregates:
             if self._can_skip(agg, actual):
+                aggregates.remove(agg)
                 continue
             bal = self.budget.budget[agg] - self.ledger.subtotals[agg][actual]
             data = [self.budget.budget[agg]] + [self.ledger.subtotals[agg][x] for x in self.ledger.amount_types]
@@ -168,15 +183,22 @@ class Manager:
             pcspent = 0.0
         print(f"Percent spent: {pcspent:.1f}")
         print(f"Percent remainint:  {pcremain:.1f}")
-
         print()
         print(tabulate(self.table_data, headers=self.headers, stralign='right', colalign=('left',)))
-        plot.plt.figure('Dashboard')
-        print("M182: Include aggregates")
-        bamts = [self.budget.budget[cat] for cat in categories]
-        plot.chart(categories, bamts, label='Budget', width=0.7)
-        lamts = [self.ledger.subtotals[cat][actual] for cat in categories]
-        plot.chart(categories, lamts, label='Ledger', width=0.4, savefig=fig_chart)
+
+        # Make plot
+        if len(categories):
+            plot.plt.figure('Budget Category Dashboard')
+            bamts = [self.budget.budget[cat] for cat in categories]
+            plot.chart(categories, bamts, label='Budget', width=0.7)
+            lamts = [self.ledger.subtotals[cat][actual] for cat in categories]
+            plot.chart(categories, lamts, label='Ledger', width=0.4, savefig=fig_chart)
+        if len(aggregates):
+            plot.plt.figure('Budget Aggregate Dashboard')
+            bamts = [self.budget.budget[agg] for agg in aggregates]
+            plot.chart(aggregates, bamts, label='Budget', width=0.7)
+            lamts = [self.ledger.subtotals[agg][actual] for agg in aggregates]
+            plot.chart(aggregates, lamts, label='Ledger', width=0.4, savefig=fig_chart)
 
         self.get_schedule(status=pcspent)
         print(f"\tStart: {self.project.task1.begins}")

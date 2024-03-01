@@ -98,8 +98,7 @@ nsf = {'staff': Academic_Wages + Staff_Wages + Other_Employee_Compen + Retiremen
                  Fund_Advance_Unalloc + Recharge_Income + Control_Unit_Budget_Provisions +
                  Non_Employee_Payments),
        'subs': Intercampus + C_G_Sub_Awards, 
-       'indirect' : C_G_Spnsr_Indirect_Cost,
-       'not_included': []}
+       'indirect' : C_G_Spnsr_Indirect_Cost}
 gbmf = nsf
 si = nsf
 
@@ -115,15 +114,13 @@ sra = {'staff': Academic_Wages + Staff_Wages + Other_Employee_Compen + Retiremen
                  Fund_Advance_Unalloc + Recharge_Income + Control_Unit_Budget_Provisions),
        'contracts': Non_Employee_Payments,
        'subs': Intercampus + C_G_Sub_Awards,
-       'indirect': C_G_Spnsr_Indirect_Cost,
-       'not_included': []}
+       'indirect': C_G_Spnsr_Indirect_Cost}
 
 gift = {'supplies': General_Supplies,
         'meetings': Conf_Mtgs_Training_Events,
         'domestic': Travel_Domestic,
         'foreign': Travel_Foreign,
-        'other_travel': Travel_Other,
-        'not_included': []}
+        'other_travel': Travel_Other}
 
 # Home
 energy = ['gas', 'solar', 'power']
@@ -133,4 +130,4 @@ other = ['other', 'dmv', 'rent', 'health', 'education', 'transportation']
 finance = ['transfer', 'credit', 'mortgage', 'salary', 'insurance', 'atm', 'loan', 'interest', 'tax']
 work = ['reimbursement']
 
-boa = {'energy': energy, 'living': living, 'entertainment': entertainment, 'other': other, 'finance': finance, 'work': work, 'not_included': []}
+boa = {'energy': energy, 'living': living, 'entertainment': entertainment, 'other': other, 'finance': finance, 'work': work}
