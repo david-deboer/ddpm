@@ -279,14 +279,17 @@ class Audit():
                             self.cadence[cad][ceys[cad]][amtt] = 0.0
                     for amtt in self.ledger.amount_types:
                         self.cadence[cad][ceys[cad]][amtt] += row[amtt]
-        self.header = [self.ledger.columns[x] for x in cols_to_show]
+        self.header = []
+        for _x in cols_to_show:
+            if _x in self.ledger.columns:
+                self.header.append(self.ledger.columns[_x])
         self.table_data = []
         if not len(self.rows):
             return 
         for key in sorted(self.rows.keys(), reverse=sort_reverse):
             row = []
             for this_key in cols_to_show:
-                if this_key in self.rows[key][this_key]:
+                if this_key in self.rows[key]:
                     if this_key in self.ledger.date_types:
                         row.append(self.rows[key][this_key].strftime('%Y-%m-%d'))
                     else:

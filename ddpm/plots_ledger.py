@@ -38,7 +38,8 @@ def chart(x, y, label, norm=1.0, width=0.65,  xlabel=None, ylabel=None,
             plt.savefig('bar_chart.png')
 
 def cadences(cadences, amount):
-    amount = amount.split('+')
+    if isinstance(amount, str):
+        amount = amount.split('+')
     plt.figure('Cadences')
     for this_cadence in ['yearly', 'quarterly', 'monthly', 'daily']:
         ordered_keys = sorted(cadences[this_cadence].keys())
