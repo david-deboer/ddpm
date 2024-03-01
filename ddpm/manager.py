@@ -96,7 +96,7 @@ class Manager:
         now = datetime.now().astimezone()
         self.project = project.Project(self.yaml_data['fund'], organization='RAL')
         if 'end' in self.yaml_data:
-            task1 = components.Task(name='Period of Performance', begins=self.yaml_data['start'], ends=self.yaml_data['stop'], status=status, updated=now)
+            task1 = components.Task(name='Period of Performance', begins=self.yaml_data['start'], ends=self.yaml_data['end'], status=status, updated=now)
         elif 'duration' in self.yaml_data:
             duration = ut.months_to_timedelta(self.yaml_data['start'], self.yaml_data['duration'])
             task1 = components.Task(name='Period of Performance', begins=self.yaml_data['start'], duration=duration, status=status, updated=now)
