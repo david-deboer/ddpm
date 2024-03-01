@@ -161,16 +161,17 @@ class Manager:
         # Make table
         self.table_data = []
         self.headers = ['Category', 'Budget'] + [x for x in self.ledger.amount_types]
+        skipped = []
         for cat in categories:
             if self._can_skip(cat, amt2use):
-                categories.remove(cat)
+                skipped.append(cat)
                 continue
             bal = self.budget.budget[cat] - self.ledger.subtotals[cat][amt2use]
             data = [self.budget.budget[cat]] + [self.ledger.subtotals[cat][x] for x in self.ledger.amount_types]
             self.table_data.append([cat] + [ul.print_money(x) for x in data])
         for agg in aggregates:
             if self._can_skip(agg, amt2use):
-                aggregates.remove(agg)
+                skipped.append(agg)
                 continue
             bal = self.budget.budget[agg] - self.ledger.subtotals[agg][amt2use]
             data = [self.budget.budget[agg]] + [self.ledger.subtotals[agg][x] for x in self.ledger.amount_types]
@@ -188,6 +189,12 @@ class Manager:
         print(f"Percent remainint:  {pcremain:.1f}")
         print()
         print(tabulate(self.table_data, headers=self.headers, stralign='right', colalign=('left',)))
+        # Remove skipped ones
+        for skca in skipped:
+            if skca in categories:
+                categories.remove(skca)
+            if skca in aggregates:
+                aggregates.remove(skca)
 
         # Make plot
         if len(categories):

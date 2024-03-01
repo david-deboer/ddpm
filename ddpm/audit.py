@@ -147,15 +147,8 @@ class Filter:
 
 class Audit():
     """
-    Look at the new CalAnswers General Ledger files
-
-    Parameter:
-    -----------
-    ledger : Ledger instance
-
+    Look at Ledger files
     """
-    null_account = '-x-'
-    report_type_indicator = '++++++'
 
     def __init__(self, ledger):
         """
@@ -165,7 +158,7 @@ class Audit():
 
         Attributes
         ----------
-        Same as above
+        ledger : Ledger instance
         filter : Filter instance
         """
         self.ledger = ledger
