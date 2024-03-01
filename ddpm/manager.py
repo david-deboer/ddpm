@@ -54,11 +54,30 @@ class Manager:
         self.ledger = ledger.Ledger(self.yaml_data['fund'], use_files)  #start a ledger
         self.ledger.read(invert=self.invert)  # read data for the ledger
         self.budget_category_accounts = getattr(acl, self.yaml_data['categories'])  # get the account codes for each budget category
-        self.ledger.get_budget_categories(self.budget_category_accounts)  # subtotal the ledger into budget categories
+        self._check_categories_aggregates(self.budget, self.budget_category_accounts)
+        self.ledger.get_budget_categories(self.budget.categories)  # subtotal the ledger into budget categories
         self.ledger.get_budget_aggregates(self.budget.aggregates)  # add the budget category aggregates from sponsor to ledger
-        # Pull out the complete set of categories and aggregates
-        self.categories = sorted(set(list(self.budget.categories.keys()) + list(self.ledger.budget_categories.keys())))
-        self.aggregates = sorted(set(list(self.budget.aggregates.keys()) + list(self.ledger.budget_aggregates.keys())))
+
+    def _check_categories(self, budget, cat_from_acl):
+        """
+        Check that all self.budget.categories are in account_code_list.
+
+        Note that all budget categories in budget.categories _must_ be in the account_code_list, but not vice versa.
+        Aggregates aren't checked here, since they will error out when reading the budget yaml
+
+        """
+        # Do the checking here
+        # Make this, the two lines below and the get_budget_X above consistent
+        for category in self.budget.categories:
+            if category not in cat_from_acl:
+                raise ValueError(f"The category {category} from the budget yaml is not in account_code_list.py -- please add.")
+        if 'not_included' not in cat_from_acl:
+            cat_from_acl['not_included'] = []
+        for category in cat_from_acl:
+            if category not in self.budget.categories:
+                print(f"The category {category} in account_code_list.py is not in the budget -- adding with budget of 0")
+                self.budget.categories[category] = category
+                self.budget.budget[category] = 0.0
 
     def get_schedule(self, status=None):
         """
@@ -90,6 +109,12 @@ class Manager:
                     self.project.add(tk, attrname=f"task{ctr}")
                     ctr += 1
 
+    def _can_skip(self, cat, actual):
+        if abs(self.budget.budget[cat]) < 1.0 and abs(self.ledger.subtotals[cat][actual]) < 1.0:
+            print(f"Skipping {cat}-{actual} since no budget or expenditure")
+            return True
+        return False
+
     def dashboard(self, categories=None, aggregates=None, report=False):
         """
         Parameters
@@ -104,15 +129,9 @@ class Manager:
         """
         self.get_finance('files')
         if categories is None:
-            categories = copy(self.categories)
-            if 'not_included' in categories:
-                asumt = 0.0
-                for amtt in self.ledger.amount_types:
-                    asumt += abs(self.ledger.subtotals['not_included'][amtt])
-                if asumt < 1.0:
-                    categories.remove('not_included')
+            categories = list(self.budget.categories.keys())
         if aggregates is None:
-            aggregates = self.aggregates
+            aggregates = list(self.budget.aggregates.keys())
         if report:
             fig_ddp = 'fig_ddp.png'
             fig_chart = 'fig_chart.png'
@@ -120,17 +139,21 @@ class Manager:
             fig_ddp = False
             fig_chart = False
         self.table_data = []
-        print("M119 - ugly dashboard")
+        print("M119 - ugly dashboard actual 'logic'")
         if 'actual' in self.ledger.subtotals[categories[0]]:
             actual = 'actual'
         else:
             actual = list(self.ledger.amount_types.keys())[0]
         self.headers = ['Category', 'Budget'] + [x for x in self.ledger.amount_types]
         for cat in categories:
+            if self._can_skip(cat, actual):
+                continue
             bal = self.budget.budget[cat] - self.ledger.subtotals[cat][actual]
             data = [self.budget.budget[cat]] + [self.ledger.subtotals[cat][x] for x in self.ledger.amount_types]
             self.table_data.append([cat] + [ul.print_money(x) for x in data])
         for agg in aggregates:
+            if self._can_skip(agg, actual):
+                continue
             bal = self.budget.budget[agg] - self.ledger.subtotals[agg][actual]
             data = [self.budget.budget[agg]] + [self.ledger.subtotals[agg][x] for x in self.ledger.amount_types]
             self.table_data.append(['+'+agg] + [ul.print_money(x) for x in data])
@@ -149,6 +172,7 @@ class Manager:
         print()
         print(tabulate(self.table_data, headers=self.headers, stralign='right', colalign=('left',)))
         plot.plt.figure('Dashboard')
+        print("M182: Include aggregates")
         bamts = [self.budget.budget[cat] for cat in categories]
         plot.chart(categories, bamts, label='Budget', width=0.7)
         lamts = [self.ledger.subtotals[cat][actual] for cat in categories]

@@ -201,6 +201,8 @@ class Ledger():
         """
         Budget categories are groups of account codes which get sub-totaled.
 
+        Generally the budget categories come from the yaml and are handled by manager.py.
+
         Parameter
         ---------
         budget_categories : dict, None
@@ -230,7 +232,9 @@ class Ledger():
 
     def get_budget_aggregates(self, budget_aggregates):
         """
-        Budget aggregates are groups of budget_categories which get sub-totaled
+        Budget aggregates are groups of budget_categories which get sub-totaled.
+
+        Generally the aggregates come from the yaml and are handled by manager.py
 
         Parameter
         ---------
@@ -248,12 +252,12 @@ class Ledger():
         self.budget_aggregates = budget_aggregates
         if budget_aggregates is None:
             return
-        for this_cat, cmps in self.budget_aggregates.items():
-            self.subtotals[this_cat] = {}
+        for this_agg, these_cats in self.budget_aggregates.items():
+            self.subtotals[this_agg] = {}
             for amtt in self.grand_total:
-                self.subtotals[this_cat][amtt] = 0.0
-                for cmp in cmps:
-                    self.subtotals[this_cat][amtt] += self.subtotals[cmp][amtt]
+                self.subtotals[this_agg][amtt] = 0.0
+                for cmp in these_cats:
+                    self.subtotals[this_agg][amtt] += self.subtotals[cmp][amtt]
 
 class Budget:
     def __init__(self, data):
@@ -289,7 +293,7 @@ class Budget:
                     nval = ul.sumup(data[amt[1:]])
                 else:
                     nval = eval(amt)
-            self.categories[this_cat] = this_cat  # Just point to itself
+            self.categories[this_cat] = this_cat  # Just point to itself to make a dict
             self.budget[this_cat] = nval
             try:
                 self.grand_total += nval
