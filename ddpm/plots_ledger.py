@@ -2,8 +2,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 
 
-def chart(x, y, label, norm=1.0, width=0.65,  xlabel=None, ylabel=None,
-             add_legend=True, savefig=False):
+def chart(x, y, label, norm=1.0, width=0.65,  xlabel=None, ylabel=None):
     ind = list(range(len(x)))
     if isinstance(label, str):
         if len(x) != len(y):
@@ -29,13 +28,6 @@ def chart(x, y, label, norm=1.0, width=0.65,  xlabel=None, ylabel=None,
     if ylabel is not None:
         plt.ylabel(ylabel)
     plt.xticks(ind, x)
-    if add_legend:
-        plt.legend()
-    if savefig:
-        if isinstance(savefig, str):
-            plt.savefig(savefig)
-        else:
-            plt.savefig('bar_chart.png')
 
 def cadences(cadences, amount):
     if isinstance(amount, str):

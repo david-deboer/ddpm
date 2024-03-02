@@ -3,17 +3,13 @@ This provides the overall analysis for budget and ledger.  The input yaml define
 
 """
 import yaml
-from . import account_code_list as acl
 from . import utils_ledger as ul
 from . import utils_time as ut
 from . import plots_ledger as plot
-from . import reports_ledger as rl
-from . import project, components, ledger
-from . import audit
+from . import project, components, ledger, account_code_list, reports_ledger, audit
 from tabulate import tabulate
 from datetime import datetime
 from dateutil.parser import parse
-from copy import copy
 
 
 class Manager:
@@ -47,7 +43,7 @@ class Manager:
         """
         # Make the sponsor budget from yaml and get account codes
         self.budget = ledger.Budget(data=self.yaml_data)
-        self.budget_category_accounts = getattr(acl, self.yaml_data['categories'])  # get the account codes for each budget category
+        self.budget_category_accounts = getattr(account_code_list, self.yaml_data['categories'])  # get the account codes for each budget category
         self._check_and_set_categories()
 
         # Setup the ledger
@@ -58,6 +54,7 @@ class Manager:
         self.ledger.read(invert=self.invert)  # read data for the ledger
         self.ledger.get_budget_categories(self.budget.categories)  # subtotal the ledger into budget categories
         self.ledger.get_budget_aggregates(self.budget.aggregates)  # add the budget category aggregates from sponsor to ledger
+        print(f"Ledger dates: {self.ledger.first_date.strftime('%Y-%m-%d')} - {self.ledger.last_date.strftime('%Y-%m-%d')}")
 
     def _check_and_set_categories(self):
         """
@@ -186,7 +183,7 @@ class Manager:
             pcremain = 0.0
             pcspent = 0.0
         print(f"Percent spent: {pcspent:.1f}")
-        print(f"Percent remainint:  {pcremain:.1f}")
+        print(f"Percent remaining:  {pcremain:.1f}")
         print()
         print(tabulate(self.table_data, headers=self.headers, stralign='right', colalign=('left',)))
         # Remove skipped ones
@@ -202,13 +199,19 @@ class Manager:
             bamts = [self.budget.budget[cat] for cat in categories]
             plot.chart(categories, bamts, label='Budget', width=0.7)
             lamts = [self.ledger.subtotals[cat][amt2use] for cat in categories]
-            plot.chart(categories, lamts, label='Ledger', width=0.4, savefig=fig_chart)
+            plot.chart(categories, lamts, label='Ledger', width=0.4)
+            plot.plt.legend()
+            plot.plt.grid()
+            if fig_chart:
+                plot.plt.savefig(fig_chart)
         if len(aggregates):
             plot.plt.figure('Budget Aggregate Dashboard')
             bamts = [self.budget.budget[agg] for agg in aggregates]
             plot.chart(aggregates, bamts, label='Budget', width=0.7)
             lamts = [self.ledger.subtotals[agg][amt2use] for agg in aggregates]
-            plot.chart(aggregates, lamts, label='Ledger', width=0.4, savefig=fig_chart)
+            plot.chart(aggregates, lamts, label='Ledger', width=0.4)
+            plot.plt.legend()
+            plot.plt.grid()
 
         self.get_schedule(status=pcspent)
         print(f"\tStart: {self.project.task1.begins}")
@@ -216,7 +219,7 @@ class Manager:
         self.project.chart(chart='all', sortby=['date'], weekends=False, months=False, figsize=(6, 2), savefig=fig_ddp)
 
         if report:
-            rl.tex_dashboard(self)
+            reports_ledger.tex_dashboard(self)
 
     def show_files(self):
         ul.show_ledger_files(self.ledger)

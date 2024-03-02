@@ -52,6 +52,7 @@ class Ledger():
         print("Reading in ledger files:", end=' ')
         if invert:
             print("Inverting amounts")
+        invert = -1.0 if invert else 1.0
         self.data = {}
         base = settings.BaseType()
         self.first_date = base.make_date('2040/1/1')
@@ -62,7 +63,7 @@ class Ledger():
         counters = {}  # out-of-fy and line counters for each file
         for key in ['columns', 'amount_types', 'date_types']:
             setattr(self, key, {})
-        invert = -1.0 if invert else 1.0
+        
 
         # Read in ledger files
         for ledger_file, report_type in self.files.items():  # loop through files
@@ -102,8 +103,8 @@ class Ledger():
                 self.data[this_account]['entries'].append(this_entry)
                 self.total_entries += 1
                 for col in L.amount_types:
-                    self.data[this_account][col] += invert * this_entry[col]
-                    self.grand_total[col] += invert * this_entry[col]
+                    self.data[this_account][col] += this_entry[col]
+                    self.grand_total[col] += this_entry[col]
                 for date_type in L.date_types:
                     if this_entry[date_type] < self.first_date:
                         self.first_date = copy(this_entry[date_type])
