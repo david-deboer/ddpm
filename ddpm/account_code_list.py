@@ -127,7 +127,8 @@ energy = ['gas', 'solar', 'power']
 living = ['water', 'garbage', 'grocery', 'retail', 'internet', 'auto']
 entertainment = ['restaurant', 'admission', 'subscription']
 other = ['other', 'dmv', 'rent', 'health', 'education', 'transportation']
-finance = ['transfer', 'credit', 'mortgage', 'salary', 'insurance', 'atm', 'loan', 'interest', 'tax', 'deposit']
+finance = ['credit', 'mortgage', 'salary', 'insurance', 'atm', 'loan', 'interest', 'tax', 'deposit']
 work = ['reimbursement']
+transfer = ['transfer_to_robin', 'transfer_to_mark', 'transfer_to_jeff', 'transfer_to_sav', 'transfer_to_chk']
 
-boa = {'energy': energy, 'living': living, 'entertainment': entertainment, 'other': other, 'finance': finance, 'work': work}
+boa = {'energy': energy, 'living': living, 'entertainment': entertainment, 'other': other, 'finance': finance, 'work': work, 'transfer': transfer}
