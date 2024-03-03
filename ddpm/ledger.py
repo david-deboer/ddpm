@@ -126,6 +126,22 @@ class Ledger():
             table_data.append([lfile, counters[lfile]['fy'], counters[lfile]['lines']])
         print('\n' + tabulate(table_data, headers=['ledger file', 'out_of_fy', 'total']))
 
+    def _get_file_header(self):
+        self.file_header = []
+        for fil in self.files:
+            if not len(self.file_header):
+                self.file_header = self.report_class[fil].columns
+            else:
+                if set(self.file_header) != set(self.report_class[fil].columns):
+                    print(f"{self.file_header} is different than {self.report_class[fil].columns}")
+
+    def _get_update_prompt(self, entry):
+        show = []
+        for col in self.columns:
+            if col in entry:
+                show.append(str(entry[col]))
+        return '| '.join(show) + ':  '
+
     def update_account(self, accounts='all', shortcuts={}):
         """
         Go through ledger.data and change the key (account) if desired.
@@ -150,24 +166,22 @@ class Ledger():
                 shortcuts = yaml.safe_load(fp)
         if len(shortcuts):
             print("Using shortcuts:")
-            print(shortcuts)
+            for sc, cat in shortcuts.items():
+                print(f"\t{sc} -> {cat}")
         ctr = 0
         asking = True
+        self.get_file_header()
+        print("Use <RET> for current or '-9' to quit.")
         for account in self.data:
             if accounts is None or account in accounts:
                 for entry in self.data[account]['entries']:
                     use_entry = copy(entry)
-                    show = []
-                    for col in self.columns:
-                        if col in use_entry:
-                            show.append(str(use_entry[col]))
-                    show = '| '.join(show) + ':  '
                     if asking:
-                        key = input(show)
+                        key = input(self._get_update_prompt(use_entry))
                     else:
                         key = ''
                     if key == '-9':
-                        print("Skipping the rest")
+                        print("Skipping the rest!")
                         key = account
                         accounts = []
                         asking = False
@@ -190,6 +204,7 @@ class Ledger():
             print(f"Made {ctr} updates -- writing 'updated.csv'.")
             with open('updated.csv', 'w') as fp:
                 writer = csv.writer(fp)
+                writer.writerow(self.file_header)
                 for account, entries in self.updated.items():
                     for entry in entries['entries']:
                         this_row = []
@@ -199,6 +214,8 @@ class Ledger():
                                 this_one = this_one.strftime('%m/%d/%Y')
                             this_row.append(this_one)
                         writer.writerow(this_row)
+        else:
+            print("No updates made.")
 
     def get_budget_categories(self, budget_categories):
         """
