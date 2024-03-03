@@ -8,6 +8,10 @@ def ledger_info(report_type, columns):
         return FundSummary(report_type, columns)
     elif report_type == 'boa':
         return BankOfAmerica(report_type, columns)
+    else:
+        print(f"Invalid ledger type:  {report_type}")
+        print("Consider adding to settings_ledger.py and account_code_list.py?")
+        return None
 
 class BaseType:
     def __repr__(self):
