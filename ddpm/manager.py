@@ -32,6 +32,7 @@ class Manager:
             self.invert = self.yaml_data['invert']
         else:
             self.invert = False
+        self.ledger = None
 
     def get_finance(self, file_list):
         """
@@ -55,6 +56,7 @@ class Manager:
         self.ledger.get_budget_categories(self.budget.categories)  # subtotal the ledger into budget categories
         self.ledger.get_budget_aggregates(self.budget.aggregates)  # add the budget category aggregates from sponsor to ledger
         print(f"Ledger dates: {self.ledger.first_date.strftime('%Y-%m-%d')} - {self.ledger.last_date.strftime('%Y-%m-%d')}")
+        self.budget.categories['not_included'] = self.ledger.budget_categories['not_included']  # Copy over after setting ledger categories
 
     def _check_and_set_categories(self):
         """
@@ -72,14 +74,12 @@ class Manager:
         # Check and add if the opposite...
         for category in self.budget_category_accounts:
             if category not in self.budget.categories:
-                print(f"The category {category} in account_code_list.py is not in the budget -- adding with budget of 0")
-                self.budget.categories[category] = []
+                print(f"The category '{category}' in account_code_list.py is not in the budget for '{self.yaml_data['categories']}' -- adding with budget of 0")
                 self.budget.budget[category] = 0.0
-            else:
-                self.budget.categories[category] = self.budget_category_accounts[category]
+            self.budget.categories[category] = self.budget_category_accounts[category]
 
         # Include a "not_included" category
-        self.budget.categories['not_included'] = []
+        self.budget.categories['not_included'] = []  # Will get set after setting the ledger categories in set_finance
         self.budget.budget['not_included'] = 0.0
 
 
@@ -112,6 +112,11 @@ class Manager:
                     tk = components.Task(name=mstatement, begins=mstart, ends=mstop, updated=now)
                     self.project.add(tk, attrname=f"task{ctr}")
                     ctr += 1
+        if self.ledger is not None:
+            ledger_earliest = components.Milestone(name='Earliest ledger entry.', date=self.ledger.first_date, updated=now)
+            self.project.add(ledger_earliest, attrname='ledger_earliest')
+            ledger_latest = components.Milestone(name='Latest ledger entry.', date=self.ledger.last_date, updated=now)
+            self.project.add(ledger_latest, attrname='ledger_latest')
 
     def _can_skip(self, cat, amt2use):
         if abs(self.budget.budget[cat]) < 1.0 and abs(self.ledger.subtotals[cat][amt2use]) < 1.0:

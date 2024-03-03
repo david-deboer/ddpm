@@ -20,9 +20,6 @@ class BaseType:
             s += f"\t{key}: {val}\n"
         return s
 
-    def set_columns(self, value):
-        self.columns = value
-
     def make_amt(self, x):
         """
         Convert accounting formatted money to a float
@@ -33,6 +30,7 @@ class BaseType:
         try:
             return float(trial)
         except ValueError:
+            print("Amount not successfully made -- returning 0.0")
             return 0.0
 
     def make_date(self, x):
@@ -60,7 +58,11 @@ class BaseType:
             self.reverse_map[val['name']] = key
 
     def keygen(self, row):
-        return self.cpliti(row[self.key_ind], '-', 0)
+        """
+        Update this in the child class if needed.
+
+        """
+        return self.cpliti(row[self.key_index], '-', 0)
 
 
 class BankOfAmerica(BaseType):
@@ -68,7 +70,7 @@ class BankOfAmerica(BaseType):
         self.report_type = report_type
         self.columns = columns
         self.key = 'Account'
-        self.key_ind = self.columns.index(self.key)
+        self.key_index = self.columns.index(self.key)
         self.date_types = ['date']
         self.amount_types = ['amount']
         self.colmap = {'Date': {'name': 'date', 'func': self.make_date},
@@ -84,7 +86,7 @@ class Calanswers(BaseType):
         self.report_type = report_type
         self.columns = columns
         self.key = 'Account - Desc'
-        self.key_ind = self.columns.index(self.key)
+        self.key_index = self.columns.index(self.key)
         self.date_types = ['date']
         self.amount_types = ['actual', 'budget', 'encumbrance']
         self.colmap = {'Accounting Period - Desc': {'name': 'period', 'func': self.clean},
@@ -113,7 +115,7 @@ class FundSummary(BaseType):
         self.report_type = report_type
         self.columns = columns
         self.key = 'Dept ID - Desc'
-        self.key_ind = self.columns.index(self.key)
+        self.key_index = self.columns.index(self.key)
         self.amount_types = ['actual', 'encumbrance', 'remaining']
         self.date_types = []
         self.colmap = {'Dept ID - Desc': {'name': 'deptid', 'func': self.clean},
