@@ -127,13 +127,21 @@ class Ledger():
         print('\n' + tabulate(table_data, headers=['ledger file', 'out_of_fy', 'total']))
 
     def get_file_header(self):
+        """
+        Attribute
+        ---------
+        file_header : list
+            List containing the file's header line.  Will warn if they differ file-to-file.
+
+        """
         self.file_header = []
         for fil in self.files:
             if not len(self.file_header):
                 self.file_header = self.report_class[fil].columns
             else:
                 if set(self.file_header) != set(self.report_class[fil].columns):
-                    print(f"{self.file_header} is different than {self.report_class[fil].columns}")
+                    print(f"{self.report_class[fil].columns} is different than the assumed file header {self.file_header}")
+
 
     def _get_update_prompt(self, entry):
         show = []
@@ -173,13 +181,10 @@ class Ledger():
         self.get_file_header()
         print("Use <RET> for current or '-9' to stop updating the rest.")
         for account in self.data:
-            if accounts is None or account in accounts:
+            if accounts is None or account in accounts:  # Check for update
                 for entry in self.data[account]['entries']:
                     use_entry = copy(entry)
-                    if asking:
-                        key = input(self._get_update_prompt(use_entry))
-                    else:
-                        key = account
+                    key = input(self._get_update_prompt(use_entry)) if asking else account
                     if key == '-9':
                         print("Using existing account for the rest!")
                         key = account
@@ -194,7 +199,7 @@ class Ledger():
                     self.updated[key].setdefault('entries', [])
                     use_entry.update({'account': key})
                     self.updated[key]['entries'].append(use_entry)
-            else:
+            else:  # Copy over
                 self.updated.setdefault(account, {})
                 self.updated[account].setdefault('entries', [])
                 for entry in self.data[account]['entries']:
@@ -336,7 +341,7 @@ class Budget:
                 self.budget[this_cat] += self.budget[cmp]
 
     def adjust(self):
-        print("")
+        print("Maybe do this or maybe not?")
         # if len(adjust):
         #     this_date = tdt.datetime.datetime.now()
         #     for account, val in adjust.items():

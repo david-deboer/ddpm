@@ -31,19 +31,19 @@ def cadence_keys(cadence, date):
     if cadence == 'monthly':
         nmon = date.month + 1
         wrap = (nmon-1) // 12
-        cdate = datetime.datetime(year=date.year+wrap, month=nmon-12*wrap, day=1).astimezone() - datetime.timedelta(days=1)
+        cdate = datetime.datetime(year=date.year+wrap, month=nmon-12*wrap, day=1, hour=23, minute=59).astimezone() - datetime.timedelta(days=1)
     if cadence == 'quarterly':
         qtr = int(floor((date.month-1)/3 + 1))
         if qtr == 1:
-            cdate = datetime.datetime(year=date.year, month=3, day=31).astimezone()
+            cdate = datetime.datetime(year=date.year, month=3, day=31, hour=23, minute=59).astimezone()
         elif qtr == 2:
-            cdate = datetime.datetime(year=date.year, month=6, day=30).astimezone()
+            cdate = datetime.datetime(year=date.year, month=6, day=30, hour=23, minute=59).astimezone()
         elif qtr == 3:
-            cdate = datetime.datetime(year=date.year, month=9, day=30).astimezone()
+            cdate = datetime.datetime(year=date.year, month=9, day=30, hour=23, minute=59).astimezone()
         elif qtr == 4:
-            cdate = datetime.datetime(year=date.year, month=12, day=31).astimezone()
+            cdate = datetime.datetime(year=date.year, month=12, day=31, hour=23, minute=59).astimezone()
     if cadence == 'yearly':
-        cdate = datetime.datetime(year=date.year, month=12, day=31).astimezone()
+        cdate = datetime.datetime(year=date.year, month=12, day=31, hour=23, minute=59).astimezone()
     if cdate > now:
         return now
     return cdate

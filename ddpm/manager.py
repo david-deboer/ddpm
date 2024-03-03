@@ -120,7 +120,8 @@ class Manager:
 
     def _can_skip(self, cat, amt2use):
         if abs(self.budget.budget[cat]) < 1.0 and abs(self.ledger.subtotals[cat][amt2use]) < 1.0:
-            print(f"Skipping {cat}-{amt2use} since no budget or expenditure")
+            if cat != 'not_included':
+                print(f"Skipping {cat}-{amt2use} since no budget or expenditure")
             return True
         return False
 

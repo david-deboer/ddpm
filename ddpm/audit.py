@@ -168,31 +168,34 @@ class Audit():
 
     def in_fill_cadence(self):
         """
-        In-fill days and months that don't have data with a 0.0; quarterly/yearly are skipped,although the last/first dates are added.
+        In-fill cadences that don't have data with a 0.0.
 
         """
-        for this_cadence in ['daily', 'monthly']:
+        for this_cadence in ['daily', 'monthly', 'quarterly', 'yearly']:
             ordered_keys = sorted(self.cadence[this_cadence].keys())
             this_time = copy(ordered_keys[0])
             while this_time < ordered_keys[-1]:
-                if this_cadence == 'daily':
-                    dt = timedelta(days=1)
-                elif this_cadence == 'monthly':
-                    nmon = this_time.month + 2
-                    wrap = (nmon-1) // 12
-                    cdate = datetime(year=this_time.year+wrap, month=nmon-12*wrap, day=1).astimezone() - timedelta(days=1)
-                    dt = cdate - this_time
-                this_time += dt
+                this_time = ut.cadence_keys(this_cadence, this_time + timedelta(days=1))
                 if this_time in ordered_keys:
                     pass
                 else:
                     self.cadence[this_cadence][this_time] = {}
                     for amtt in self.ledger.amount_types:
                         self.cadence[this_cadence][this_time][amtt] = 0.0
-        for this_cadence in ['monthly', 'quarterly', 'yearly']:
-            self.cadence[this_cadence][self.ledger.first_date] = {}
-            for amtt in self.ledger.amount_types:
-                self.cadence[this_cadence][self.ledger.first_date][amtt] = 0.0
+
+    def _get_sort_key(self, row, sort_by, use_absval):
+        key = []
+        for sb in sort_by:
+            val = row[sb]
+            try:
+                val = int(float(val) * 100.0)
+                if use_absval:
+                    val = abs(val)
+            except (ValueError, TypeError):
+                pass
+            key.append(val)
+        key.append(self.total_lines)  # to ensure unique
+        return tuple(key)
 
     def detail(self, sort_by='account,date', sort_reverse=False, cols_to_show='all', csv=False):
         """
@@ -228,7 +231,7 @@ class Audit():
         elif isinstance(cols_to_show, str):
             cols_to_show = cols_to_show.split(',')
 
-        total_lines = 0
+        self.total_lines = 0
         self.rows = {}
         self.subtotal = {}
         for amtt in self.ledger.amount_types:
@@ -247,20 +250,9 @@ class Audit():
                     continue
                 for amtt in self.ledger.amount_types:
                     self.subtotal[amtt] += row[amtt]
-                total_lines += 1
+                self.total_lines += 1
                 # Get row
-                key = []
-                for sb in sort_by:
-                    val = row[sb]
-                    try:
-                        val = int(float(val) * 100.0)
-                        if use_absval:
-                            val = abs(val)
-                    except (ValueError, TypeError, KeyError):
-                        pass
-                    key.append(val)
-                key.append(total_lines)  # to ensure unique
-                key = tuple(key)
+                key = self._get_sort_key(row=row, sort_by=sort_by, use_absval=use_absval)
                 self.rows[key] = copy(row)
                 # Get cadences
                 ceys = {}
@@ -292,6 +284,9 @@ class Audit():
             ul.write_to_csv(csv, self.table_data, self.header)
 
     def show_table(self):
+        """
+        Shows the detail table and subtotals
+        """
         print()
         print(tabulate(self.table_data, headers=self.header, floatfmt='.2f'))
         print(f"\nSub-total:") 
@@ -300,7 +295,7 @@ class Audit():
 
     def show_plot(self, amounts):
         """
-        Get rid of the amounts and use amount_types_in_audit...
+        Plots the cadence data after filling in.
         """
         self.in_fill_cadence()
         plots.cadences(self.cadence, amount=amounts)
