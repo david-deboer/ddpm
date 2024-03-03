@@ -126,7 +126,7 @@ class Ledger():
             table_data.append([lfile, counters[lfile]['fy'], counters[lfile]['lines']])
         print('\n' + tabulate(table_data, headers=['ledger file', 'out_of_fy', 'total']))
 
-    def _get_file_header(self):
+    def get_file_header(self):
         self.file_header = []
         for fil in self.files:
             if not len(self.file_header):
@@ -171,7 +171,7 @@ class Ledger():
         ctr = 0
         asking = True
         self.get_file_header()
-        print("Use <RET> for current or '-9' to quit.")
+        print("Use <RET> for current or '-9' to stop updating the rest.")
         for account in self.data:
             if accounts is None or account in accounts:
                 for entry in self.data[account]['entries']:
@@ -179,11 +179,10 @@ class Ledger():
                     if asking:
                         key = input(self._get_update_prompt(use_entry))
                     else:
-                        key = ''
-                    if key == '-9':
-                        print("Skipping the rest!")
                         key = account
-                        accounts = []
+                    if key == '-9':
+                        print("Using existing account for the rest!")
+                        key = account
                         asking = False
                     if not len(key):
                         key = account
