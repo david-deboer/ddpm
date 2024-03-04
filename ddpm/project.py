@@ -1,7 +1,7 @@
 from copy import copy
 from . import plots_proj as plots
 from . import settings_proj as settings
-from . import utils_ddp as ud
+from . import utils_proj as ud
 from . import utils_time as ut
 from . import components
 import datetime
