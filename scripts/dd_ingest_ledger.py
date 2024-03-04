@@ -1,6 +1,6 @@
 #! /usr/bin/env python
 import argparse
-from ddpm import utils_ledger as ul
+from ddpm import utils_ledger as utils
 from os import path
 
 ap = argparse.ArgumentParser(description="Perform xlsx -> csv actions based on 'file_indicator'.")
@@ -48,12 +48,12 @@ else:
 
 if xlsin is not None:
     print(f"   >>>Reading {xlsin}")
-    ul.xls2csv(xlsin, csvout)
+    utils.xls2csv(xlsin, csvout)
     import os
     os.remove(xlsin)
 print(f"   >>>Scrubbing {args.file_type} csv file {csvout}.")
-ul.scrub_csv(csvout, args.legend_starts_with, args.data_ends_with)
+utils.scrub_csv(csvout, args.legend_starts_with, args.data_ends_with)
 
 if args.split:
     print(f"Splitting {csvout}")
-    ul.split_csv(csvout)
+    utils.split_csv(csvout)

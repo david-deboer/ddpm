@@ -89,8 +89,8 @@ def split_csv(fn):
     files_to_write = {}
     for fund, dirname in funds.items():
         files_to_write[fund] = {'fn': os.path.join(dirname, fn)}
-        files_to_write[fund]['fp'] = open(files_to_write[fund]['fn'], 'w')
-        files_to_write[fund]['writer'] = csv.writer(files_to_write[fund]['fp'])
+        files_to_write[fund]['fp'] = None
+        files_to_write[fund]['writer'] = None
         files_to_write[fund]['counter'] = 0
 
     with open(fn, 'r') as fp_in:
@@ -101,6 +101,9 @@ def split_csv(fn):
                     vals['writer'].writerow(row)
             else:
                 fundno = int(row[2].split()[0])
+                if files_to_write[fundno]['fp'] is None:  # Only open if fund present.
+                    files_to_write[fundno]['fp'] = open(files_to_write[fundno]['fn'], 'w')
+                    files_to_write[fundno]['writer'] = csv.writer(files_to_write[fundno]['fp'])
                 files_to_write[fundno]['writer'].writerow(row)
                 files_to_write[fundno]['counter'] += 1
     
