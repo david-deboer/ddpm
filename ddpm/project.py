@@ -1,7 +1,7 @@
 from copy import copy
 from . import plots_proj as plots
 from . import settings_proj as settings
-from . import utils_proj as ud
+from . import utils_proj as utils
 from . import utils_time as ut
 from . import components
 import datetime
@@ -268,7 +268,7 @@ class Project:
             print(f"{this.jot}  {this.date.strftime('%Y-%m-%d %H:%M')}  - ({', '.join(this.reference)})")
 
     def color_bar(self):
-        ud.color_bar()
+        utils.color_bar()
 
     def _determine_entry_type(self, header, row):
         kwargs = {}
@@ -309,7 +309,7 @@ class Project:
         classdecl = {'milestone': components.Milestone, 'timeline': components.Timeline, 'task': components.Task}
 
         if loc.startswith('http'):
-            data = ud.load_sheet_from_url(loc)
+            data = utils.load_sheet_from_url(loc)
             header = copy(data[0])
             reader = data[1:]
         else:
@@ -378,7 +378,7 @@ class Project:
             pcdict[f"v{col2[0]}"] = pcol
             pcdict[f"v{col2[1]}"] = pcol
 
-        entpar = ud.components_parameters(show=False)
+        entpar = utils.components_parameters(show=False)
         for entry in self.entry_types:
             for p in entpar[entry]:
                 if p in pcdict:
@@ -410,9 +410,9 @@ class Project:
                                 val = getattr(this, col)
                                 if val is None:
                                     val = ''
-                                elif col in ud.DATE_FIELDS:
-                                    val = ud.datedeltastr(val)
-                                elif col in ud.LIST_FIELDS:
+                                elif col in utils.DATE_FIELDS:
+                                    val = utils.datedeltastr(val)
+                                elif col in utils.LIST_FIELDS:
                                     val = '|'.join([str(_x) for _x in val])
                                 row.append(val)
                                 added = True
