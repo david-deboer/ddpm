@@ -172,6 +172,7 @@ class Audit():
 
         """
         self.cumulative = {}
+        now = datetime.now().astimezone().replace(hour=23, minute=59, second=0, microsecond=0)
         for this_cadence in ['daily', 'monthly', 'quarterly', 'yearly']:
             ordered_keys = sorted(self.cadence[this_cadence].keys())
             this_time = copy(ordered_keys[0])
@@ -182,6 +183,8 @@ class Audit():
             while this_time < ordered_keys[-1]:
                 prev_time = copy(this_time)
                 this_time = ut.cadence_keys(this_cadence, this_time + timedelta(days=1))
+                if this_time > now:
+                    this_time = now
                 if this_time in ordered_keys:
                     pass
                 else:
@@ -247,6 +250,7 @@ class Audit():
         for amtt in self.ledger.amount_types:
             self.subtotal[amtt] = 0.0
         self.cadence = {'daily': {}, 'monthly': {}, 'quarterly': {}, 'yearly': {}}
+        now = datetime.now().astimezone().replace(hour=23, minute=59, second=0, microsecond=0)
         for account in self.filter.account:
             if account in self.filter.exclude:
                 continue
@@ -265,15 +269,16 @@ class Audit():
                 key = self._get_sort_key(row=row, sort_by=sort_by, use_absval=use_absval)
                 self.rows[key] = copy(row)
                 # Get cadences
-                ceys = {}
                 for cad in self.cadence.keys():
-                    ceys[cad] = ut.cadence_keys(cad, row['date'])
-                    if ceys[cad] not in self.cadence[cad]:
-                        self.cadence[cad][ceys[cad]]= {}
+                    cey = ut.cadence_keys(cad, row['date'])  # Last minute of that cadence
+                    if cey > now:
+                        cey = now
+                    if cey not in self.cadence[cad]:
+                        self.cadence[cad][cey]= {}
                         for amtt in self.ledger.amount_types:
-                            self.cadence[cad][ceys[cad]][amtt] = 0.0
+                            self.cadence[cad][cey][amtt] = 0.0
                     for amtt in self.ledger.amount_types:
-                        self.cadence[cad][ceys[cad]][amtt] += row[amtt]
+                        self.cadence[cad][cey][amtt] += row[amtt]
         self.header = []
         for _x in cols_to_show:
             if _x in self.ledger.columns:
