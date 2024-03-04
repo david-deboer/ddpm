@@ -1,7 +1,7 @@
 import vobject
 import datetime
 from copy import copy
-from ddpm import project, components
+from . import project, components
 from dateutil.parser import parse
 import pytz
 
@@ -9,10 +9,13 @@ import pytz
 def to_dtz(val, time='00:00'):
     if isinstance(val, datetime.datetime):
         return val.astimezone()
-    hr = int(time.split(':')[0])
-    mn = int(time.split(':')[1])
-    dt = datetime.datetime(year=val.year, month=val.month, day=val.day, hour=hr, minute=mn)
-    return dt.astimezone()
+    # From calev value
+    try:
+        hr, mn = [int(t) for t in time.split(':')]
+        sc = 0
+    except ValueError:
+        hr, mn, sc = [int(t) for t in time.split(':')]
+    return datetime.datetime(year=val.year, month=val.month, day=val.day, hour=hr, minute=mn, second=sc).astimezone()
 
 def get_era(now, dtstart, dtend, upcoming):
     if dtend < now:
@@ -30,7 +33,7 @@ class iCal:
         self._make_tzid_convert()
         self.events = {'past': {}, 'current': {}, 'next': {}, 'upcoming': {}, 'future': {}}
         self.era_colors = {'past': '.7', 'current': 'g', 'next': 'r', 'upcoming': 'b', 'future': 'k'}
-        self.now = to_dtz(datetime.datetime.now())
+        self.now = datetime.datetime.now().astimezone()
 
     def _make_tzid_convert(self):
         self.TZID = {}
