@@ -166,15 +166,21 @@ class Audit():
                              dates=list(ledger.date_types),
                              amounts=list(ledger.amount_types))
 
-    def in_fill_cadence(self):
+    def in_fill_cadence_cumulative(self):
         """
-        In-fill cadences that don't have data with a 0.0.
+        In-fill cadences that don't have data with a 0.0 and make the cumulative data.
 
         """
+        self.cumulative = {}
         for this_cadence in ['daily', 'monthly', 'quarterly', 'yearly']:
             ordered_keys = sorted(self.cadence[this_cadence].keys())
             this_time = copy(ordered_keys[0])
+            if this_cadence == 'daily':
+                self.cumulative[this_time] = {}
+                for amtt in self.ledger.amount_types:
+                    self.cumulative[this_time][amtt] = self.cadence['daily'][this_time][amtt]
             while this_time < ordered_keys[-1]:
+                prev_time = copy(this_time)
                 this_time = ut.cadence_keys(this_cadence, this_time + timedelta(days=1))
                 if this_time in ordered_keys:
                     pass
@@ -182,6 +188,10 @@ class Audit():
                     self.cadence[this_cadence][this_time] = {}
                     for amtt in self.ledger.amount_types:
                         self.cadence[this_cadence][this_time][amtt] = 0.0
+                if this_cadence == 'daily':
+                    self.cumulative[this_time] = {}
+                    for amtt in self.ledger.amount_types:
+                        self.cumulative[this_time][amtt] = self.cumulative[prev_time][amtt] + self.cadence['daily'][this_time][amtt]
 
     def _get_sort_key(self, row, sort_by, use_absval):
         key = []
@@ -297,5 +307,6 @@ class Audit():
         """
         Plots the cadence data after filling in.
         """
-        self.in_fill_cadence()
+        self.in_fill_cadence_cumulative()
         plots.cadences(self.cadence, amount=amounts)
+        plots.cumulative(self.cumulative, amount=amounts)

@@ -48,3 +48,18 @@ def cadences(cadences, amount):
         else:
             plt.fill_between(ordered_keys, ordered_amounts, label=this_cadence)
     plt.legend()
+
+def cumulative(cumulative, amount):
+    if isinstance(amount, str):
+        amount = amount.split('+')
+    plt.figure('Cumulative')
+    ordered_keys = sorted(cumulative.keys())
+    ordered_amounts = []
+    for key in ordered_keys:
+        this_amt = 0.0
+        for amtt in amount:
+            if amtt in cumulative[key]:
+                this_amt += cumulative[key][amtt]
+        ordered_amounts.append(this_amt)
+    plt.fill_between(ordered_keys, ordered_amounts)
+    plt.plot(ordered_keys, ordered_amounts, 'k')
