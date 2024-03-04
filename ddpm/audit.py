@@ -168,7 +168,7 @@ class Audit():
 
     def in_fill_cadence_cumulative(self):
         """
-        In-fill cadences that don't have data with a 0.0 and make the cumulative data.
+        In-fill cadences that don't have data with a 0.0 and make the cumulative data on daily basis.
 
         """
         self.cumulative = {}
