@@ -125,6 +125,8 @@ class Ledger():
         if counters['overall']:
             table_data = []
             for lfile in sorted(counters):
+                if lfile == 'overall':
+                    continue
                 table_data.append([lfile, counters[lfile]['fy'], counters[lfile]['lines']])
             print('\n' + tabulate(table_data, headers=['ledger file', 'out_of_fy', 'total']))
         else:
