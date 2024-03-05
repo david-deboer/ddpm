@@ -7,6 +7,7 @@ from . import utils_ledger as ul
 
 
 class Ledger():
+
     def __init__(self, fund, files):
         """
         Parameters
@@ -60,11 +61,10 @@ class Ledger():
         self.grand_total = {}
         self.total_entries = 0
         self.report_class = {}  # File report_type classes
-        counters = {}  # out-of-fy and line counters for each file
+        counters = {'overall': 0}  # out-of-fy and line counters for each file
         for key in ['columns', 'amount_types', 'date_types']:
             setattr(self, key, {})
         
-
         # Read in ledger files
         for ledger_file, report_type in self.files.items():  # loop through files
             if report_type == 'none':
@@ -87,6 +87,7 @@ class Ledger():
 
             # Loop over rows in the file
             for row in this_file.values:
+                counters['overall'] += 1
                 counters[ledger_file]['lines'] += 1
                 this_account = L.keygen(row)
                 if this_account not in self.data:
@@ -121,10 +122,15 @@ class Ledger():
                     if this_entry['date'] < fy.start or this_entry['date'] > fy.stop:
                         print(f"\t{this_entry['date'].isoformat().split('T')[0]} is not in FY{fy.year}")
                         counters[ledger_file]['fy'] += 1
-        table_data = []
-        for lfile in sorted(counters):
-            table_data.append([lfile, counters[lfile]['fy'], counters[lfile]['lines']])
-        print('\n' + tabulate(table_data, headers=['ledger file', 'out_of_fy', 'total']))
+        if counters['overall']:
+            table_data = []
+            for lfile in sorted(counters):
+                table_data.append([lfile, counters[lfile]['fy'], counters[lfile]['lines']])
+            print('\n' + tabulate(table_data, headers=['ledger file', 'out_of_fy', 'total']))
+        else:
+            from datetime import datetime
+            self.first_date = datetime.now().astimezone()
+            self.last_date = self.first_date
 
     def get_file_header(self):
         """

@@ -119,6 +119,8 @@ class Manager:
             self.project.add(ledger_latest, attrname='ledger_latest')
 
     def _can_skip(self, cat, amt2use):
+        if amt2use is None:
+            return True
         if abs(self.budget.budget[cat]) < 1.0 and abs(self.ledger.subtotals[cat][amt2use]) < 1.0:
             if cat != 'not_included':
                 print(f"Skipping {cat}-{amt2use} since no budget or expenditure")
@@ -157,6 +159,7 @@ class Manager:
             fig_chart = False
 
         # Get the amount type you will use
+        amt2use = None
         for amt2use in self.ledger.amount_types:
             if amt2use in amount2use:
                 break
@@ -179,13 +182,16 @@ class Manager:
             bal = self.budget.budget[agg] - self.ledger.subtotals[agg][amt2use]
             data = [self.budget.budget[agg]] + [self.ledger.subtotals[agg][x] for x in self.ledger.amount_types]
             self.table_data.append(['+'+agg] + [ul.print_money(x) for x in data])
-        bal = self.budget.grand_total - self.ledger.grand_total[amt2use]
+        if amt2use is None:
+            bal = 0.0
+        else:
+            bal = self.budget.grand_total - self.ledger.grand_total[amt2use]
         data = [self.budget.grand_total] + [self.ledger.grand_total[x] for x in self.ledger.amount_types]
         self.table_data.append(['Grand Total'] + [ul.print_money(x) for x in data])
         try:
             pcremain = 100.0 * bal / self.budget.grand_total
             pcspent = 100.0 * self.ledger.grand_total[amt2use] / self.budget.grand_total
-        except ZeroDivisionError:
+        except (ZeroDivisionError, KeyError):
             pcremain = 0.0
             pcspent = 0.0
         print(f"Percent spent: {pcspent:.1f}")

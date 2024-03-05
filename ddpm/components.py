@@ -1,5 +1,5 @@
 from . import settings_proj as settings
-from . import utils_proj as ud
+from . import utils_proj as utils
 from . import utils_time as ut
 import datetime
 import hashlib
@@ -251,7 +251,7 @@ class Milestone(Entry):
             return settings.STATUS_COLOR['late']
         if self.status == 'complete' and self.complete is not None:
             if abs(self.complete) > 1.0:
-                return ud.complete2rgb(self.complete)
+                return utils.complete2rgb(self.complete)
             return settings.STATUS_COLOR['complete']
         if self.status in settings.STATUS_COLOR:
             return settings.STATUS_COLOR[self.status]
@@ -332,7 +332,7 @@ class Timeline(Entry):
 
     def get_color(self):
         if self.color is None or self.color == 'auto':
-            return ud.COLOR_PALETTE[0]
+            return utils.COLOR_PALETTE[0]
         return self.color
 
     def add_note(self, note):
@@ -362,10 +362,10 @@ class Task(Timeline):
                 if self.begins > now:
                     return settings.COLOR_PALETTE[0]
                 if self.complete is not None:
-                    return ud.complete2rgb(self.complete)
+                    return utils.complete2rgb(self.complete)
                 pc_elapsed = 100.0 * (now - self.begins) / self.duration
                 completed = pc_elapsed - self.status if pc_elapsed > self.status else 0.0
-                return ud.complete2rgb((completed-50.0))
+                return utils.complete2rgb((completed-50.0))
             return settings.COLOR_PALETTE[0]
         return self.color
 
