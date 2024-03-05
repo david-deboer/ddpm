@@ -286,6 +286,7 @@ class Audit():
         self.table_data = []
         if not len(self.rows):
             return 
+        self.in_fill_cadence_cumulative()
         for key in sorted(self.rows.keys(), reverse=sort_reverse):
             row = []
             for this_key in cols_to_show:
@@ -301,6 +302,7 @@ class Audit():
     def show_table(self):
         """
         Shows the detail table and subtotals
+
         """
         print()
         print(tabulate(self.table_data, headers=self.header, floatfmt='.2f'))
@@ -311,7 +313,10 @@ class Audit():
     def show_plot(self, amounts):
         """
         Plots the cadence data after filling in.
+
         """
-        self.in_fill_cadence_cumulative()
         plots.cadences(self.cadence, amount=amounts)
         plots.cumulative(self.cumulative, amount=amounts)
+
+    def project_end(self):
+        print()
