@@ -150,21 +150,27 @@ class Audit():
     Look at Ledger files
     """
 
-    def __init__(self, ledger):
+    def __init__(self, ledger, expense_amounts=None):
         """
         Parameters
         ----------
         ledger : Ledger instance
+        expense_amounts : list or None
+            List of amount types to use as default for plots and projections, can override in the call
 
         Attributes
         ----------
         ledger : Ledger instance
         filter : Filter instance
+        self.expense_amounts : list or None
+            See Parameters
+
         """
         self.ledger = ledger
         self.filter = Filter(ledger_accounts=list(ledger.data.keys()),
                              dates=list(ledger.date_types),
                              amounts=list(ledger.amount_types))
+        self.expense_amounts = expense_amounts
 
     def in_fill_cadence_cumulative(self):
         """
@@ -310,13 +316,25 @@ class Audit():
         for amtt in self.ledger.amount_types:
             print(f"\t{amtt}:  {self.subtotal[amtt]:.2f}")
 
-    def show_plot(self, amounts):
+    def _get_amount_list(self, amounts):
+        if amounts is None:
+            amounts = copy(self.expense_amounts)
+        if amounts is None:
+            return []
+        cull_amt = []
+        for amt in amounts:
+            if amt not in self.ledger.amount_types:
+                cull_amt.append(amt)
+        return cull_amt
+
+    def show_plot(self, amounts=None):
         """
-        Plots the cadence data after filling in.
+        Plots the cadence and cumulative data.
 
         """
+        amounts = self._get_amount_list(amounts=amounts)
         plots.cadences(self.cadence, amount=amounts)
         plots.cumulative(self.cumulative, amount=amounts)
 
-    def project_end(self):
-        print()
+    def project_end(self, amounts=None):
+        amounts = self._get_amount_list(amounts=amounts)

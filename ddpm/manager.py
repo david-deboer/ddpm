@@ -15,14 +15,28 @@ from dateutil.parser import parse
 class Manager:
     def __init__(self, yaml_file):
         """
+        This sets up the manager by processing the input yaml file data.
+
         Parameter
         ---------
         yaml_file : str
             Name of Yaml file
+
         Attributes
         ----------
-        same as above
+        yaml_file : str
+            Same as Parameter
+        yaml_data : dict
+            Contents of the input yaml
         name : str
+            Generated name of project
+        invert : str
+            Flag to invert values in ledger
+        expenses_amount : list or None
+            If list, use those amount_types in plots etc
+        ledger, budget, project : None
+            Sets up a None version of the ledger, budget and project schedule
+
         """
         self.yaml_file = yaml_file
         with open (self.yaml_file, 'r') as fp:
@@ -32,7 +46,14 @@ class Manager:
             self.invert = self.yaml_data['invert']
         else:
             self.invert = False
+        if 'expenses' in self.yaml_data:
+            delimiter = '+' if '+' in self.yaml_data['expenses'] else ','
+            self.expenses_amount = self.yaml_data['expenses'].split(delimiter)
+        else:
+            self.expenses_amount = None
         self.ledger = None
+        self.budget = None
+        self.project = None
 
     def get_finance(self, file_list):
         """
@@ -127,7 +148,7 @@ class Manager:
             return True
         return False
 
-    def dashboard(self, categories=None, aggregates=None, report=False, amount2use=['actual', 'amount']):
+    def dashboard(self, categories=None, aggregates=None, report=False, amount2use=None):
         """
         Parameters
         ----------
@@ -138,7 +159,7 @@ class Manager:
         report : bool
             Write the pdf report
         amount2use : list
-            List of types that should be used to show results -- uses first found that matches report type
+            List of types that should be used to show results -- IF NOT None OVERRIDES self.expenses_amount
 
         """
         self.get_finance('files')
