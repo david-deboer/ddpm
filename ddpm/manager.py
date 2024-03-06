@@ -32,7 +32,7 @@ class Manager:
             Generated name of project
         invert : str
             Flag to invert values in ledger
-        expenses_amount : list or None
+        chart_amounts : list or None
             If list, use those amount_types in plots etc
         ledger, budget, project : None
             Sets up a None version of the ledger, budget and project schedule
@@ -42,15 +42,8 @@ class Manager:
         with open (self.yaml_file, 'r') as fp:
             self.yaml_data = yaml.safe_load(fp)
         self.name = f"{self.yaml_data['name']} - {self.yaml_data['fund']}"
-        if 'invert' in self.yaml_data:
-            self.invert = self.yaml_data['invert']
-        else:
-            self.invert = False
-        if 'expenses' in self.yaml_data:
-            delimiter = '+' if '+' in self.yaml_data['expenses'] else ','
-            self.expenses_amount = self.yaml_data['expenses'].split(delimiter)
-        else:
-            self.expenses_amount = None
+        self.invert = self.yaml_data['invert'] if 'invert' in self.yaml_data else False
+        self.chart_amounts = ul.get_amount_list(self.yaml_data['chart_amounts']) if 'chart_amounts' in self.yaml_data else None
         self.ledger = None
         self.budget = None
         self.project = None
@@ -139,16 +132,14 @@ class Manager:
             ledger_latest = components.Milestone(name='Latest ledger entry.', date=self.ledger.last_date, updated=now)
             self.project.add(ledger_latest, attrname='ledger_latest')
 
-    def _can_skip(self, cat, amt2use):
-        if amt2use is None:
-            return True
-        if abs(self.budget.budget[cat]) < 1.0 and abs(self.ledger.subtotals[cat][amt2use]) < 1.0:
+    def _can_skip(self, cat, amounts):
+        if abs(self.budget.budget[cat]) < 1.0 and abs(self.ledger.totaling(cat, amounts)) < 1.0:
             if cat != 'not_included':
-                print(f"Skipping {cat}-{amt2use} since no budget or expenditure")
+                print(f"Skipping {cat}-{'+'.join(amounts)} since no budget or expenditure")
             return True
         return False
 
-    def dashboard(self, categories=None, aggregates=None, report=False, amount2use=None):
+    def dashboard(self, categories=None, aggregates=None, report=False, amounts=None):
         """
         Parameters
         ----------
@@ -159,7 +150,7 @@ class Manager:
         report : bool
             Write the pdf report
         amount2use : list
-            List of types that should be used to show results -- IF NOT None OVERRIDES self.expenses_amount
+            List of types that should be used to show results -- IF NOT None OVERRIDES self.chart_amounts
 
         """
         self.get_finance('files')
@@ -179,39 +170,33 @@ class Manager:
             fig_ddp = False
             fig_chart = False
 
-        # Get the amount type you will use
-        amt2use = None
-        for amt2use in self.ledger.amount_types:
-            if amt2use in amount2use:
-                break
+        # Get the amount types you will use
+        amounts = ul.get_amount_list(amounts=amounts, amount_types=self.ledger.amount_types, chart_amounts=self.chart_amounts)
 
         # Make table
         self.table_data = []
         self.headers = ['Category', 'Budget'] + [x for x in self.ledger.amount_types]
         skipped = []
         for cat in categories:
-            if self._can_skip(cat, amt2use):
+            if self._can_skip(cat, amounts):
                 skipped.append(cat)
                 continue
-            bal = self.budget.budget[cat] - self.ledger.subtotals[cat][amt2use]
+            bal = self.budget.budget[cat] - self.ledger.totaling(cat, amounts)
             data = [self.budget.budget[cat]] + [self.ledger.subtotals[cat][x] for x in self.ledger.amount_types]
             self.table_data.append([cat] + [ul.print_money(x) for x in data])
         for agg in aggregates:
-            if self._can_skip(agg, amt2use):
+            if self._can_skip(agg, amounts):
                 skipped.append(agg)
                 continue
-            bal = self.budget.budget[agg] - self.ledger.subtotals[agg][amt2use]
+            bal = self.budget.budget[agg] - self.ledger.totaling(cat, amounts)
             data = [self.budget.budget[agg]] + [self.ledger.subtotals[agg][x] for x in self.ledger.amount_types]
             self.table_data.append(['+'+agg] + [ul.print_money(x) for x in data])
-        if amt2use is None:
-            bal = 0.0
-        else:
-            bal = self.budget.grand_total - self.ledger.grand_total[amt2use]
+        bal = self.budget.grand_total - self.ledger.totaling('grand', amounts)
         data = [self.budget.grand_total] + [self.ledger.grand_total[x] for x in self.ledger.amount_types]
         self.table_data.append(['Grand Total'] + [ul.print_money(x) for x in data])
         try:
             pcremain = 100.0 * bal / self.budget.grand_total
-            pcspent = 100.0 * self.ledger.grand_total[amt2use] / self.budget.grand_total
+            pcspent = 100.0 * self.ledger.totaling('grand', amounts) / self.budget.grand_total
         except (ZeroDivisionError, KeyError):
             pcremain = 0.0
             pcspent = 0.0
@@ -231,7 +216,7 @@ class Manager:
             plot.plt.figure('Budget Category Dashboard')
             bamts = [self.budget.budget[cat] for cat in categories]
             plot.chart(categories, bamts, label='Budget', width=0.7)
-            lamts = [self.ledger.subtotals[cat][amt2use] for cat in categories]
+            lamts = [self.ledger.totaling(cat, amounts) for cat in categories]
             plot.chart(categories, lamts, label='Ledger', width=0.4)
             plot.plt.legend()
             plot.plt.grid()
@@ -241,7 +226,7 @@ class Manager:
             plot.plt.figure('Budget Aggregate Dashboard')
             bamts = [self.budget.budget[agg] for agg in aggregates]
             plot.chart(aggregates, bamts, label='Budget', width=0.7)
-            lamts = [self.ledger.subtotals[agg][amt2use] for agg in aggregates]
+            lamts = [self.ledger.totaling(agg, amounts) for agg in aggregates]
             plot.chart(aggregates, lamts, label='Ledger', width=0.4)
             plot.plt.legend()
             plot.plt.grid()
@@ -268,6 +253,6 @@ class Manager:
 
         """
         self.get_finance(file_list=file_list)
-        self.audit = audit.Audit(self.ledger)
+        self.audit = audit.Audit(self.ledger, chart_amounts=self.chart_amounts)
 
 

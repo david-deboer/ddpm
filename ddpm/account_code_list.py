@@ -88,7 +88,7 @@ sub_account_types = ['Travel_Domestic', 'Travel_Foreign', 'Travel_Other',
                      'General_Supplies_X', 'General_Supplies_Food']
 
 nsf = {'staff': Academic_Wages + Staff_Wages + Other_Employee_Compen + Retirement_Benefits,
-       'equip': Computer_Equip_Inven + Equip_Inventorial + Comp_Equip_Non_Inventor + Equip_Non_Inventorial,
+       'equipment': Computer_Equip_Inven + Equip_Inventorial + Comp_Equip_Non_Inventor + Equip_Non_Inventorial,
        'travel': Conf_Mtgs_Training_Events + Travel,
        'other': (General_Supplies + Computing_Supplies + Comp_Serv_Software + Communications +
                  Maint_Contract_Serv + Rents_Utilities + Publications_Media +
@@ -104,7 +104,7 @@ si = nsf
 
 
 sra = {'staff': Academic_Wages + Staff_Wages + Other_Employee_Compen + Retirement_Benefits,
-       'equip': Computer_Equip_Inven + Equip_Inventorial + Comp_Equip_Non_Inventor + Equip_Non_Inventorial,
+       'equipment': Computer_Equip_Inven + Equip_Inventorial + Comp_Equip_Non_Inventor + Equip_Non_Inventorial,
        'travel': Conf_Mtgs_Training_Events + Travel,
        'other': (General_Supplies + Computing_Supplies + Comp_Serv_Software + Communications +
                  Maint_Contract_Serv + Rents_Utilities + Publications_Media +

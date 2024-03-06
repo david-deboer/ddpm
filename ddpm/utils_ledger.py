@@ -24,6 +24,25 @@ def print_money(amt, dollar_sign=False, cents=False, pad=False):
         money = money.split('.')[0]
     return money
 
+def get_amount_list(amounts, amount_types=None, chart_amounts=None):
+    """
+    Find the amounts to use for charts etc
+    """
+    if amounts is None:
+        amounts = chart_amounts
+    if amounts is None:
+        return []
+    if isinstance(amounts, str):
+        delimiter = '+' if '+' in amounts else ','
+        amounts = amounts.split(delimiter)
+    if amount_types is None:
+        return amounts
+    amts2use = []
+    for amt in amounts:
+        if amt in amount_types:
+            amts2use.append(amt)
+    return amts2use
+
 def show_ledger_files(ledger):
     for fname, rc in ledger.report_class.items():
         print(f"File: {fname}")

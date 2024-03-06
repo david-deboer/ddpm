@@ -150,19 +150,19 @@ class Audit():
     Look at Ledger files
     """
 
-    def __init__(self, ledger, expense_amounts=None):
+    def __init__(self, ledger, chart_amounts=None):
         """
         Parameters
         ----------
         ledger : Ledger instance
-        expense_amounts : list or None
+        chart_amounts : list or None
             List of amount types to use as default for plots and projections, can override in the call
 
         Attributes
         ----------
         ledger : Ledger instance
         filter : Filter instance
-        self.expense_amounts : list or None
+        self.chart_amounts : list or None
             See Parameters
 
         """
@@ -170,7 +170,7 @@ class Audit():
         self.filter = Filter(ledger_accounts=list(ledger.data.keys()),
                              dates=list(ledger.date_types),
                              amounts=list(ledger.amount_types))
-        self.expense_amounts = expense_amounts
+        self.chart_amounts = chart_amounts
 
     def in_fill_cadence_cumulative(self):
         """
@@ -181,6 +181,8 @@ class Audit():
         now = datetime.now().astimezone().replace(hour=23, minute=59, second=0, microsecond=0)
         for this_cadence in ['daily', 'monthly', 'quarterly', 'yearly']:
             ordered_keys = sorted(self.cadence[this_cadence].keys())
+            if not len(ordered_keys):
+                continue
             this_time = copy(ordered_keys[0])
             if this_cadence == 'daily':
                 self.cumulative[this_time] = {}
@@ -290,9 +292,9 @@ class Audit():
             if _x in self.ledger.columns:
                 self.header.append(self.ledger.columns[_x])
         self.table_data = []
+        self.in_fill_cadence_cumulative()
         if not len(self.rows):
             return 
-        self.in_fill_cadence_cumulative()
         for key in sorted(self.rows.keys(), reverse=sort_reverse):
             row = []
             for this_key in cols_to_show:
@@ -316,25 +318,14 @@ class Audit():
         for amtt in self.ledger.amount_types:
             print(f"\t{amtt}:  {self.subtotal[amtt]:.2f}")
 
-    def _get_amount_list(self, amounts):
-        if amounts is None:
-            amounts = copy(self.expense_amounts)
-        if amounts is None:
-            return []
-        cull_amt = []
-        for amt in amounts:
-            if amt not in self.ledger.amount_types:
-                cull_amt.append(amt)
-        return cull_amt
-
-    def show_plot(self, amounts=None):
+    def show_plots(self, amounts=None):
         """
         Plots the cadence and cumulative data.
 
         """
-        amounts = self._get_amount_list(amounts=amounts)
-        plots.cadences(self.cadence, amount=amounts)
-        plots.cumulative(self.cumulative, amount=amounts)
+        amounts = ul.get_amount_list(amounts=amounts, amount_types=self.ledger.amount_types, chart_amounts=self.chart_amounts)
+        plots.cadences(self.cadence, amounts=amounts)
+        plots.cumulative(self.cumulative, amounts=amounts)
 
     def project_end(self, amounts=None):
-        amounts = self._get_amount_list(amounts=amounts)
+        amounts = ul.get_amount_list(amounts=amounts, amount_types=self.ledger.amount_types, chart_amounts=self.chart_amounts)

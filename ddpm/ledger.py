@@ -129,6 +129,7 @@ class Ledger():
                     continue
                 table_data.append([lfile, counters[lfile]['fy'], counters[lfile]['lines']])
             print('\n' + tabulate(table_data, headers=['ledger file', 'out_of_fy', 'total']))
+            print(f"Total number of entries: {counters['overall']}")
         else:
             from datetime import datetime
             self.first_date = datetime.now().astimezone()
@@ -150,6 +151,18 @@ class Ledger():
                 if set(self.file_header) != set(self.report_class[fil].columns):
                     print(f"{self.report_class[fil].columns} is different than the assumed file header {self.file_header}")
 
+    def totaling(self, cat, amounts):
+        """
+        Returns a sum of the supplied amounts (types) for given cat.
+
+        """
+        tot = 0.0
+        for amt in amounts:
+            if cat == 'grand':
+                tot += self.grand_total[amt]
+            else:
+                tot += self.subtotals[cat][amt]
+        return tot
 
     def _get_update_prompt(self, entry):
         show = []

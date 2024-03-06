@@ -29,16 +29,14 @@ def chart(x, y, label, norm=1.0, width=0.65,  xlabel=None, ylabel=None):
         plt.ylabel(ylabel)
     plt.xticks(ind, x)
 
-def cadences(cadences, amount):
-    if isinstance(amount, str):
-        amount = amount.split('+')
-    plt.figure('Cadences')
+def cadences(cadences, amounts):
+    plt.figure(f"Cadences: {', '.join(amounts)}")
     for this_cadence in ['yearly', 'quarterly', 'monthly', 'daily']:
         ordered_keys = sorted(cadences[this_cadence].keys())
         ordered_amounts = []
         for key in ordered_keys:
             this_amt = 0.0
-            for amtt in amount:
+            for amtt in amounts:
                 if amtt in cadences[this_cadence][key]:
                     this_amt += cadences[this_cadence][key][amtt]
             ordered_amounts.append(this_amt)
@@ -49,15 +47,13 @@ def cadences(cadences, amount):
             plt.fill_between(ordered_keys, ordered_amounts, label=this_cadence)
     plt.legend()
 
-def cumulative(cumulative, amount):
-    if isinstance(amount, str):
-        amount = amount.split('+')
-    plt.figure('Cumulative')
+def cumulative(cumulative, amounts):
+    plt.figure(f"Cumulative: {', '.join(amounts)}")
     ordered_keys = sorted(cumulative.keys())
     ordered_amounts = []
     for key in ordered_keys:
         this_amt = 0.0
-        for amtt in amount:
+        for amtt in amounts:
             if amtt in cumulative[key]:
                 this_amt += cumulative[key][amtt]
         ordered_amounts.append(this_amt)
