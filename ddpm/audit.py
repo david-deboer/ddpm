@@ -6,6 +6,7 @@ from . import utils_time as ut
 from . import plots_ledger as plots
 from dateutil.parser import parse
 from datetime import datetime, timedelta
+from argparse import Namespace
 
 
 class Filter:
@@ -172,40 +173,6 @@ class Audit():
                              dates=list(ledger.date_types),
                              amounts=list(ledger.amount_types))
         self.chart_amounts = chart_amounts
-        self.smooth = None
-
-    def in_fill_cadence_cumulative(self):
-        """
-        In-fill cadences that don't have data with a 0.0 and make the cumulative data on daily basis.
-
-        """
-        self.cumulative = {}
-        now = datetime.now().astimezone().replace(hour=23, minute=59, second=0, microsecond=0)
-        for this_cadence in ['daily', 'monthly', 'quarterly', 'yearly']:
-            ordered_keys = sorted(self.cadence[this_cadence].keys())
-            if not len(ordered_keys):
-                continue
-            this_time = copy(ordered_keys[0])
-            if this_cadence == 'daily':
-                self.cumulative[this_time] = {}
-                for amtt in self.ledger.amount_types:
-                    self.cumulative[this_time][amtt] = self.cadence['daily'][this_time][amtt]
-            while this_time < ordered_keys[-1]:
-                prev_time = copy(this_time)
-                this_time = ut.cadence_keys(this_cadence, this_time + timedelta(days=1))
-                if this_time > now:
-                    this_time = now
-                if this_time in ordered_keys:
-                    pass
-                else:
-                    self.cadence[this_cadence][this_time] = {}
-                    for amtt in self.ledger.amount_types:
-                        self.cadence[this_cadence][this_time][amtt] = 0.0
-                if this_cadence == 'daily':
-                    self.cumulative[this_time] = {}
-                    for amtt in self.ledger.amount_types:
-                        self.cumulative[this_time][amtt] = self.cumulative[prev_time][amtt] + self.cadence['daily'][this_time][amtt]
-        self.smooth_cumulative_rates()
 
     def _get_sort_key(self, row, sort_by, use_absval):
         key = []
@@ -328,32 +295,61 @@ class Audit():
         """
         amounts = ul.get_amount_list(amounts=amounts, amount_types=self.ledger.amount_types, chart_amounts=self.chart_amounts)
         plots.cadences(self.cadence, amounts=amounts)
-        plots.cumulative(self.cumulative, amounts=amounts, smooth=self.smooth)
+        plots.cumulative(self.cumulative, amounts=amounts)
 
-    def smooth_cumulative_rates(self, amounts=None, fs=1.0, cutoff=60.0, order=8):
+    def in_fill_cadence_cumulative(self):
+        """
+        In-fill cadences that don't have data with a 0.0 and make the cumulative data on daily basis.
+
+        """
+        self.cumulative = {'t': []}
+        for amtt in self.ledger.amount_types:
+            self.cumulative[amtt] = []
+        now = datetime.now().astimezone().replace(hour=23, minute=59, second=0, microsecond=0)
+        for this_cadence in ['daily', 'monthly', 'quarterly', 'yearly']:
+            ordered_keys = sorted(self.cadence[this_cadence].keys())
+            if not len(ordered_keys):
+                continue
+            this_time = copy(ordered_keys[0])
+            if this_cadence == 'daily':  # Start cumulative
+                self.cumulative['t'].append(this_time)
+                for amtt in self.ledger.amount_types:
+                    self.cumulative[amtt].append(self.cadence['daily'][this_time][amtt])  # First one
+            ctr = 0
+            while this_time < ordered_keys[-1]:
+                this_time = ut.cadence_keys(this_cadence, this_time + timedelta(days=1))
+                if this_time > now:
+                    this_time = now
+                if this_time in ordered_keys:
+                    pass
+                else:
+                    self.cadence[this_cadence][this_time] = {}
+                    for amtt in self.ledger.amount_types:
+                        self.cadence[this_cadence][this_time][amtt] = 0.0
+                if this_cadence == 'daily':  # Next cumulative entry
+                    self.cumulative['t'].append(this_time)
+                    for amtt in self.ledger.amount_types:
+                        self.cumulative[amtt].append(self.cumulative[amtt][ctr] + self.cadence['daily'][this_time][amtt])
+                ctr += 1
+        self.smooth_cumulative_rates()
+
+    def smooth_cumulative_rates(self, fs=1.0, cutoff=60.0, order=8):
+        from numpy import diff, insert, mean
         self.fs = fs
         self.cutoff = 1.0 / cutoff
         self.order = order
-        self.smooth = {}
-        self.diff = {}
-        ordered_keys = sorted(self.cumulative.keys())
+        self.mean_rate = {}
         for amtt in self.ledger.amount_types:
-            ordered_amounts = []
-            self.smooth[amtt] = 0.0
-            for key in ordered_keys:
-                this_amt = 0.0
-                self.smooth[amtt] 
-                for amtt in amounts:
-                    if amtt in self.cumulative[key]:
-                        this_amt += self.cumulative[key][amtt]
-                ordered_amounts.append(this_amt)
-            from numpy import diff, insert, mean
-            self.smooth = ul.butter_lowpass_filter(ordered_amounts, self.cutoff, self.fs, self.order)
-            self.diff = insert(diff(self.smooth), 0, 0.0)
-            plots.plt.figure("DIFF")
-            plots.plt.plot(ordered_keys, self.diff)
-            ilo = int(0.15 * len(ordered_amounts))
-            ihi = int(0.85 * len(ordered_amounts))
-            mv = mean(self.diff[ilo:ihi])
-            plots.plt.plot([ordered_keys[ilo], ordered_keys[ihi]], [mv, mv], lw=4)
+            smkey = f"smooth_{amtt}"
+            self.cumulative[smkey] = ul.butter_lowpass_filter(self.cumulative[amtt], self.cutoff, self.fs, self.order)
+            dikey = f"diff_{amtt}"
+            self.cumulative[dikey] = insert(diff(self.cumulative[smkey]), 0, 0.0)
+            ilo = int(0.15 * len(self.cumulative['t']))
+            ihi = int(0.85 * len(self.cumulative['t']))
+            mv = mean(self.cumulative[dikey][ilo:ihi])
+            self.mean_rate[amtt] = mv
+            plots.plt.figure("DIFF RATES")
+            plots.plt.plot(self.cumulative['t'], self.cumulative[dikey], label=dikey)
+            plots.plt.plot([self.cumulative['t'][ilo], self.cumulative['t'][ihi]], [mv, mv], lw=4, label=f"mean {dikey}")
+            plots.plt.legend()
 
