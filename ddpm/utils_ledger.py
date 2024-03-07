@@ -48,6 +48,18 @@ def show_ledger_files(ledger):
         print(f"File: {fname}")
         print(rc)
 
+def butter_lowpass_filter(data, cutoff, fs, order):
+    from scipy.signal import butter, filtfilt, freqz
+    # print("Cutoff freq " + str(cutoff))
+    nyq = 0.5 * fs # Nyquist Frequency
+    normal_cutoff = cutoff / nyq
+    # Get the filter coefficients 
+    b, a = butter(order, normal_cutoff, btype='low', analog=False)
+    w, ff = freqz(b, a, fs=fs)
+    #plt.semilogy(w, np.abs(ff), label='Filter')
+    y = filtfilt(b, a, data)
+    return y
+
 def augmented_slice(S):
     """
     Takes string of form:  :, n1:, :n2, n1:n2

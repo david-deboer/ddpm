@@ -47,7 +47,7 @@ def cadences(cadences, amounts):
             plt.fill_between(ordered_keys, ordered_amounts, label=this_cadence)
     plt.legend()
 
-def cumulative(cumulative, amounts):
+def cumulative(cumulative, amounts, smooth=None):
     plt.figure(f"Cumulative: {', '.join(amounts)}")
     ordered_keys = sorted(cumulative.keys())
     ordered_amounts = []
@@ -59,3 +59,5 @@ def cumulative(cumulative, amounts):
         ordered_amounts.append(this_amt)
     plt.fill_between(ordered_keys, ordered_amounts)
     plt.plot(ordered_keys, ordered_amounts, 'k')
+    if smooth is not None:
+        plt.plot(ordered_keys, smooth, 'b', lw=2)

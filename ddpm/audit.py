@@ -164,6 +164,7 @@ class Audit():
         filter : Filter instance
         self.chart_amounts : list or None
             See Parameters
+        smooth : None
 
         """
         self.ledger = ledger
@@ -171,6 +172,7 @@ class Audit():
                              dates=list(ledger.date_types),
                              amounts=list(ledger.amount_types))
         self.chart_amounts = chart_amounts
+        self.smooth = None
 
     def in_fill_cadence_cumulative(self):
         """
@@ -203,6 +205,7 @@ class Audit():
                     self.cumulative[this_time] = {}
                     for amtt in self.ledger.amount_types:
                         self.cumulative[this_time][amtt] = self.cumulative[prev_time][amtt] + self.cadence['daily'][this_time][amtt]
+        self.smooth_cumulative_rates()
 
     def _get_sort_key(self, row, sort_by, use_absval):
         key = []
@@ -325,7 +328,32 @@ class Audit():
         """
         amounts = ul.get_amount_list(amounts=amounts, amount_types=self.ledger.amount_types, chart_amounts=self.chart_amounts)
         plots.cadences(self.cadence, amounts=amounts)
-        plots.cumulative(self.cumulative, amounts=amounts)
+        plots.cumulative(self.cumulative, amounts=amounts, smooth=self.smooth)
 
-    def project_end(self, amounts=None):
-        amounts = ul.get_amount_list(amounts=amounts, amount_types=self.ledger.amount_types, chart_amounts=self.chart_amounts)
+    def smooth_cumulative_rates(self, amounts=None, fs=1.0, cutoff=60.0, order=8):
+        self.fs = fs
+        self.cutoff = 1.0 / cutoff
+        self.order = order
+        self.smooth = {}
+        self.diff = {}
+        ordered_keys = sorted(self.cumulative.keys())
+        for amtt in self.ledger.amount_types:
+            ordered_amounts = []
+            self.smooth[amtt] = 0.0
+            for key in ordered_keys:
+                this_amt = 0.0
+                self.smooth[amtt] 
+                for amtt in amounts:
+                    if amtt in self.cumulative[key]:
+                        this_amt += self.cumulative[key][amtt]
+                ordered_amounts.append(this_amt)
+            from numpy import diff, insert, mean
+            self.smooth = ul.butter_lowpass_filter(ordered_amounts, self.cutoff, self.fs, self.order)
+            self.diff = insert(diff(self.smooth), 0, 0.0)
+            plots.plt.figure("DIFF")
+            plots.plt.plot(ordered_keys, self.diff)
+            ilo = int(0.15 * len(ordered_amounts))
+            ihi = int(0.85 * len(ordered_amounts))
+            mv = mean(self.diff[ilo:ihi])
+            plots.plt.plot([ordered_keys[ilo], ordered_keys[ihi]], [mv, mv], lw=4)
+
