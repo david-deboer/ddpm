@@ -8,7 +8,7 @@ from . import utils_time as ut
 from . import plots_ledger as plot
 from . import project, components, ledger, account_code_list, reports_ledger, audit
 from tabulate import tabulate
-from datetime import datetime
+from datetime import datetime, timedelta
 from dateutil.parser import parse
 
 
@@ -139,7 +139,7 @@ class Manager:
             return True
         return False
 
-    def dashboard(self, categories=None, aggregates=None, report=False, amounts=None):
+    def dashboard(self, categories=None, aggregates=None, report=False, amounts=None, rate=None):
         """
         Parameters
         ----------
@@ -151,7 +151,9 @@ class Manager:
             Write the pdf report
         amount2use : list
             List of types that should be used to show results -- IF NOT None OVERRIDES self.chart_amounts
-
+        rate : None or float
+            Using dd_audit, you can get an estimate of the rate of expenditure/day for the same amounts, if present gives a spend-out date
+            
         """
         self.get_finance('files')
         if categories is None:
@@ -191,11 +193,11 @@ class Manager:
             bal = self.budget.budget[agg] - self.ledger.totaling(cat, amounts)
             data = [self.budget.budget[agg]] + [self.ledger.subtotals[agg][x] for x in self.ledger.amount_types]
             self.table_data.append(['+'+agg] + [ul.print_money(x) for x in data])
-        bal = self.budget.grand_total - self.ledger.totaling('grand', amounts)
+        grand_bal = self.budget.grand_total - self.ledger.totaling('grand', amounts)
         data = [self.budget.grand_total] + [self.ledger.grand_total[x] for x in self.ledger.amount_types]
         self.table_data.append(['Grand Total'] + [ul.print_money(x) for x in data])
         try:
-            pcremain = 100.0 * bal / self.budget.grand_total
+            pcremain = 100.0 * grand_bal / self.budget.grand_total
             pcspent = 100.0 * self.ledger.totaling('grand', amounts) / self.budget.grand_total
         except (ZeroDivisionError, KeyError):
             pcremain = 0.0
@@ -232,10 +234,18 @@ class Manager:
             plot.plt.grid()
 
         self.get_schedule(status=pcspent)
+        if rate is None:
+            print("Do you want to include a rate/day (-r) for a spend out time?")
+        else:
+            now = datetime.now().astimezone()
+            rate = float(rate)
+            spend_out = components.Milestone(name='Spend out', date=now+timedelta(days = grand_bal / rate), updated=now)
+            self.project.add(spend_out, attrname="spend_out")
+            print(f"With a balance of {grand_bal:.2f} at a rate of {rate:.2f} /day, you will spend out in {grand_bal/rate:.1f} days or by {spend_out.date.strftime('%Y-%m-%d')}")
         print(f"\tStart: {self.project.task1.begins}")
         print(f"\tEnds: {self.project.task1.ends}")
         self.project.chart(chart='all', sortby=['date'], weekends=False, months=False, figsize=(6, 2), savefig=fig_ddp)
-
+            
         if report:
             reports_ledger.tex_dashboard(self)
 

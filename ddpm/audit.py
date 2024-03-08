@@ -6,7 +6,6 @@ from . import utils_time as ut
 from . import plots_ledger as plots
 from dateutil.parser import parse
 from datetime import datetime, timedelta
-from argparse import Namespace
 
 
 class Filter:
@@ -339,6 +338,7 @@ class Audit():
         self.cutoff = 1.0 / cutoff
         self.order = order
         self.mean_rate = {}
+        print("Rates:")
         for amtt in self.ledger.amount_types:
             smkey = f"smooth_{amtt}"
             self.cumulative[smkey] = ul.butter_lowpass_filter(self.cumulative[amtt], self.cutoff, self.fs, self.order)
@@ -352,4 +352,6 @@ class Audit():
             plots.plt.plot(self.cumulative['t'], self.cumulative[dikey], label=dikey)
             plots.plt.plot([self.cumulative['t'][ilo], self.cumulative['t'][ihi]], [mv, mv], lw=4, label=f"mean {dikey}")
             plots.plt.legend()
+            print(f"\t{amtt}: {mv:.3f} /day")
+
 
