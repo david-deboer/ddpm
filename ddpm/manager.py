@@ -233,7 +233,7 @@ class Manager:
             print(f"With a balance of {grand_bal:.2f} at a rate of {rate:.2f} /day, you will spend out in {grand_bal/rate:.1f} days or by {spend_out.date.strftime('%Y-%m-%d')}")
         print(f"\tStart: {self.project.task1.begins}")
         print(f"\tEnds: {self.project.task1.ends}")
-        self.project.chart(chart='all', sortby=['date'], weekends=False, months=False, figsize=(6, 2), savefig=fig_chart)
+        self.project.chart(chart='all', sortby=['date'], weekends=False, months=False, figsize=(6, 2), savefig=fig_chart, make_pretty=True)
             
         if report:
             reports_ledger.tex_dashboard(self)

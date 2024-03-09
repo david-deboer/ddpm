@@ -9,6 +9,7 @@ Re-re-adapted 2023 October 23 - made into class
 """
 import datetime
 import matplotlib.pyplot as plt
+from matplotlib import style
 import matplotlib.dates
 import numpy as np
 from . import settings_proj as settings
@@ -169,108 +170,119 @@ class Gantt:
         must have an entry for every ylabel) other_labels prints another label by the entry (to right on
         plot), it also must have an entry for every ylabel
 
+        https://www.geeksforgeeks.org/style-plots-using-matplotlib/
+
         Parameters
         ----------
 
         """
         self.sv.update(kwargs, settings.CHART_DEFAULTS)
+        use_style = 'seaborn-v0_8-darkgrid' if self.sv.make_pretty else 'default'
 
         # Initialise plot
-        fig1 = plt.figure(figsize=self.sv.figsize, tight_layout=True)
-        ax1 = fig1.add_subplot(111)
-        # plt.title(str(self.timezone))
-        ax1.axis(xmin=matplotlib.dates.date2num(self.extrema.min)-self.deltadate/10.0,
-                 xmax=matplotlib.dates.date2num(self.extrema.max)+self.deltadate/10.0)
-        self.assign_yvals_labels(self.sv.colinear_delimiter)
-        try:
-            step = self.yticks[1] - self.yticks[0]
-        except IndexError:
-            step = 0.1
+        with plt.style.context(use_style):
+            fig1 = plt.figure('chart', figsize=self.sv.figsize, tight_layout=True)
+            ax1 = fig1.add_subplot(111)
+            
+            ax1.axis(xmin=matplotlib.dates.date2num(self.extrema.min)-self.deltadate/10.0,
+                    xmax=matplotlib.dates.date2num(self.extrema.max)+self.deltadate/10.0)
+            self.assign_yvals_labels(self.sv.colinear_delimiter)
+            try:
+                step = self.yticks[1] - self.yticks[0]
+            except IndexError:
+                step = 0.1
 
-        if self.sv.weekends:
-            self.plot_weekends()
-        if self.sv.months:
-            self.plot_months()
+            if self.sv.weekends:
+                self.plot_weekends()
+            if self.sv.months:
+                self.plot_months()
 
-        # Plot the data
-        for i, dtlim in enumerate(self.dates):
-            info = self.info[i]
-            start = matplotlib.dates.date2num(dtlim[0])
-            if dtlim[1] is None:  # Milestone
-                plt.plot(start, self.yvals[i], info.marker, color=info.color, markersize=8)
-            else:
-                stop = matplotlib.dates.date2num(dtlim[1])
-                plt.barh(self.yvals[i],  stop - start, left=start, height=0.3, align='center', color=info.color, alpha=0.75)
-                try:
-                    if isinstance(info.status, (float, int)):
-                        plt.barh(self.yvals[i], info.status*(stop - start)/100.0, left=start, height=0.1, align='center', color='k', alpha=0.75)
-                except AttributeError:
-                    continue
+            # Plot the data
+            for i, dtlim in enumerate(self.dates):
+                info = self.info[i]
+                start = matplotlib.dates.date2num(dtlim[0])
+                if dtlim[1] is None:  # Milestone
+                    plt.plot(start, self.yvals[i], info.marker, color=info.color, markersize=8)
+                else:
+                    stop = matplotlib.dates.date2num(dtlim[1])
+                    plt.barh(self.yvals[i],  stop - start, left=start, height=0.3, align='center', color=info.color, alpha=0.75)
+                    try:
+                        if isinstance(info.status, (float, int)):
+                            plt.barh(self.yvals[i], info.status*(stop - start)/100.0, left=start, height=0.1, align='center', color='k', alpha=0.75)
+                    except AttributeError:
+                        continue
 
-        # Format the y-axis
-        locsy, labelsy = plt.yticks(self.yticks, self.ylabels)
-        plt.setp(labelsy, fontsize=14)
-        if self.sv.grid:
-            plt.grid(color='0.6', linestyle=':')
+            # Format the y-axis
+            locsy, labelsy = plt.yticks(self.yticks, self.ylabels)
+            plt.setp(labelsy, fontsize=14)
+            if self.sv.grid:
+                if self.sv.make_pretty:
+                    plt.grid(axis='x', color='white', lw=2, linestyle='-')
+                    plt.grid(axis='y', visible=False)
+                else:
+                    plt.grid(axis='x', color='0.6', linestyle=':')
+                    plt.grid(axis='y', visible=False)
 
-        # Plot current time
-        now = datetime.datetime.now().astimezone(self.timezone)
-        if now >= self.extrema.min and now <= self.extrema.max:
-            now_num = matplotlib.dates.date2num(now)
-            plt.plot([now_num, now_num], [self.yticks[0]-step, self.yticks[-1]+step], '--', color=settings.COLOR_PALETTE[3])
-        if int(self.deltadate) > 400:  # plot year markers
-            yr1 = self.extrema.min.year
-            yr2 = self.extrema.max.year
-            if self.deltadate > 2.5*365 and self.extrema.max.month > 8:
-                yr2 += 1
-            for yr in range(yr1, yr2+1):
-                this_yr = datetime.datetime(year=yr, month=1, day=1)
-                plt.plot([this_yr, this_yr], [self.yticks[0]-step, self.yticks[-1]+step], 'k:')
-        ax1.xaxis_date(tz=self.timezone)  # Tell matplotlib that these are dates...
-        if self.sv.set_time_axis:
-            self.date_ticks(self.sv.interval)
-            rule = matplotlib.dates.rrulewrapper(self.itvmapper, interval=self.interval)
-            loc = matplotlib.dates.RRuleLocator(rule, tz=self.timezone)
-            formatter = matplotlib.dates.DateFormatter(self.fmttr, tz=self.timezone)
-            ax1.xaxis.set_major_locator(loc)
-            ax1.xaxis.set_major_formatter(formatter)
-            labelsx = ax1.get_xticklabels()
-            plt.setp(labelsx, rotation=30, fontsize=12)
+            # Plot current time
+            now = datetime.datetime.now().astimezone(self.timezone)
+            if now >= self.extrema.min and now <= self.extrema.max:
+                now_num = matplotlib.dates.date2num(now)
+                plt.plot([now_num, now_num], [self.yticks[0]-step, self.yticks[-1]+step], '--', color=settings.COLOR_PALETTE[3])
+            if int(self.deltadate) > 400:  # plot year markers
+                yr1 = self.extrema.min.year
+                yr2 = self.extrema.max.year
+                if self.deltadate > 2.5*365 and self.extrema.max.month > 8:
+                    yr2 += 1
+                for yr in range(yr1, yr2+1):
+                    this_yr = datetime.datetime(year=yr, month=1, day=1)
+                    plt.plot([this_yr, this_yr], [self.yticks[0]-step, self.yticks[-1]+step], 'k:')
+            ax1.xaxis_date(tz=self.timezone)  # Tell matplotlib that these are dates...
+            if self.sv.set_time_axis:
+                self.date_ticks(self.sv.interval)
+                rule = matplotlib.dates.rrulewrapper(self.itvmapper, interval=self.interval)
+                loc = matplotlib.dates.RRuleLocator(rule, tz=self.timezone)
+                formatter = matplotlib.dates.DateFormatter(self.fmttr, tz=self.timezone)
+                ax1.xaxis.set_major_locator(loc)
+                ax1.xaxis.set_major_formatter(formatter)
+                labelsx = ax1.get_xticklabels()
+                plt.setp(labelsx, rotation=30, fontsize=12)
 
-        # Finish up
-        ax1.invert_yaxis()
-        ax1.axis(ymin=self.yticks[-1] + (step - 0.01), ymax=self.yticks[0] - (step - 0.01))
-        fig1.autofmt_xdate()
-        #plt.tight_layout()
-        if self.sv.make_pretty:
-            # Remove the spines
-            ax1.spines[['top','left','bottom']].set_visible(False)
+            # Finish up
+            ax1.invert_yaxis()
+            ax1.axis(ymin=self.yticks[-1] + (step - 0.01), ymax=self.yticks[0] - (step - 0.01))
+            fig1.autofmt_xdate()
 
-            # Make the left spine thicker
-            ax1.spines['right'].set_linewidth(1.1)
+            if self.sv.make_pretty:
+                # https://towardsdatascience.com/5-steps-to-build-beautiful-bar-charts-with-python-3691d434117a
+                # Remove the spines
+                ax1.spines[['top','right']].set_visible(False)
 
-            # Add in red line and rectangle on top
-            ax1.plot([0.12, .9], [.98, .98], transform=fig1.transFigure, clip_on=False, color='#E3120B', linewidth=.6)
-            ax1.add_patch(plt.Rectangle((0.12,.98), 0.04, -0.02, facecolor='#E3120B', transform=fig1.transFigure, clip_on=False, linewidth = 0))
+                # Make the left spine thicker
+                ax1.spines[['top', 'right']].set_visible(True)
+                ax1.spines[['left', 'bottom']].set_linewidth(1.1)
 
-            # Add in title and subtitle
-            ax1.text(x=0.12, y=.93, s="Text 1", transform=fig1.transFigure, ha='left', fontsize=14, weight='bold', alpha=.8)
-            ax1.text(x=0.12, y=.90, s="Text 2", transform=fig1.transFigure, ha='left', fontsize=12, alpha=.8)
+                # Add in banner line and rectangle on top
+                ax1.plot([0.05, .98], [.98, .98], transform=fig1.transFigure, clip_on=False, color=settings.BANNER_COLOR, linewidth=.6)
+                ax1.add_patch(plt.Rectangle((0.05,.98), 0.04, -0.02, facecolor=settings.BANNER_COLOR, transform=fig1.transFigure, clip_on=False, linewidth = 0))
 
-            # Set source text
-            ax1.text(x=0.1, y=0.12, s="Text 3", transform=fig1.transFigure, ha='left', fontsize=10, alpha=.7)
+                # Add in title and subtitle
+                ax1.text(x=0.05, y=.93, s="Text 1", transform=fig1.transFigure, ha='left', fontsize=14, weight='bold', alpha=.8)
+                ax1.text(x=0.05, y=.90, s="Text 2", transform=fig1.transFigure, ha='left', fontsize=12, alpha=.8)
 
-            # Adjust the margins around the plot area
-            plt.subplots_adjust(left=None, bottom=0.2, right=None, top=0.85, wspace=None, hspace=None)
+                # Set source text
+                ax1.text(x=0.05, y=0.12, s="Text 3", transform=fig1.transFigure, ha='left', fontsize=10, alpha=.7)
 
-            # Set a white background
-            fig1.patch.set_facecolor('white')
+                # Adjust the margins around the plot area
+                plt.subplots_adjust(left=None, bottom=0.2, right=None, top=0.95, wspace=None, hspace=None)
 
-        if self.sv.savefig:
-            if isinstance(self.sv.savefig, str):
-                plt.savefig(self.sv.savefig)
-            else:
-                plt.savefig('bar_chart.png')
+                # Set a white background
+                fig1.patch.set_facecolor('white')
+
+            if self.sv.savefig:
+                if isinstance(self.sv.savefig, str):
+                    plt.savefig(self.sv.savefig)
+                else:
+                    plt.savefig('bar_chart.png')
 
 def cumulative_graph(dates, values, norm):
     datemin, datemax = matplotlib.dates.date2num(dates[0]), matplotlib.dates.date2num(dates[-1])

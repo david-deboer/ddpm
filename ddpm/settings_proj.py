@@ -23,6 +23,7 @@ STATUS_COLOR = {
     'removed': COLOR_PALETTE[4]
 }
 
+BANNER_COLOR = 'steelblue'
 
 # These are used in plot_proj.py and project.py "chart" 
 CHART_DEFAULTS = {
