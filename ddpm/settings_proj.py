@@ -33,5 +33,6 @@ CHART_DEFAULTS = {
     'interval': None,
     'set_time_axis': False,
     'figsize': (12, 8),
-    'savefig': False
+    'savefig': False,
+    'make_pretty': False
 }

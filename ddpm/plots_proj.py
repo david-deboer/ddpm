@@ -241,7 +241,31 @@ class Gantt:
         ax1.invert_yaxis()
         ax1.axis(ymin=self.yticks[-1] + (step - 0.01), ymax=self.yticks[0] - (step - 0.01))
         fig1.autofmt_xdate()
-        plt.tight_layout()
+        #plt.tight_layout()
+        if self.sv.make_pretty:
+            # Remove the spines
+            ax1.spines[['top','left','bottom']].set_visible(False)
+
+            # Make the left spine thicker
+            ax1.spines['right'].set_linewidth(1.1)
+
+            # Add in red line and rectangle on top
+            ax1.plot([0.12, .9], [.98, .98], transform=fig1.transFigure, clip_on=False, color='#E3120B', linewidth=.6)
+            ax1.add_patch(plt.Rectangle((0.12,.98), 0.04, -0.02, facecolor='#E3120B', transform=fig1.transFigure, clip_on=False, linewidth = 0))
+
+            # Add in title and subtitle
+            ax1.text(x=0.12, y=.93, s="Text 1", transform=fig1.transFigure, ha='left', fontsize=14, weight='bold', alpha=.8)
+            ax1.text(x=0.12, y=.90, s="Text 2", transform=fig1.transFigure, ha='left', fontsize=12, alpha=.8)
+
+            # Set source text
+            ax1.text(x=0.1, y=0.12, s="Text 3", transform=fig1.transFigure, ha='left', fontsize=10, alpha=.7)
+
+            # Adjust the margins around the plot area
+            plt.subplots_adjust(left=None, bottom=0.2, right=None, top=0.85, wspace=None, hspace=None)
+
+            # Set a white background
+            fig1.patch.set_facecolor('white')
+
         if self.sv.savefig:
             if isinstance(self.sv.savefig, str):
                 plt.savefig(self.sv.savefig)
