@@ -50,9 +50,7 @@ class Ledger():
             The net set of columns/amount_types/date_types
             
         """
-        print("Reading in ledger files:", end=' ')
-        if invert:
-            print("Inverting amounts")
+        print(f"Reading in ledger files: {'Inverting amounts' if invert else ''}")
         invert = -1.0 if invert else 1.0
         self.data = {}
         base = settings.BaseType()

@@ -50,10 +50,19 @@ class Manager:
 
     def get_finance(self, file_list):
         """
+        Read in the ledger and the budget and transfer budget categories to ledger.
+
         Parameter
         ---------
         file_list : str, list
             key to use from the Yaml file for budget is str, else list of filenames
+
+        Attributes
+        ----------
+        budget : Budget instance
+        budget_category_accounts : dict
+        ledger : Ledger instance
+
 
         """
         # Make the sponsor budget from yaml and get account codes
@@ -99,6 +108,8 @@ class Manager:
 
     def get_schedule(self, status=None):
         """
+        Read any schedule info in yaml and start a project.
+
         Parameter
         ---------
         status : float, None
@@ -139,6 +150,18 @@ class Manager:
             return True
         return False
 
+    def _make_dash_fig(self, figname, use, amounts, save_it=False):
+        if len(use):
+            plot.plt.figure(figname)
+            bamts = [self.budget.budget[ca] for ca in use]
+            plot.chart(use, bamts, label='Budget', width=0.7)
+            lamts = [self.ledger.totaling(ca, amounts) for ca in use]
+            plot.chart(use, lamts, label='Ledger', width=0.4)
+            plot.plt.legend()
+            plot.plt.grid()
+            if save_it:
+                plot.plt.savefig(save_it)
+
     def dashboard(self, categories=None, aggregates=None, report=False, amounts=None, rate=None):
         """
         Parameters
@@ -156,86 +179,52 @@ class Manager:
             
         """
         self.get_finance('files')
-        if categories is None:
+        if categories is None or categories == 'all':
             categories = list(self.budget.categories.keys())
         elif not isinstance(categories, list):
             categories = []
-        if aggregates is None:
+        if aggregates is None or aggregates == 'all':
             aggregates = list(self.budget.aggregates.keys())
         elif not isinstance(aggregates, list):
             aggregates = []
-
-        if report:
-            fig_ddp = 'fig_ddp.png'
-            fig_chart = 'fig_chart.png'
-        else:
-            fig_ddp = False
-            fig_chart = False
+        fig_ledger, fig_chart = ('fig_ledger.png', 'fig_chart.png') if report else (False, False)
 
         # Get the amount types you will use
         amounts = ul.get_amount_list(amounts=amounts, amount_types=self.ledger.amount_types, chart_amounts=self.chart_amounts)
 
         # Make table
         self.table_data = []
-        self.headers = ['Category', 'Budget'] + [x for x in self.ledger.amount_types]
-        skipped = []
-        for cat in categories:
-            if self._can_skip(cat, amounts):
-                skipped.append(cat)
-                continue
-            bal = self.budget.budget[cat] - self.ledger.totaling(cat, amounts)
-            data = [self.budget.budget[cat]] + [self.ledger.subtotals[cat][x] for x in self.ledger.amount_types]
-            self.table_data.append([cat] + [ul.print_money(x) for x in data])
-        for agg in aggregates:
-            if self._can_skip(agg, amounts):
-                skipped.append(agg)
-                continue
-            bal = self.budget.budget[agg] - self.ledger.totaling(cat, amounts)
-            data = [self.budget.budget[agg]] + [self.ledger.subtotals[agg][x] for x in self.ledger.amount_types]
-            self.table_data.append(['+'+agg] + [ul.print_money(x) for x in data])
+        self.headers = ['Category', 'Budget', 'Balance'] + [x for x in self.ledger.amount_types]
+        use = {}
+        for catype, catagg in zip(['cat', 'agg'], [categories, aggregates]):
+            use[catype] = []
+            for ca in catagg:
+                if not self._can_skip(ca, amounts):
+                    use[catype].append(ca)
+                    bal = self.budget.budget[ca] - self.ledger.totaling(ca, amounts)
+                    data = [self.budget.budget[ca], bal] + [self.ledger.subtotals[ca][x] for x in self.ledger.amount_types]
+                    self.table_data.append([ca] + [ul.print_money(x) for x in data])
         grand_bal = self.budget.grand_total - self.ledger.totaling('grand', amounts)
-        data = [self.budget.grand_total] + [self.ledger.grand_total[x] for x in self.ledger.amount_types]
+        data = [self.budget.grand_total, grand_bal] + [self.ledger.grand_total[x] for x in self.ledger.amount_types]
         self.table_data.append(['Grand Total'] + [ul.print_money(x) for x in data])
+        pcremain, pcspent = -999.0, -999.0
         try:
             pcremain = 100.0 * grand_bal / self.budget.grand_total
             pcspent = 100.0 * self.ledger.totaling('grand', amounts) / self.budget.grand_total
         except (ZeroDivisionError, KeyError):
-            pcremain = 0.0
-            pcspent = 0.0
-        print(f"Percent spent: {pcspent:.1f}")
-        print(f"Percent remaining:  {pcremain:.1f}")
-        print()
-        print(tabulate(self.table_data, headers=self.headers, stralign='right', colalign=('left',)))
-        # Remove skipped ones
-        for skca in skipped:
-            if skca in categories:
-                categories.remove(skca)
-            if skca in aggregates:
-                aggregates.remove(skca)
+            pass
+        print(f"Percent spent: {pcspent:.0f}")
+        print(f"Percent remaining:  {pcremain:.0f}\n")
+        print(tabulate(self.table_data, headers=self.headers, stralign='right', colalign=('left',)), '\n')
 
-        # Make plot
-        if len(categories):
-            plot.plt.figure('Budget Category Dashboard')
-            bamts = [self.budget.budget[cat] for cat in categories]
-            plot.chart(categories, bamts, label='Budget', width=0.7)
-            lamts = [self.ledger.totaling(cat, amounts) for cat in categories]
-            plot.chart(categories, lamts, label='Ledger', width=0.4)
-            plot.plt.legend()
-            plot.plt.grid()
-            if fig_chart:
-                plot.plt.savefig(fig_chart)
-        if len(aggregates):
-            plot.plt.figure('Budget Aggregate Dashboard')
-            bamts = [self.budget.budget[agg] for agg in aggregates]
-            plot.chart(aggregates, bamts, label='Budget', width=0.7)
-            lamts = [self.ledger.totaling(agg, amounts) for agg in aggregates]
-            plot.chart(aggregates, lamts, label='Ledger', width=0.4)
-            plot.plt.legend()
-            plot.plt.grid()
+        # Make ledger plots
+        self._make_dash_fig('Budget Category Dashboard', use['cat'], amounts, save_it=fig_ledger)
+        self._make_dash_fig('Budget Aggregate Dashboard', use['agg'], amounts, save_it=False)
 
+        # Make project
         self.get_schedule(status=pcspent)
         if rate is None:
-            print("Do you want to include a rate/day (-r) for a spend out time?")
+            print("Do you want to include a rate/day (-r) for a spend out time (use dd_audit.py)?")
         else:
             now = datetime.now().astimezone()
             rate = float(rate)
@@ -244,7 +233,7 @@ class Manager:
             print(f"With a balance of {grand_bal:.2f} at a rate of {rate:.2f} /day, you will spend out in {grand_bal/rate:.1f} days or by {spend_out.date.strftime('%Y-%m-%d')}")
         print(f"\tStart: {self.project.task1.begins}")
         print(f"\tEnds: {self.project.task1.ends}")
-        self.project.chart(chart='all', sortby=['date'], weekends=False, months=False, figsize=(6, 2), savefig=fig_ddp)
+        self.project.chart(chart='all', sortby=['date'], weekends=False, months=False, figsize=(6, 2), savefig=fig_chart)
             
         if report:
             reports_ledger.tex_dashboard(self)
