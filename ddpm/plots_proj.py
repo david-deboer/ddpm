@@ -256,11 +256,11 @@ class Gantt:
             self.ax_gantt.text(x=0.05, y=.93, s="Text 1", transform=self.fig_gantt.transFigure, ha='left', fontsize=14, weight='bold', alpha=.8)
             self.ax_gantt.text(x=0.05, y=.90, s="Text 2", transform=self.fig_gantt.transFigure, ha='left', fontsize=12, alpha=.8)
 
-            # Adjust the margins around the plot area
-            #self.ax_gantt.subplots_adjust(left=None, bottom=0.2, right=None, top=0.95, wspace=None, hspace=None)
+        # Adjust the margins around the plot area
+        #self.ax_gantt.subplots_adjust(left=None, bottom=0.2, right=None, top=0.95, wspace=None, hspace=None)
 
-        # Set a white background
-        # self.fig_gantt.patch.set_facecolor('white')
+        # Set border color
+        self.fig_gantt.patch.set_facecolor(style.border_color)
 
         if self.sv.savefig:
             if isinstance(self.sv.savefig, str):

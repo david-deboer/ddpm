@@ -162,7 +162,7 @@ class Manager:
             if save_it:
                 plot.plt.savefig(save_it)
 
-    def dashboard(self, categories=None, aggregates=None, report=False, amounts=None, rate=None):
+    def dashboard(self, categories=None, aggregates=None, report=False, amounts=None, rate=None, style='default'):
         """
         Parameters
         ----------
@@ -176,6 +176,8 @@ class Manager:
             List of types that should be used to show results -- IF NOT None OVERRIDES self.chart_amounts
         rate : None or float
             Using dd_audit, you can get an estimate of the rate of expenditure/day for the same amounts, if present gives a spend-out date
+        style : str
+            Name of style for Gantt chart (see styles_proj.py)
             
         """
         self.get_finance('files')
@@ -233,7 +235,7 @@ class Manager:
             print(f"With a balance of {grand_bal:.2f} at a rate of {rate:.2f} /day, you will spend out in {grand_bal/rate:.1f} days or by {spend_out.date.strftime('%Y-%m-%d')}")
         print(f"\tStart: {self.project.task1.begins}")
         print(f"\tEnds: {self.project.task1.ends}")
-        self.project.chart(chart='all', sortby=['date'], weekends=False, months=False, figsize=(6, 2), savefig=fig_chart, style='pretty1')
+        self.project.chart(chart='all', sortby=['date'], weekends=False, months=False, figsize=(6, 2), savefig=fig_chart, style=style)
             
         if report:
             reports_ledger.tex_dashboard(self)
