@@ -23,8 +23,6 @@ STATUS_COLOR = {
     'removed': COLOR_PALETTE[4]
 }
 
-BANNER_COLOR = 'steelblue'
-
 # These are used in plot_proj.py and project.py "chart" 
 CHART_DEFAULTS = {
     'colinear_delimiter': '|',
@@ -35,5 +33,5 @@ CHART_DEFAULTS = {
     'set_time_axis': False,
     'figsize': (12, 8),
     'savefig': False,
-    'make_pretty': False
+    'style': 'default'
 }
