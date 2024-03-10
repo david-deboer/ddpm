@@ -9,7 +9,6 @@ Re-re-adapted 2023 October 23 - made into class
 """
 import datetime
 import matplotlib.pyplot as plt
-from matplotlib import style
 import matplotlib.dates
 import numpy as np
 from . import settings_proj as settings
@@ -45,6 +44,10 @@ class StateVariable:
         for key, value in kwargs.items():
             setattr(self, key, value)
 
+#class DefaultStyle(StateVariable):
+#    def __init__(self, xgrid_color='g', xgrid_lw=1, xgrid_ls='-'):
+
+
 
 class Gantt:
     def __init__(self, name=None):
@@ -75,7 +78,7 @@ class Gantt:
         self.deltadate = self.datemax - self.datemin
         self.timezone = timezone
 
-    def plot_weekends(self, color='lightcyan'):
+    def plot_weekends(self, ax, color='lightcyan'):
         """
         Include weekend on the plot.
         
@@ -90,21 +93,21 @@ class Gantt:
         ybound = 1.1 * len(self.ykeys)
         this_date = datetime.datetime(year=first_sat.year, month=first_sat.month, day=first_sat.day).replace(tzinfo=self.timezone)
         while this_date < self.extrema.max:
-            plt.fill_between([this_date, this_date + datetime.timedelta(days=2)], [ybound, ybound], -10, color=color)
+            ax.fill_between([this_date, this_date + datetime.timedelta(days=2)], [ybound, ybound], -10, color=color)
             this_date += datetime.timedelta(days=7)
 
-    def plot_months(self, color='0.7'):
+    def plot_months(self, ax, color='0.7'):
         ybound = 1.1 * len(self.ykeys)
         if self.extrema.min.day < 10:
             first_day = datetime.datetime(year=self.extrema.min.year, month=self.extrema.min.month, day=1).replace(tzinfo=self.timezone)
-            plt.plot([first_day, first_day], [-10, ybound], '--', lw=2, color=color)
+            ax.plot([first_day, first_day], [-10, ybound], '--', lw=2, color=color)
         this_day = (ut.last_day_of_month(self.extrema.min, return_datetime=True) + datetime.timedelta(days=1)).replace(tzinfo=self.timezone)
         while this_day < self.extrema.max:
-            plt.plot([this_day, this_day], [-10, ybound], '--', lw=2, color=color)
+            ax.plot([this_day, this_day], [-10, ybound], '--', lw=2, color=color)
             this_day = (ut.last_day_of_month(this_day, return_datetime=True) + datetime.timedelta(days=1)).replace(tzinfo=self.timezone)
         if self.extrema.max.day > 20:
             this_day = (ut.last_day_of_month(self.extrema.max, return_datetime=True) + datetime.timedelta(days=1)).replace(tzinfo=self.timezone)
-            plt.plot([this_day, this_day], [-10, ybound], '--', lw=2, color=color)
+            ax.plot([this_day, this_day], [-10, ybound], '--', lw=2, color=color)
 
     def assign_yvals_labels(self, colinear_delimiter='\n'):
         """
@@ -181,11 +184,10 @@ class Gantt:
 
         # Initialise plot
         with plt.style.context(use_style):
-            fig1 = plt.figure('chart', figsize=self.sv.figsize, tight_layout=True)
-            ax1 = fig1.add_subplot(111)
-            
-            ax1.axis(xmin=matplotlib.dates.date2num(self.extrema.min)-self.deltadate/10.0,
-                    xmax=matplotlib.dates.date2num(self.extrema.max)+self.deltadate/10.0)
+            self.fig_gantt, self.ax_gantt = plt.subplots(ncols=1, nrows=1, figsize=self.sv.figsize,  layout='constrained')
+            #plt.style.use(use_style)
+            self.ax_gantt.axis(xmin=matplotlib.dates.date2num(self.extrema.min)-self.deltadate/10.0,
+                                xmax=matplotlib.dates.date2num(self.extrema.max)+self.deltadate/10.0)
             self.assign_yvals_labels(self.sv.colinear_delimiter)
             try:
                 step = self.yticks[1] - self.yticks[0]
@@ -193,41 +195,40 @@ class Gantt:
                 step = 0.1
 
             if self.sv.weekends:
-                self.plot_weekends()
+                self.plot_weekends(self.ax_gantt)
             if self.sv.months:
-                self.plot_months()
+                self.plot_months(self.ax_gantt)
 
             # Plot the data
             for i, dtlim in enumerate(self.dates):
                 info = self.info[i]
                 start = matplotlib.dates.date2num(dtlim[0])
                 if dtlim[1] is None:  # Milestone
-                    plt.plot(start, self.yvals[i], info.marker, color=info.color, markersize=8)
+                    self.ax_gantt.plot(start, self.yvals[i], info.marker, color=info.color, markersize=8)
                 else:
                     stop = matplotlib.dates.date2num(dtlim[1])
-                    plt.barh(self.yvals[i],  stop - start, left=start, height=0.3, align='center', color=info.color, alpha=0.75)
+                    self.ax_gantt.barh(self.yvals[i],  stop - start, left=start, height=0.3, align='center', color=info.color, alpha=0.75)
                     try:
                         if isinstance(info.status, (float, int)):
-                            plt.barh(self.yvals[i], info.status*(stop - start)/100.0, left=start, height=0.1, align='center', color='k', alpha=0.75)
+                            self.ax_gantt.barh(self.yvals[i], info.status*(stop - start)/100.0, left=start, height=0.1, align='center', color='k', alpha=0.75)
                     except AttributeError:
                         continue
 
             # Format the y-axis
-            locsy, labelsy = plt.yticks(self.yticks, self.ylabels)
-            plt.setp(labelsy, fontsize=14)
+            self.ax_gantt.set_yticks(self.yticks, labels=self.ylabels, fontsize=14)
             if self.sv.grid:
                 if self.sv.make_pretty:
-                    plt.grid(axis='x', color='white', lw=2, linestyle='-')
-                    plt.grid(axis='y', visible=False)
+                    self.ax_gantt.grid(axis='x', color='white', lw=2, linestyle='-')
+                    self.ax_gantt.grid(axis='y', visible=False)
                 else:
-                    plt.grid(axis='x', color='0.6', linestyle=':')
-                    plt.grid(axis='y', visible=False)
+                    self.ax_gantt.grid(axis='x', color='0.6', linestyle=':')
+                    self.ax_gantt.grid(axis='y', visible=False)
 
             # Plot current time
             now = datetime.datetime.now().astimezone(self.timezone)
             if now >= self.extrema.min and now <= self.extrema.max:
                 now_num = matplotlib.dates.date2num(now)
-                plt.plot([now_num, now_num], [self.yticks[0]-step, self.yticks[-1]+step], '--', color=settings.COLOR_PALETTE[3])
+                self.ax_gantt.plot([now_num, now_num], [self.yticks[0]-step, self.yticks[-1]+step], '--', color=settings.COLOR_PALETTE[3])
             if int(self.deltadate) > 400:  # plot year markers
                 yr1 = self.extrema.min.year
                 yr2 = self.extrema.max.year
@@ -235,48 +236,44 @@ class Gantt:
                     yr2 += 1
                 for yr in range(yr1, yr2+1):
                     this_yr = datetime.datetime(year=yr, month=1, day=1)
-                    plt.plot([this_yr, this_yr], [self.yticks[0]-step, self.yticks[-1]+step], 'k:')
-            ax1.xaxis_date(tz=self.timezone)  # Tell matplotlib that these are dates...
+                    self.ax_gantt.plot([this_yr, this_yr], [self.yticks[0]-step, self.yticks[-1]+step], 'k:')
+            self.ax_gantt.xaxis_date(tz=self.timezone)  # Tell matplotlib that these are dates...
             if self.sv.set_time_axis:
                 self.date_ticks(self.sv.interval)
                 rule = matplotlib.dates.rrulewrapper(self.itvmapper, interval=self.interval)
                 loc = matplotlib.dates.RRuleLocator(rule, tz=self.timezone)
                 formatter = matplotlib.dates.DateFormatter(self.fmttr, tz=self.timezone)
-                ax1.xaxis.set_major_locator(loc)
-                ax1.xaxis.set_major_formatter(formatter)
-                labelsx = ax1.get_xticklabels()
-                plt.setp(labelsx, rotation=30, fontsize=12)
+                self.ax_gantt.xaxis.set_major_locator(loc)
+                self.ax_gantt.xaxis.set_major_formatter(formatter)
+            self.ax_gantt.set_xticks(self.ax_gantt.get_xticks(), self.ax_gantt.get_xticklabels(), rotation=30, fontsize=12, ha='right')
 
             # Finish up
-            ax1.invert_yaxis()
-            ax1.axis(ymin=self.yticks[-1] + (step - 0.01), ymax=self.yticks[0] - (step - 0.01))
-            fig1.autofmt_xdate()
+            self.ax_gantt.invert_yaxis()
+            self.ax_gantt.axis(ymin=self.yticks[-1] + (step - 0.01), ymax=self.yticks[0] - (step - 0.01))
+            #self.ax_gantt.autofmt_xdate()
 
             if self.sv.make_pretty:
                 # https://towardsdatascience.com/5-steps-to-build-beautiful-bar-charts-with-python-3691d434117a
                 # Remove the spines
-                ax1.spines[['top','right']].set_visible(False)
+                self.ax_gantt.spines[['top','right']].set_visible(False)
 
                 # Make the left spine thicker
-                ax1.spines[['top', 'right']].set_visible(True)
-                ax1.spines[['left', 'bottom']].set_linewidth(1.1)
+                self.ax_gantt.spines[['top', 'right']].set_visible(True)
+                self.ax_gantt.spines[['left', 'bottom']].set_linewidth(1.1)
 
                 # Add in banner line and rectangle on top
-                ax1.plot([0.05, .98], [.98, .98], transform=fig1.transFigure, clip_on=False, color=settings.BANNER_COLOR, linewidth=.6)
-                ax1.add_patch(plt.Rectangle((0.05,.98), 0.04, -0.02, facecolor=settings.BANNER_COLOR, transform=fig1.transFigure, clip_on=False, linewidth = 0))
+                self.ax_gantt.plot([0.05, .98], [.98, .98], transform=self.fig_gantt.transFigure, clip_on=False, color=settings.BANNER_COLOR, linewidth=.6)
+                self.ax_gantt.add_patch(plt.Rectangle((0.05,.98), 0.04, -0.02, facecolor=settings.BANNER_COLOR, transform=self.fig_gantt.transFigure, clip_on=False, linewidth = 0))
 
                 # Add in title and subtitle
-                ax1.text(x=0.05, y=.93, s="Text 1", transform=fig1.transFigure, ha='left', fontsize=14, weight='bold', alpha=.8)
-                ax1.text(x=0.05, y=.90, s="Text 2", transform=fig1.transFigure, ha='left', fontsize=12, alpha=.8)
-
-                # Set source text
-                ax1.text(x=0.05, y=0.12, s="Text 3", transform=fig1.transFigure, ha='left', fontsize=10, alpha=.7)
+                self.ax_gantt.text(x=0.05, y=.93, s="Text 1", transform=self.fig_gantt.transFigure, ha='left', fontsize=14, weight='bold', alpha=.8)
+                self.ax_gantt.text(x=0.05, y=.90, s="Text 2", transform=self.fig_gantt.transFigure, ha='left', fontsize=12, alpha=.8)
 
                 # Adjust the margins around the plot area
-                plt.subplots_adjust(left=None, bottom=0.2, right=None, top=0.95, wspace=None, hspace=None)
+                #self.ax_gantt.subplots_adjust(left=None, bottom=0.2, right=None, top=0.95, wspace=None, hspace=None)
 
                 # Set a white background
-                fig1.patch.set_facecolor('white')
+                self.fig_gantt.patch.set_facecolor('white')
 
             if self.sv.savefig:
                 if isinstance(self.sv.savefig, str):
