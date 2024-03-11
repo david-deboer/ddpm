@@ -24,6 +24,7 @@ class Project:
             Name of organization
         timezone : interpretable as ut.datetimedelta.timezone, None
             Preferred timezone
+
         Attributes
         ----------
         self.all_entries : dict
