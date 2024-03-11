@@ -14,13 +14,11 @@ def tex_dashboard(dashboard, name_date_format='%Y-%m-%d'):
     doc.preamble.append(Command('author', f"{pofp.begins.strftime('%Y-%m-%d')} - {pofp.ends.strftime('%Y-%m-%d')}"))
     doc.preamble.append(Command('date', NoEscape(r'\today')))
     doc.append(NoEscape(r'\maketitle'))
-    doc.append(VerticalSpace(NoEscape('-1cm')))
+    # doc.append(VerticalSpace(NoEscape('-1cm')))
+
     # Summary
-    # _money = ul.print_money(dashboard.ledger.grand_total['actual'])
-    # _diff = dashboard.budget.grand_total - dashboard.ledger.grand_total['actual']
-    #doc.append(NoEscape("\vspace{-2cm}"))
-    #doc.append(f"This report summarizes budgets for {dashboard.ledger.fund} with a balance of {ul.print_money(_diff)}.")
-    #doc.append(f"Total expenditures in all categories is {_money}.")
+    if len(dashboard.sgrand): doc.append(NoEscape(r'\noindent ' + dashboard.sgrand + r'\newline'))
+    if len(dashboard.sdept): doc.append(dashboard.sdept)
     with doc.create(Figure(position='h!')) as bar_chart:
         bar_chart.add_image('fig_chart.png', width='250px')
         bar_chart.add_caption('Category budgets and expenditures.')

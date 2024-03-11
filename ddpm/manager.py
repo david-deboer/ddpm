@@ -225,6 +225,7 @@ class Manager:
 
         # Make project
         self.get_schedule(status=pcspent)
+        self.sgrand, self.sdept = '', ''
         if rate is None:
             print("Do you want to include a rate/day (-r) for a spend out time (use dd_audit.py)?")
         else:
@@ -232,19 +233,21 @@ class Manager:
             rate = float(rate)
             spend_out_grand = components.Milestone(name='Spend out grand total', date=now+timedelta(days = grand_bal / rate), updated=now)
             self.project.add(spend_out_grand, attrname="spend_out_grand")
-            print(f"With a grand total balance of {grand_bal:.2f} at a rate of {rate:.2f} /day, you will spend out in {grand_bal/rate:.1f} days or by {spend_out_grand.date.strftime('%Y-%m-%d')}")
+            self.sgrand = (f"With a grand total balance of {ul.print_money(grand_bal)} at a rate of {ul.print_money(rate)} /day, "
+                           f"you will spend out in {grand_bal/rate:.1f} days or by {spend_out_grand.date.strftime('%Y-%m-%d')}")
             if 'department_total' in use['agg']:
                 dept_bal = self.budget.budget['department_total'] - self.ledger.totaling('department_total', amounts)
                 spend_out_dept = components.Milestone(name='Spend out dept total', date=now+timedelta(days = dept_bal / rate), updated=now)
                 self.project.add(spend_out_dept, attrname="spend_out_dept")
-                print(f"With a dept total balance of {dept_bal:.2f} at a rate of {rate:.2f} /day, you will spend out in {dept_bal/rate:.1f} days or by {spend_out_dept.date.strftime('%Y-%m-%d')}")
+                self.sdept = (f"With a dept total balance of {ul.print_money(dept_bal)} at a rate of {ul.print_money(rate)} /day, "
+                              f"you will spend out in {dept_bal/rate:.1f} days or by {spend_out_dept.date.strftime('%Y-%m-%d')}")
 
         print(f"\tStart: {self.project.task1.begins}")
         print(f"\tEnds: {self.project.task1.ends}")
         self.project.chart(chart='all', sortby=['date'], weekends=False, months=False, figsize=(6, 2), savefig=fig_chart, style=style, banner=banner)
-            
-        if report:
-            reports_ledger.tex_dashboard(self)
+        if len(self.sgrand): print(self.sgrand)
+        if len(self.sdept): print(self.sdept)
+        if report: reports_ledger.tex_dashboard(self)
 
     def show_files(self):
         ul.show_ledger_files(self.ledger)
