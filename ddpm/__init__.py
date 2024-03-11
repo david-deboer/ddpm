@@ -1,1 +1,1 @@
-from . import project, components, icalendar, manager, audit, ledger
+from . import audit, manager, icalendar, ledger, project

@@ -175,8 +175,7 @@ class Project:
         chart : 
         sortby : list or 'all' (chart_types)
            fields to sort by
-        kwargs parameters, see settings.CHART_DEFAULTS
-            'colinear_delimiter', 'weekends', 'months', 'grid', 'interval', 'set_time_axis', 'figsize', 'savefig', 'style'
+        kwargs parameters see settings_proj.CHART_DEFAULTS
 
         """
         kwargs2use = copy(settings.CHART_DEFAULTS)

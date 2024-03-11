@@ -138,9 +138,9 @@ class Manager:
                     self.project.add(tk, attrname=f"task{ctr}")
                     ctr += 1
         if self.ledger is not None:
-            ledger_earliest = components.Milestone(name='Earliest ledger entry.', date=self.ledger.first_date, updated=now)
+            ledger_earliest = components.Milestone(name='Earliest ledger entry', date=self.ledger.first_date, updated=now)
             self.project.add(ledger_earliest, attrname='ledger_earliest')
-            ledger_latest = components.Milestone(name='Latest ledger entry.', date=self.ledger.last_date, updated=now)
+            ledger_latest = components.Milestone(name='Latest ledger entry', date=self.ledger.last_date, updated=now)
             self.project.add(ledger_latest, attrname='ledger_latest')
 
     def _can_skip(self, cat, amounts):
@@ -162,7 +162,7 @@ class Manager:
             if save_it:
                 plot.plt.savefig(save_it)
 
-    def dashboard(self, categories=None, aggregates=None, report=False, amounts=None, rate=None, style='default'):
+    def dashboard(self, categories=None, aggregates=None, report=False, amounts=None, rate=None, style='default', banner=None):
         """
         Parameters
         ----------
@@ -235,7 +235,7 @@ class Manager:
             print(f"With a balance of {grand_bal:.2f} at a rate of {rate:.2f} /day, you will spend out in {grand_bal/rate:.1f} days or by {spend_out.date.strftime('%Y-%m-%d')}")
         print(f"\tStart: {self.project.task1.begins}")
         print(f"\tEnds: {self.project.task1.ends}")
-        self.project.chart(chart='all', sortby=['date'], weekends=False, months=False, figsize=(6, 2), savefig=fig_chart, style=style)
+        self.project.chart(chart='all', sortby=['date'], weekends=False, months=False, figsize=(6, 2), savefig=fig_chart, style=style, banner=banner)
             
         if report:
             reports_ledger.tex_dashboard(self)

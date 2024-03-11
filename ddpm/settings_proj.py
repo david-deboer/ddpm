@@ -1,5 +1,7 @@
 import datetime
+from os import path
 
+STYLE_DIR = path.join(path.dirname(__file__), 'styles')
 
 COLOR_PALETTE = [
     (0.12156862745098039, 0.4666666666666667, 0.7058823529411765, 1.0),
@@ -28,10 +30,10 @@ CHART_DEFAULTS = {
     'colinear_delimiter': '|',
     'weekends': True,
     'months': True,
-    'grid': True,
     'interval': None,
     'set_time_axis': False,
     'figsize': (12, 8),
     'savefig': False,
-    'style': 'default'
+    'style': 'classic',
+    'banner': None
 }

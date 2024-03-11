@@ -14,8 +14,8 @@ setup_args = {
     'author_email': "david.r.deboer@gmail.com",
     'version': '0.2',
     'scripts': glob.glob('scripts/*'),
-    'packages': ['ddpm']
-    #'install_requires': ['pyyaml', 'json']
+    'packages': ['ddpm'],
+    'include_package_data': True
 }
 
 if __name__ == '__main__':
