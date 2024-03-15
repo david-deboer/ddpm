@@ -6,7 +6,7 @@ def tex_dashboard(dashboard, name_date_format='%Y-%m-%d'):
     from datetime import datetime
 
     pofp = dashboard.project.all_entries[dashboard.project.tasks[0]]
-    now = datetime.now().strftime(name_date_format)
+    now = datetime.now().strftime(name_date_format) 
     geometry_options = {"tmargin": "1.5cm", "lmargin": "2cm",
                         "bmargin": "1.5cm", "rmargin": "2cm"}
     doc = Document(geometry_options=geometry_options)
