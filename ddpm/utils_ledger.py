@@ -2,6 +2,7 @@
 import csv
 import os
 import locale
+from copy import copy
 locale.setlocale(locale.LC_ALL, '')
 
 
@@ -128,13 +129,14 @@ def split_csv(fn):
         reader = csv.reader(fp_in)
         for i, row in enumerate(reader):
             if not i:
-                for vals in files_to_write.values():
-                    vals['writer'].writerow(row)
+                header = copy(row)
             else:
                 fundno = int(row[2].split()[0])
                 if files_to_write[fundno]['fp'] is None:  # Only open if fund present.
+                    print(f"Opening {fundno}")
                     files_to_write[fundno]['fp'] = open(files_to_write[fundno]['fn'], 'w')
                     files_to_write[fundno]['writer'] = csv.writer(files_to_write[fundno]['fp'])
+                    files_to_write[fundno]['writer'].writerow(header)
                 files_to_write[fundno]['writer'].writerow(row)
                 files_to_write[fundno]['counter'] += 1
     
