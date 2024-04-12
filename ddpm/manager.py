@@ -172,7 +172,7 @@ class Manager:
             Aggregates to use, None uses all
         report : bool
             Write the pdf report
-        amount2use : list
+        amounts : list
             List of types that should be used to show results -- IF NOT None OVERRIDES self.chart_amounts
         rate : None or float
             Using dd_audit, you can get an estimate of the rate of expenditure/day for the same amounts, if present gives a spend-out date
