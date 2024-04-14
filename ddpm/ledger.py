@@ -68,7 +68,11 @@ class Ledger():
             if report_type == 'none':
                 continue
             fy = ut.get_fiscal_year(ledger_file)  # Will return the fiscal year if filename contains it
-            this_file = pd.read_csv(ledger_file)
+            try:
+                this_file = pd.read_csv(ledger_file)
+            except FileNotFoundError:
+                print(f"{ledger_file} does not exist.")
+                continue
             L = settings.ledger_info(report_type, this_file.columns.to_list())
 
             # Get overall info and initialize

@@ -32,11 +32,11 @@ def tex_dashboard(dashboard, name_date_format='%Y-%m-%d'):
                 for row in dashboard.table_data:
                     tabular.add_row((row[0],
                                     ul.print_money(row[1]),
-                                    ul.print_money(row[2]),
-                                    ul.print_money(row[3])))
+                                    ul.print_money(row[3]),
+                                    ul.print_money(row[2])))
                     tabular.add_hline()
     with doc.create(Figure(position='h!')) as bar_chart:
-        bar_chart.add_image('fig_ddp.png', width='200px')
+        bar_chart.add_image('fig_ledger.png', width='200px')
         bar_chart.add_caption('Period of performance.')
     # # Rates
     # with doc.create(Figure(position='h!')) as rate:
