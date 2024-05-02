@@ -78,8 +78,8 @@ class Manager:
         self.ledger.read(invert=self.invert)  # read data for the ledger
         self.ledger.get_budget_categories(self.budget.categories)  # subtotal the ledger into budget categories
         self.ledger.get_budget_aggregates(self.budget.aggregates)  # add the budget category aggregates from sponsor to ledger
-        print(f"Ledger dates: {self.ledger.first_date.strftime('%Y-%m-%d')} - {self.ledger.last_date.strftime('%Y-%m-%d')}")
         self.budget.categories['not_included'] = self.ledger.budget_categories['not_included']  # Copy over after setting ledger categories
+        self.budget_category_accounts['not_included'] = self.ledger.budget_categories['not_included']  # Copy over after setting ledger categories (again)
 
     def _check_and_set_categories(self):
         """

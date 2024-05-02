@@ -143,8 +143,11 @@ def split_csv(fn):
     print(f"{i} total records.")
 
     for fundno in sorted(files_to_write):
-        print(f"{files_to_write[fundno]['counter']:4d} entries to {files_to_write[fundno]['fn']}")
-        files_to_write[fundno]['fp'].close()
+        if files_to_write[fundno]['fp'] is None:
+            print(f"{files_to_write[fundno]['fn']} wasn't opened")
+        else:
+            print(f"{files_to_write[fundno]['counter']:4d} entries to {files_to_write[fundno]['fn']}")
+            files_to_write[fundno]['fp'].close()
 
 def xls2csv(xlsfile, csvfile):
     import pandas
