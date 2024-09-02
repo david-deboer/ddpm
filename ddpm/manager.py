@@ -30,8 +30,8 @@ class Manager:
             Contents of the input yaml
         name : str
             Generated name of project
-        invert : str
-            Flag to invert values in ledger
+        flip : str
+            Flag to flip values in ledger
         chart_amounts : list or None
             If list, use those amount_types in plots etc
         ledger, budget, project : None
@@ -42,13 +42,13 @@ class Manager:
         with open (self.yaml_file, 'r') as fp:
             self.yaml_data = yaml.safe_load(fp)
         self.name = f"{self.yaml_data['name']} - {self.yaml_data['fund']}"
-        self.invert = self.yaml_data['invert'] if 'invert' in self.yaml_data else False
+        self.flip = self.yaml_data['flip'] if 'flip' in self.yaml_data else False
         self.chart_amounts = ul.get_amount_list(self.yaml_data['chart_amounts']) if 'chart_amounts' in self.yaml_data else None
         self.ledger = None
         self.budget = None
         self.project = None
 
-    def get_finance(self, file_list):
+    def get_finance(self, file_list, raise_fund_error=True):
         """
         Read in the ledger and the budget and transfer budget categories to ledger.
 
@@ -75,7 +75,7 @@ class Manager:
             return
         use_files = file_list if isinstance(file_list, list) else self.yaml_data[file_list]
         self.ledger = ledger.Ledger(self.yaml_data['fund'], use_files)  #start a ledger
-        self.ledger.read(invert=self.invert)  # read data for the ledger
+        self.ledger.read(flip=self.flip, raise_fund_error=raise_fund_error)  # read data for the ledger
         self.ledger.get_budget_categories(self.budget.categories)  # subtotal the ledger into budget categories
         self.ledger.get_budget_aggregates(self.budget.aggregates)  # add the budget category aggregates from sponsor to ledger
         self.budget.categories['not_included'] = self.ledger.budget_categories['not_included']  # Copy over after setting ledger categories
@@ -252,7 +252,7 @@ class Manager:
     def show_files(self):
         ul.show_ledger_files(self.ledger)
 
-    def start_audit(self, file_list='files'):
+    def start_audit(self, file_list='files', raise_fund_error=True):
         """
         Parameters
         ----------
@@ -262,7 +262,7 @@ class Manager:
             list of amount_types to use in the audit
 
         """
-        self.get_finance(file_list=file_list)
+        self.get_finance(file_list=file_list, raise_fund_error=raise_fund_error)
         self.audit = audit.Audit(self.ledger, chart_amounts=self.chart_amounts)
 
 

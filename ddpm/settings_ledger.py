@@ -1,4 +1,5 @@
 from dateutil.parser import parse
+import hashlib
 
 
 def ledger_info(report_type, columns):
@@ -57,6 +58,14 @@ class BaseType:
             self.all.append(val['name'])
             self.reverse_map[val['name']] = key
 
+    def _eq(self, fields, e1, e2):
+        ehash = ''
+        for fld in fields:
+            if e1[self.colmap[fld]['name']] != e2[self.colmap[fld]['name']]:
+                return False
+            ehash += str(e1[self.colmap[fld]['name']])
+        return  hashlib.md5(ehash.encode('ascii')).hexdigest()[:8]
+
     def keygen(self, row):
         """
         Update this in the child class if needed.
@@ -80,6 +89,13 @@ class BankOfAmerica(BaseType):
                        }
         self._get_all()
 
+    def equivalent(self, e1, e2):
+        fields = ['Description', 'Account']
+        return self._eq(fields, e1, e2)
+
+    def equal(self, e1, e2):
+        fields = list(self.colmap.keys())
+        return self._eq(fields, e1, e2)
 
 class Calanswers(BaseType):
     def __init__(self, report_type, columns):
@@ -108,7 +124,15 @@ class Calanswers(BaseType):
                        'Actuals Amount': {'name': 'actual','func':  self.make_amt}
                        }
         self._get_all()
+    
+    def equivalent(self, e1, e2):
+        fields = ['Dept ID - Desc', 'CF1 Code', 'CF2 Code', 'Program Code', 'Account - Desc',
+                  'Document ID', 'Description', 'Detailed Description', 'Reference']
+        return self._eq(fields, e1, e2)
 
+    def equal(self, e1, e2):
+        fields = list(self.colmap.keys())
+        return self._eq(fields, e1, e2)
 
 class FundSummary(BaseType):
     def __init__(self, report_type, columns):
@@ -127,3 +151,11 @@ class FundSummary(BaseType):
                        'Remaining Balance': {'name': 'remaining', 'func': self.make_amt}
                        }
         self._get_all()
+
+    def equivalent(self, e1, e2):
+        fields = ['Dept ID - Desc', 'Account Category']
+        return self._eq(fields, e1, e2)
+
+    def equal(self, e1, e2):
+        fields = list(self.colmap.keys())
+        return self._eq(fields, e1, e2)

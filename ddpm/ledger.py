@@ -25,14 +25,16 @@ class Ledger():
         self.fund = fund
         self.files = files
 
-    def read(self, invert=False):
+    def read(self, flip=False, raise_fund_error=True):
         """
         Read in the datafiles to produce data dictionary
 
         Parameter
         ---------
-        invert : bool
-            Flag to invert the amount(s)
+        flip : bool
+            Flag to flip the amount(s)
+        raise_fund_error : bool
+            If True, error out if fund numbers don't match
 
         Attributes
         ----------
@@ -50,8 +52,8 @@ class Ledger():
             The net set of columns/amount_types/date_types
             
         """
-        print(f"Reading in ledger files: {'Inverting amounts' if invert else ''}")
-        invert = -1.0 if invert else 1.0
+        print(f"Reading in ledger files: {'flipping amounts' if flip else ''}")
+        flip = -1.0 if flip else 1.0
         self.data = {}
         base = settings.BaseType()
         self.first_date = base.make_date('2040/1/1')
@@ -100,7 +102,7 @@ class Ledger():
                 for icol, ncol in enumerate(L.columns):  # loop through columns
                     H = L.colmap[ncol]
                     if H['name'] in L.amount_types:
-                        this_entry[H['name']] = invert * H['func'](row[icol])
+                        this_entry[H['name']] = flip * H['func'](row[icol])
                     else:
                         this_entry[H['name']] = H['func'](row[icol])
                 self.data[this_account]['entries'].append(this_entry)
@@ -117,7 +119,8 @@ class Ledger():
                 # A few specific checks
                 try:
                     if str(this_entry['fund']) != str(self.fund):
-                        raise ValueError(f"Fund {this_entry['fund']} != {self.fund}")
+                        if raise_fund_error:
+                            raise ValueError(f"Fund {this_entry['fund']} != {self.fund}")
                 except (KeyError, TypeError):
                     pass
                 if fy.year is not None:  # check correct fiscal year
@@ -136,6 +139,87 @@ class Ledger():
             from datetime import datetime
             self.first_date = datetime.now().astimezone()
             self.last_date = self.first_date
+
+    def patrol(self, etype='equivalent', report_type='calanswers'):
+        """
+        Check for entries with same content.  Ad hoc for gift letters...
+
+        """
+        print("Assuming calanswers.")
+        print(f"Using {etype} - generating attribute busted")
+        print("Checking actual")
+        L = settings.ledger_info(report_type, ['Account - Desc'])
+        ctr = 0
+        self.busted = {}
+        for account in self.data:
+            for n1 in range(len(self.data[account]['entries'])):
+                for n2 in range(len(self.data[account]['entries'])):
+                    if n1 == n2:
+                        continue
+                    eq = getattr(L, etype)(self.data[account]['entries'][n1], self.data[account]['entries'][n2])
+                    if eq:
+                        self.busted.setdefault(eq, [])
+                        if abs(self.data[account]['entries'][n1]['actual']) > 0.0:
+                            #self.busted[eq].append(self.data[account]['entries'][n1])
+                            en = self.data[account]['entries'][n1]
+                            self.busted[eq].append([en['fund'], en['date'].strftime('%Y-%m-%d'), en['actual']])
+                        if abs(self.data[account]['entries'][n2]['actual']) > 0.0:
+                            #self.busted[eq].append(self.data[account]['entries'][n2])
+                            en = self.data[account]['entries'][n2]
+                            self.busted[eq].append([en['fund'], en['date'].strftime('%Y-%m-%d'), en['actual']])
+                        ctr += 1
+        if len(self.busted):
+            print(f"{ctr} are {etype}")
+
+    def intellicull(self, report_type='calanswers'):
+        """
+        Poll to cull entries.  Ad hoc for gift letters...part deux
+        
+        """
+        print("INTELLICULL:  Assuming calanswers.")
+        print("Checking actual")
+        L = settings.ledger_info(report_type, ['Account - Desc'])
+        dctr = 0
+        poll = {}
+        for account in self.data:
+            poll[account] = {}
+            for entry in self.data[account]['entries']:
+                dctr += 1
+                actual_int = int(abs(entry['actual'] * 100))
+                if actual_int < 100:  # Ignore less than $1
+                    continue
+                poll[account].setdefault(actual_int, [])
+                poll[account][actual_int].append(copy(entry))
+        keep = {}
+        breaking = False
+        self.data = {}
+        for account in poll:
+            keep[account] = {}
+            self.data[account] = {'entries': []}
+            for actin in poll[account]:
+                if len(poll[account][actin]) == 1:
+                    keep[account][actin] = [0]
+                else:
+                    for i, entry in enumerate(poll[account][actin]):
+                        print(f"{i}:  {entry['fund']}: {entry['account']}, {entry['date'].strftime('%Y-%m-%d')}, {entry['description']} {entry['detailed_description']} -- {entry['actual']}")
+                    ask = input("Which to keep: ")
+                    if ask == 'x':  # None
+                        keep[account][actin] = []
+                    elif ask == 'a':  # all
+                        keep[account][actin] = list(range(len(poll[account][actin])))
+                    elif ask == 'b':  # break
+                        breaking = True
+                        break
+                    else:  # csv
+                        keep[account][actin] = [int(i) for i in ask.split(',')]
+            if breaking:
+                break
+        for account in keep:
+            for actin in keep[account]:
+                for keeping in keep[account][actin]:
+                    self.data[account]['entries'].append(poll[account][actin][keeping])
+
+        #print(f"poll count {pctr}")
 
     def get_file_header(self):
         """
@@ -318,7 +402,7 @@ class Ledger():
                     self.subtotals[this_agg][amtt] += self.subtotals[cmp][amtt]
 
 class Budget:
-    def __init__(self, data):
+    def __init__(self, data, key='budget'):
         """
         Make the sponsor budget, generally from budget key in the yaml file
 
@@ -337,7 +421,10 @@ class Budget:
             Dictionary of categories/aggregates with subtotals
 
         """
-        self.budget = data['budget']
+        if key is None:
+            self.budget = data
+        else:
+            self.budget = data[key]
         self.categories = {}  # These are the budget categories (not aggregated as below)
         self.aggregates = {}  # These are aggregates of other budget categories
         self.grand_total = 0.0
