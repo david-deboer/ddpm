@@ -72,14 +72,16 @@ def augmented_slice(S):
     S[1] = None if not S[1] else S[1]
     return slice(S[0], S[1])
 
-def sumup(adict):
+def sumup(adict, keys=None):
     """
     Sumup the values in a dictionary.
 
     """
+    if keys is None:
+        keys = list(adict.keys())
     sum = 0.0
-    for v in adict.values():
-        sum += eval(str(v))
+    for key in keys:
+        sum += eval(str(adict[key]))
     return sum
 
 

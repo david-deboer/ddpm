@@ -7,7 +7,6 @@ from . import utils_ledger as ul
 
 
 class Ledger():
-
     def __init__(self, fund, files):
         """
         Parameters
@@ -408,8 +407,10 @@ class Budget:
 
         Parameter
         ---------
-        budget : dict
+        data : dict
             Budget items and amounts or subtotaling list
+        key : str or None
+            If not None, use that key in data as the budget
 
         Attributes
         ----------
@@ -421,6 +422,10 @@ class Budget:
             Dictionary of categories/aggregates with subtotals
 
         """
+        if isinstance(data, str):
+            import yaml
+            with open(data, 'r') as fp:
+                data = yaml.safe_load(fp)
         if key is None:
             self.budget = data
         else:
@@ -449,6 +454,23 @@ class Budget:
             self.budget[this_cat] = 0.0
             for cmp in cmps:
                 self.budget[this_cat] += self.budget[cmp]
+
+    def add_rate(self, cat, keys, rate=0.605):
+        amt = self.totalit(keys)
+        self.budget[cat] = amt * rate
+        self.categories[cat] = cat
+
+    def pie(self, keys=None, autopct='%.0f%%', ax=None):
+        from . import plots_ledger
+        plots_ledger.pie(self.budget, keys, autopct=autopct, ax=ax)
+        self.pie_total = ul.sumup(self.budget, keys)
+        print(f"Pie total: {ul.print_money(self.pie_total)}")
+
+    def totalit(self, keys):
+        amt = 0.0
+        for key in keys:
+            amt += self.budget[key]
+        return amt
 
     def adjust(self):
         print("Maybe do this or maybe not?")

@@ -63,3 +63,28 @@ def cumulative(cumulative, amounts):
     plt.fill_between(cumulative['t'], ordered_amounts)
     plt.plot(cumulative['t'], ordered_amounts, 'k')
     plt.plot(cumulative['t'], ordered_smooth, 'b', lw=2)
+
+def pie(budget, keys=None, autopct='%.0f%%', ax=None):
+    """
+    Parameters:
+    -----------
+    budget : dict
+        dictionary of budget items
+    keys : list of str or None
+        keys to use from the budget
+
+    """
+    vals, lbls = [], []
+    if keys is not None:
+        use = {}
+        for key in keys:
+            use[key] = budget[key]
+    else:
+        use = budget
+    for key, val in use.items():
+        vals.append(val)
+        lbls.append(f"{key}\n${val:.0f}")
+    if ax is None:
+        plt.pie(vals, labels=lbls, autopct=autopct)
+    else:
+        ax.pie(vals, labels=lbls, autopct=autopct)
