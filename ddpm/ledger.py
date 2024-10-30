@@ -455,8 +455,8 @@ class Budget:
             for cmp in cmps:
                 self.budget[this_cat] += self.budget[cmp]
 
-    def add_rate(self, cat, keys, rate=0.605):
-        amt = self.totalit(keys)
+    def add_rate(self, cat, keys, rate=0.605, offset=0.0):
+        amt = self.totalit(keys) + offset
         self.budget[cat] = amt * rate
         self.categories[cat] = cat
         self.grand_total += amt * rate
