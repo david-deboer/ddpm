@@ -459,6 +459,7 @@ class Budget:
         amt = self.totalit(keys)
         self.budget[cat] = amt * rate
         self.categories[cat] = cat
+        self.grand_total += amt * rate
 
     def pie(self, keys=None, autopct='%.0f%%', ax=None):
         from . import plots_ledger
