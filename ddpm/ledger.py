@@ -465,7 +465,7 @@ class Budget:
         from . import plots_ledger
         plots_ledger.pie(self.budget, keys, autopct=autopct, ax=ax)
         self.pie_total = ul.sumup(self.budget, keys)
-        print(f"Pie total: {ul.print_money(self.pie_total)}")
+        print(f"Pie total {','.join(keys)}: {ul.print_money(self.pie_total)}")
 
     def totalit(self, keys):
         amt = 0.0

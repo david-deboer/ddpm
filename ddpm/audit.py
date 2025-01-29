@@ -189,7 +189,7 @@ class Audit():
 
     def detail(self, sort_by='account,date', sort_reverse=False, cols_to_show='all', csv=False):
         """
-        Look at detail in a svticular account with various filters and options.
+        Look at detail in a particular account with various filters and options.
 
         Parameters:
         ------------
