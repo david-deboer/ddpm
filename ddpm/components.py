@@ -107,9 +107,10 @@ class Entry:
                 pass
         print(f"Adding {self.type} {self.name}")
 
-    def make_key(self, keystr):
+    def make_key(self, params):
         """Generate the unique hash key"""
-        return hashlib.md5(keystr.encode('ascii')).hexdigest()[:6]
+        ss = self.type + ''.join([str(getattr(self, par)) for par in params])
+        return hashlib.md5(ss.encode('ascii')).hexdigest()[:6]
 
     def add_note(self, note):
         """Add a note string to the note list."""
@@ -189,6 +190,8 @@ class Milestone(Entry):
             how late to follow after last predecessor
         colinear : Entry, None
             Component entry to put on the same line
+        groups : list, None
+            List of group names to associate with this milestone
         marker : str
             Marker used for plotting
         color : str, None
@@ -206,7 +209,7 @@ class Milestone(Entry):
             if self.marker is None:
                 self.marker = 'D'
             self.init_timing(kwargs)
-            self.key = self.make_key(name + self.date.isoformat())
+            self.key = self.make_key(['name', 'owner', 'label'])
         else:
             print("Invalid Milestone request.")
 
@@ -238,10 +241,8 @@ class Milestone(Entry):
             return False
         return True
 
-    # def __repr__(self):
-    #     return f"{self.key}:  {self.name}  {self.date} "
-
     def get_color(self):
+        ### Move to Entry.get_color...
         now = datetime.datetime.now().astimezone()
         if self.color is None or self.color == 'auto':
             pass
@@ -259,7 +260,7 @@ class Milestone(Entry):
 
 
 class Timeline(Entry):
-    tl_parameters = ['name', 'begins', 'ends', 'duration', 'note', 'updated', 'colinear',
+    tl_parameters = ['name', 'begins', 'ends', 'owner', 'duration', 'note', 'updated', 'colinear',
                      'predecessors', 'lag', 'groups', 'label', 'color', 'timezone']
     allowed_timing_sets = [{'begins', 'ends'},
                            {'begins', 'duration'},
@@ -279,7 +280,7 @@ class Timeline(Entry):
         elif self._valid_request(**kwargs):
             super().__init__(**kwargs)
             self.init_timing(kwargs)
-            self.key = self.make_key(name + self.begins.isoformat() + self.ends.isoformat())
+            self.key = self.make_key(['name', 'owner', 'label'])
         else:
             print("Invalid Timeline request.")
 
@@ -327,10 +328,8 @@ class Timeline(Entry):
             return False
         return True
 
-    # def __repr__(self):
-    #     return f"{self.key}:  {self.name}  {self.begins} -  {self.ends}"
-
     def get_color(self):
+        ### Move to Entry.get_color...
         if self.color is None or self.color == 'auto':
             return utils.COLOR_PALETTE[0]
         return self.color
@@ -340,11 +339,16 @@ class Timeline(Entry):
 
 
 class Task(Timeline):
-    ta_extra = ['owner', 'status', 'complete']
+    """
+    A Task is just a Timeline with a status and a completion percentage.
+
+    """
+    ta_extra = ['status', 'complete']
     def __init__(self, name, **kwargs):
         self.parameters = copy(self.ta_extra)
         super().__init__(name=name, **kwargs)
         self.type = 'task'  # Overwrites 'timeline' type so is after super()
+        self.key = self.make_key(['name', 'owner', 'label'])  # And annoyingly you have to do this again
 
     def valid_request(self, **kwargs):  # This actually just differentiates Task or Timeline
         if self._valid_request(**kwargs):
@@ -354,6 +358,7 @@ class Task(Timeline):
         return False
 
     def get_color(self):
+        ### Move to Entry.get_color...
         if self.color is None or self.color == 'auto':
             if isinstance(self.status, float):
                 now = datetime.datetime.now().astimezone()
@@ -371,9 +376,9 @@ class Task(Timeline):
 
 
 class Note(Entry):
-    parameters = ['jot', 'date', 'reference', 'timezone']
     def __init__(self, jot, date='now', reference=None):
         self.type = 'note'
+        self.parameters = ['jot', 'date', 'reference', 'timezone']
         if jot is None:  # Just want the parameters
             pass
         elif self.valid_request(jot=jot):
@@ -387,7 +392,7 @@ class Note(Entry):
                 self.reference = reference
             else:
                 print(f"Invalid reference {reference}")
-            self.key = self.make_key(jot)
+            self.key = self.make_key(['jot', 'reference'])
         else:
             print("Invalid Note request.")
 
