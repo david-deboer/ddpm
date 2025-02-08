@@ -195,8 +195,8 @@ class Milestone(Entry):
             General note to add
         updated : str, datetime
             Date of the current update
-        complete : str, float, None
-            how late(=) or early (-) completed milestone was done - that is date is the actual and this tells how late/early that was
+        complete : float, None
+            Fraction complete (when < 1) or how early/late completed occurred in days from projected
         predecessors : Entry, None
             list of predessors Entries, take latest
         lag : str, float, None
