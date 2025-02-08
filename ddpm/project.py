@@ -361,7 +361,7 @@ class Project:
         print(f"Writing {fn}")
         ctr = {}
         with open(fn, 'w') as fp:
-            print("from ddpm import project\n", file=fp)
+            print("from ddpm import project, components\n", file=fp)
             org = '' if self.organization is None else f", organization='{self.organization}'"
             print(f"{projectname} = project.Project('{self.name}'{org})\n", file=fp)
             for entry in self.all_entries.values():
