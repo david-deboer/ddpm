@@ -354,9 +354,10 @@ class Project:
         if fp is not None:
             fp.close()
 
-    def scriptwrite(self, fn='export_script.py', projectname='project'):
+    def export_script(self, fn='export_script.py', projectname='project'):
         """
         This will write out the project to a python script.
+
         """
         print(f"Writing {fn}")
         ctr = {}
@@ -368,6 +369,20 @@ class Project:
                 ctr.setdefault(entry.type, 0)
                 print(entry.gen_script_entry(ctr[entry.type], projectname), file=fp)
                 ctr[entry.type] += 1
+
+    def update_archive(self, archive_fn='tracking.json'):
+        """
+        This will write out the project to a json file.
+
+        """
+        import json
+        self.archive_fn = archive_fn
+        with open(archive_fn, 'r') as fp:
+            self.archive = json.load(fp)
+        self.archive.update(self.all_entries)
+        print(f"Writing {archive_fn}")
+        with open(self.archive_fn, 'w') as fp:
+            fp.write(self.archive)
 
     def _get_csv_col(self, paired_col):
         """Done ugly to get the complete and unique column headers."""

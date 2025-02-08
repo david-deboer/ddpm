@@ -12,7 +12,7 @@ setup_args = {
     'license': "BSD",
     'author': "David DeBoer",
     'author_email': "david.r.deboer@gmail.com",
-    'version': '0.3',
+    'version': '0.3.2',
     'scripts': glob.glob('scripts/*'),
     'packages': ['ddpm'],
     'include_package_data': True
