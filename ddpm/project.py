@@ -361,11 +361,11 @@ class Project:
         print(f"Writing {fn}")
         ctr = {}
         with open(fn, 'w') as fp:
-            print("from ddgantt import ddproject as ddp\n", file=fp)
+            print("from ddpm import project\n", file=fp)
             org = '' if self.organization is None else f", organization='{self.organization}'"
-            print(f"{projectname} = gantt.Project('{self.name}'{org})\n", file=fp)
+            print(f"{projectname} = project.Project('{self.name}'{org})\n", file=fp)
             for entry in self.all_entries.values():
-                ctr[entry.type].setdefault(1)
+                ctr.setdefault(entry.type, 0)
                 print(entry.gen_script_entry(ctr[entry.type], projectname), file=fp)
                 ctr[entry.type] += 1
 

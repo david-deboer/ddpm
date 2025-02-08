@@ -156,7 +156,7 @@ class Entry:
             if len(str(val)):
                 sp = '' if is_num else "'"
                 kwlist.append(f"{par}={sp}{val}{sp}")
-        s = f"{self.type}{ctr} = ddp.{self.type.capitalize}({', '.join(kwlist)})\n"
+        s = f"{self.type}{ctr} = {projectname}.{self.type.capitalize()}({', '.join(kwlist)})\n"
         s += f"{projectname}.add_entry({self.type}{ctr})"
         return s
 
