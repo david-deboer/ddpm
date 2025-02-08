@@ -382,7 +382,7 @@ class Project:
         self.archive.update(self.all_entries)
         print(f"Writing {archive_fn}")
         with open(self.archive_fn, 'w') as fp:
-            fp.write(self.archive)
+            json.dump(self.archive, fp, indent=2)
 
     def _get_csv_col(self, paired_col):
         """Done ugly to get the complete and unique column headers."""
