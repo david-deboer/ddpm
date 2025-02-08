@@ -381,6 +381,8 @@ class Project:
             self.archive = json.load(fp)
         arcent = {}
         for key, val in self.all_entries.items():
+            if val.status == 'complete':
+                key = f"{key}_{datetime.now.isoformat()}_{val.complete}"
             arcent[key] = val.stringify()
         self.archive.update(arcent)
         print(f"Writing {archive_fn}")
