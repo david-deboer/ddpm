@@ -59,7 +59,10 @@ class Project:
 
     def __repr__(self):
         extrema = self._get_event_extrema()
-        duration = extrema.max - extrema.min
+        if extrema.min is None or extrema.max is None:
+            duration = 'No entries'
+        else:
+            duration = extrema.max - extrema.min
         s = f"Project:  {self.name}\n"
         if self.organization is not None:
             s += f"Organization: {self.organization}\n"
