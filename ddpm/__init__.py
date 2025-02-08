@@ -1,1 +1,2 @@
-from . import audit, manager, icalendar, ledger, project
+from importlib.metadata import version
+__version__ = version('ddpm')
