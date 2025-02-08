@@ -197,7 +197,7 @@ class Milestone(Entry):
             Date of the current update
         complete : float, None
             Fraction complete (when < 1) or how early/late completed occurred in days from projected
-        predecessors : Entry, None
+        predecessors : Entry hash, None
             list of predessors Entries, take latest
         lag : str, float, None
             how late to follow after last predecessor
