@@ -348,7 +348,8 @@ class Task(Timeline):
         self.parameters = copy(self.ta_extra)
         super().__init__(name=name, **kwargs)
         self.type = 'task'  # Overwrites 'timeline' type so is after super()
-        self.key = self.make_key(['name', 'owner', 'label'])  # And annoyingly you have to do this again
+        if name is not None:
+            self.key = self.make_key(['name', 'owner', 'label'])  # And annoyingly you have to do this again
 
     def valid_request(self, **kwargs):  # This actually just differentiates Task or Timeline
         if self._valid_request(**kwargs):
