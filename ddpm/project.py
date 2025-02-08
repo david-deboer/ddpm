@@ -4,9 +4,17 @@ from . import settings_proj as settings
 from . import utils_proj as utils
 from . import utils_time as ut
 from . import components
+from odsutils import logger_setup
+from odsutils import ods_timetools as timetools
 import datetime
 from argparse import Namespace
 import csv
+import logging
+
+
+logger = logging.getLogger(__name__)
+logger.setLevel('DEBUG')  # Set to lowest
+from . import LOG_FILENAME, LOG_FORMATS, __version__
 
 
 class Project:
@@ -14,7 +22,7 @@ class Project:
     This is a collection of components (components.py) and handles them as an aggregate.
     """
 
-    def __init__(self, name, organization=None, timezone=None):
+    def __init__(self, name, organization=None, timezone=None, conlog='INFO', filelog=False):
         """
         Parameters
         ----------
@@ -42,6 +50,9 @@ class Project:
             if a preferred attribute name is passed, gets added to this list as well
                    
         """
+        self.log_settings = logger_setup.Logger(logger, conlog=conlog, filelog=filelog, log_filename=LOG_FILENAME, path=None,
+                                                conlog_format=LOG_FORMATS['conlog_format'], filelog_format=LOG_FORMATS['filelog_format'])
+        logger.info(f"{__name__} ver. {__version__}")
         self.entry_types = components.event_types + components.other_types
         self.name = name
         self.organization = organization
@@ -90,7 +101,7 @@ class Project:
         """
         try:
             if entry.key in self.all_entries.keys():
-                print(f"Warning - not adding '{entry.type}': Key for {entry.name} already used ({entry.key}).")
+                logger.error(f"Warning - not adding '{entry.type}': Key for {entry.name} already used ({entry.key}).")
                 return
         except AttributeError:
             return
@@ -193,7 +204,7 @@ class Project:
 
         extrema = self._get_event_extrema()
         if extrema.min is None or extrema.max is None:
-            print("No entries.")
+            logger.warning("No entries.")
             return
         duration = extrema.max - extrema.min
 
@@ -297,7 +308,7 @@ class Project:
             if not len(val):
                 return val
         else:
-            print(f"Information:  {val} is not a str ({hdr}) - do I care?")
+            logger.warning(f"Information:  {val} is not a str ({hdr}) - do I care?")
         if hdr == 'colinear':
             if val.startswith('#'):
                 val = val.strip('#')
@@ -305,9 +316,9 @@ class Project:
                 val = self.empty_classes['entry'].make_key(val)
         return val
 
-    def csvread(self, loc, verbose=False):
+    def csvread(self, loc):
         fp = None
-        print(f"Reading {loc}")
+        logger.info(f"Reading {loc}")
         self.empty_classes = components.components_dict()  # defined in components.py
         classdecl = {'milestone': components.Milestone, 'timeline': components.Timeline, 'task': components.Task}
 
@@ -323,7 +334,7 @@ class Project:
         for row in reader:
             entry_type = self._determine_entry_type(header, row)
             if not entry_type:
-                print(f"No valid entry_type:  {row}")
+                logger.error(f"No valid entry_type:  {row}")
                 continue
             kwargs = {}
             for hdrc, val in zip(header, row):
@@ -336,10 +347,9 @@ class Project:
                         kwargs[hdr] = self._preproc_val(hdr, val)
                         break
                 if not found_valid:
-                    print(f"No valid component:  {entry_type} -- {row}")
+                    logger.error(f"No valid component:  {entry_type} -- {row}")
             if self.empty_classes[entry_type].valid_request(**kwargs):
-                if verbose:
-                    print(f'Adding {entry_type}  {row}')
+                logger.info(f'Adding {entry_type}  {row}')
                 if entry_type == 'note':
                     jot = copy(kwargs['jot'])
                     del kwargs['jot']
@@ -349,8 +359,8 @@ class Project:
                     del kwargs['name']
                     this = classdecl[entry_type](name=name, **kwargs)
                 self.add(this)
-            elif verbose:
-                print(f"Skipping invalid {entry_type}:  {row}.")
+            else:
+                logger.warning(f"Skipping invalid {entry_type}:  {row}.")
         if fp is not None:
             fp.close()
 
@@ -359,7 +369,7 @@ class Project:
         This will write out the project to a python script.
 
         """
-        print(f"Writing {fn}")
+        logger.info(f"Writing {fn}")
         ctr = {}
         with open(fn, 'w') as fp:
             print("from ddpm import project, components\n", file=fp)
@@ -385,7 +395,7 @@ class Project:
                 key = f"{key}_{datetime.now.isoformat()}_{val.complete}"
             arcent[key] = val.stringify()
         self.archive.update(arcent)
-        print(f"Writing {archive_fn}")
+        logger.info(f"Writing {archive_fn}")
         with open(self.archive_fn, 'w') as fp:
             json.dump(self.archive, fp, indent=2)
 
@@ -417,7 +427,7 @@ class Project:
         return cols
 
     def csvwrite(self, fn, paired_col=['begins:date', 'note:jot', 'predecessors:reference']):
-        print(f"Writing csv file {fn}")
+        logger.info(f"Writing csv file {fn}")
         ccols = self._get_csv_col(paired_col=paired_col)
         return ccols
         with open(fn, 'w') as fp:
