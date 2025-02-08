@@ -29,7 +29,7 @@ def last_day_of_month(t, return_datetime=False):
     return ldom.day
 
 
-def datedeltastr(val, fmt='%Y-%m-%d %H:%M'):
+def datedeltastr(val, fmt='%Y-%m-%dT%H:%M'):
     if isinstance(val, datetime.datetime):
         return val.strftime(fmt)
     elif isinstance(val, datetime.timedelta):

@@ -119,6 +119,19 @@ class Entry:
     def get_color(self):
         print("Consolidate all of the get_color methods in the components below.")
 
+    def stringify(self):
+        """
+        Return a dictionary of the component parameters and their values.
+
+        """
+        d = {}
+        for par in self.parameters:
+            val = getattr(self, par)
+            if par in settings.DATE_FIELDS:
+                val = ut.datedeltastr(val)
+            d[par] = val
+        return d
+
     def gen_script_entry(self, ctr, projectname):
         """
         Take a component Entry and generate a python script line to implement it.

@@ -379,7 +379,10 @@ class Project:
         self.archive_fn = archive_fn
         with open(archive_fn, 'r') as fp:
             self.archive = json.load(fp)
-        self.archive.update(self.all_entries)
+        arcent = {}
+        for key, val in self.all_entries.items():
+            arcent[key] = val.stringify()
+        self.archive.update(arcent)
         print(f"Writing {archive_fn}")
         with open(self.archive_fn, 'w') as fp:
             json.dump(self.archive, fp, indent=2)
