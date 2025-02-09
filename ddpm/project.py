@@ -106,20 +106,7 @@ class Project:
         except AttributeError:
             return
         self.all_entries[entry.key] = copy(entry)
-        if entry.type in ['milestone', 'note']:
-            early_date = copy(entry.date).astimezone(self.timezone)
-            late_date = copy(entry.date).astimezone(self.timezone)
-        else:
-            early_date = copy(entry.begins).astimezone(self.timezone)
-            late_date = copy(entry.ends).astimezone(self.timezone)
-        if self.earliest[entry.type] is None:
-            self.earliest[entry.type] = early_date
-        elif early_date < self.earliest[entry.type]:
-            self.earliest[entry.type] = early_date
-        if self.latest[entry.type] is None:
-            self.latest[entry.type] = late_date
-        elif late_date > self.latest[entry.type]:
-            self.latest[entry.type] = late_date
+
         try:
             if entry.colinear is not None:
                 self.colinear_map[entry.key] = entry.colinear.key
@@ -152,6 +139,33 @@ class Project:
         for skey in sorted(sort_key_dict.keys()):
             sorted_keys.append(sort_key_dict[skey])
         return sorted_keys
+
+    def postproc(self):
+        """
+        Go through all entries and pull predecessor data into components and set timing
+
+        """
+        for key in self.all_entries.keys():
+            this = self.all_entries[key]
+            if this.type == 'note':
+                continue
+            if this.predecessors is not None and len(this.predecessors):
+                for pred in this.predecessors:
+                    try:
+                        self.all_entries[key].predecessor_data.append(self.all_entries[pred])
+                    except KeyError:
+                        logger.error(f"Warning - predecessor {pred} not found for {this.name} ({this.key}).")
+        for key in self.all_entries.keys():
+            this = self.all_entries[key]
+            if this.type == 'note':
+                continue
+            this.set_timing()
+            early_date = this.date if this.type == 'milestone' else this.begins
+            late_date = this.date if this.type == 'milestone' else this.ends
+            if self.earliest[this.type] is None or early_date < self.earliest[this.type]:
+                self.earliest[this.type] = early_date
+            if self.latest[this.type] is None or late_date > self.latest[this.type]:
+                self.latest[this.type] = late_date
 
     def align_keys(self, ykeys):
         """
@@ -334,7 +348,7 @@ class Project:
         for row in reader:
             entry_type = self.determine_entry_type(header, row)
             if not entry_type:
-                logger.error(f"No valid entry_type:  {row}")
+                logger.error(f"No valid entry_type:  {row[0]}")
                 continue
             kwargs = {}
             for hdrc, val in zip(header, row):
@@ -363,6 +377,7 @@ class Project:
                 logger.warning(f"Skipping invalid {entry_type}:  {row}.")
         if fp is not None:
             fp.close()
+        self.postproc()
 
     def export_script(self, fn='export_script.py', projectname='project'):
         """

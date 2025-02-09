@@ -2,8 +2,11 @@ from . import settings_proj as settings
 from . import utils_proj as utils
 from . import utils_time as ut
 import datetime
-import hashlib
+import hashlib, logging
 from copy import copy
+
+
+logger = logging.getLogger(__name__)  # Just get the logger
 
 
 chart_types = ['task', 'milestone', 'timeline']
@@ -37,29 +40,38 @@ class Entry:
             self._init_parameters()
             self._update_parameters(**kwargs)
 
-    def __repr__(self):
-        try:
-            s = f"Name: {self.name}\n"
-            for par in self.parameters:
-                if par == 'name':
-                    continue
+    def __str__(self):
+        s = f"Name: {self.name}\n"
+        for par in self.parameters:
+            if par == 'name':
+                continue
+            try:
                 val = getattr(self, par)
-                if par  == 'colinear':
-                    val = 'No' if self.colinear is None else self.colinear.name
-                elif par == 'predecessors':
-                    val = 'No' if self.predecessors is None else ', '.join(x.name for x in self.predecessors)
-                s += f"\t{par}: {val}\n"
-            s += f"\tkey: {self.key}\n"
-            return s
-        except AttributeError:
-            return "Blank Entry"
+            except AttributeError:
+                val = 'Not Present'
+                continue
+            if par  == 'colinear':
+                val = 'No' if self.colinear is None else self.colinear.name
+            elif par == 'predecessors':
+                val = 'No' if self.predecessors is None else ', '.join(self.predecessors)
+            s += f"\t{par}: {val}\n"
+        s += f"\tkey: {self.key}\n"
+        return s
 
     def _init_parameters(self):
         """Set all parameters to None and initialize 'updated' attribute to now."""
         for par in self.parameters:
             setattr(self, par, None)
+        self.predecessor_data = []
         self.updated = datetime.datetime.now().astimezone()
         self.timezone = copy(self.updated.tzinfo)
+
+    def set_lag(self):
+        if 'lag' in self.parameters:
+            if self.lag is None:
+                self.lag = datetime.timedelta(0)
+            elif not isinstance(self.lag, datetime.timedelta):
+                self.lag = datetime.timedelta(days=float(self.lag))
 
     def _update_parameters(self, **kwargs):
         """Update any parameter attributes with some baselevel checking."""
@@ -68,7 +80,7 @@ class Entry:
             del(kwargs['timezone'])
         for key, val in kwargs.items():
             if key not in self.parameters:
-                print(f"Invalid key '{key}' for {self.type}.")
+                logger.error(f"Invalid key '{key}' for {self.type}.")
                 continue
             if key in settings.DATE_FIELDS:
                 setattr(self, key, ut.datetimedelta(val, key, timezone=self.timezone))
@@ -95,11 +107,7 @@ class Entry:
             self.status = float(self.status.strip('%'))
         except (ValueError, TypeError, AttributeError):
             pass
-        if 'lag' in self.parameters:
-            if self.lag is None:
-                self.lag = datetime.timedelta(0)
-            elif not isinstance(self.lag, datetime.timedelta):
-                self.lag = datetime.timedelta(hours=float(self.lag))
+        self.set_lag()
         if 'complete' in self.parameters:
             try:
                 self.complete = float(self.complete)
@@ -220,38 +228,28 @@ class Milestone(Entry):
             super().__init__(**kwargs)
             if self.marker is None:
                 self.marker = 'D'
-            self.init_timing(kwargs)
             self.key = self.make_key(['name', 'owner', 'label'])
         else:
-            print("Invalid Milestone request.")
+            logger.error("Invalid Milestone request.")
 
-    def init_timing(self, kwargs):
-        provided_timing = set()
-        for key in ['date', 'predecessors']:
-            if key in kwargs and isinstance(getattr(self, key), (datetime.datetime, list)):
-                provided_timing.add(key)
-        if len(provided_timing) == 2:
-            raise ValueError("Can't provide date and predecessors.")
-        if not len(provided_timing):
-            raise ValueError("Must provide one form of timing.")
-        if provided_timing == {'predecessors'}:
-            if self.lag is None:
-                self.lag = datetime.timedelta(0)
-            predecessor_times = []
-            for pred in kwargs['predecessors']:
-                predecessor_times.append(pred._predecessor_time)
-            self.date = max(predecessor_times) + self.lag
-        self._predecessor_time = self.date
+    def set_timing(self):
+        self.set_lag()
+        if len(self.predecessor_data):
+            self.date = max([x.date for x in self.predecessor_data]) + self.lag
 
     def valid_request(self, **kwargs):
         """Check info in a Milestone"""
-        if 'duration' in kwargs and len(kwargs['duration'].strip()):
-            return False
         if 'name' not in kwargs or not isinstance(kwargs['name'], str) or not len(kwargs['name'].strip()):
+            logger.error("Invalid Milestone request -- no name")
             return False
-        if 'date' not in kwargs or not len(str(kwargs['date'])):
+        if 'duration' in kwargs and len(kwargs['duration'].strip()):
+            logger.debug("Provided duration for Milestone")
             return False
-        return True
+        ctrlist = [x for x in ['date', 'predecessors'] if x in kwargs and len(str(kwargs[x]))]
+        if len(ctrlist) == 1:
+            return True
+        logger.debug(f"Invalid Milestone request -- need date or predecessors, provided {ctrlist}")
+        return False
 
     def get_color(self):
         ### Move to Entry.get_color...
@@ -269,7 +267,6 @@ class Milestone(Entry):
         if self.status in settings.STATUS_COLOR:
             return settings.STATUS_COLOR[self.status]
         return settings.STATUS_COLOR['other']
-
 
 class Timeline(Entry):
     tl_parameters = ['name', 'begins', 'ends', 'owner', 'duration', 'note', 'updated', 'colinear',
@@ -291,39 +288,20 @@ class Timeline(Entry):
             pass
         elif self._valid_request(**kwargs):
             super().__init__(**kwargs)
-            self.init_timing(kwargs)
             self.key = self.make_key(['name', 'owner', 'label'])
         else:
-            print("Invalid Timeline request.")
+            logger.error("Invalid Timeline request.")
 
-    def init_timing(self, kwargs):
-        # Check/get timing
-        provided_timing = set()
-        for key in ['begins', 'ends', 'duration', 'predecessors']:
-            if key in kwargs and isinstance(getattr(self, key), (datetime.datetime, datetime.timedelta, list)):
-                provided_timing.add(key)
-        if provided_timing not in self.allowed_timing_sets:
-            raise ValueError("Timing information not in allowed timing sets.")
-        if 'predecessors' in provided_timing:
-            if self.lag is None:
-                self.lag = datetime.timedelta(0)
-            predecessor_times = []
-            for pred in kwargs['predecessors']:
-                predecessor_times.append(pred._predecessor_time)
-            self.begins = (max(predecessor_times) + self.lag).astimezone(self.timezone)
-            provided_timing.add('begins')
-
-        if 'duration' not in provided_timing:
-            self.duration = self.ends - self.begins
-        elif 'ends' not in provided_timing:
-            self.ends = self.begins + self.duration
-        elif 'begins' not in provided_timing:
+    def set_timing(self):
+        self.set_lag()
+        if len(self.predecessor_data):
+            self.begins = max([x.ends for x in self.predecessor_data]) + self.lag
+        if self.begins is None:
             self.begins = self.ends - self.duration
-
-        if self.begins > self.ends:
-            print(f"Begins at: {self.begins} -- ends at:  {self.ends}")
-            raise ValueError(f"{self.type} begins after ending")
-        self._predecessor_time = self.ends
+        elif self.ends is None:
+            self.ends = self.begins + self.duration
+        else:
+            self.duration = self.ends - self.begins
 
     def valid_request(self, **kwargs):
         return self._valid_request(**kwargs)
@@ -331,13 +309,14 @@ class Timeline(Entry):
     def _valid_request(self, **kwargs):
         """Check info in a Timeline"""
         if 'name' not in kwargs or not isinstance(kwargs['name'], str) or not len(kwargs['name'].strip()):
-            print("ERROR in Timeline valid_request: no name")
+            logger.debug("Timeline valid_request: no name")
             return False
         provided_timing = set()
         for key in ['begins', 'ends', 'duration', 'predecessors']:
             if key in kwargs and len(str(kwargs[key])):
                 provided_timing.add(key)
         if provided_timing not in self.allowed_timing_sets:
+            logger.debug(f"Timeline valid_request: invalid timing set {provided_timing}")
             return False
         return True
 
@@ -405,10 +384,10 @@ class Note(Entry):
             elif isinstance(reference, list):
                 self.reference = reference
             else:
-                print(f"Invalid reference {reference}")
+                logger.error(f"Invalid reference {reference}")
             self.key = self.make_key(['jot', 'reference'])
         else:
-            print("Invalid Note request.")
+            logger.error("Invalid Note request.")
 
     def valid_request(self, **kwargs):
         return True if 'jot' in kwargs and isinstance(kwargs['jot'], str) and len(kwargs['jot'].strip()) else False
