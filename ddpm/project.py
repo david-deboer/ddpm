@@ -69,7 +69,7 @@ class Project:
             self.latest[entry] = None
 
     def __repr__(self):
-        extrema = self._get_event_extrema()
+        extrema = self.get_event_extrema()
         if extrema.min is None or extrema.max is None:
             duration = 'No entries'
         else:
@@ -130,7 +130,7 @@ class Project:
             setattr(self, attrname, copy(entry))
             self.listed_component_names.append(attrname)
 
-    def _sort_(self, entry_types, sortby):
+    def sort(self, entry_types, sortby):
         if entry_types == 'all':
             entry_types = components.chart_types
         elif isinstance(entry_types, str):
@@ -153,7 +153,7 @@ class Project:
             sorted_keys.append(sort_key_dict[skey])
         return sorted_keys
 
-    def _align_keys(self, ykeys):
+    def align_keys(self, ykeys):
         """
         Goes through colinear and puts them on the same line as first
         """
@@ -165,7 +165,7 @@ class Project:
                 mapkeys.append(ykey)
         return mapkeys
 
-    def _get_event_extrema(self):
+    def get_event_extrema(self):
         chkmin, chkmax = [], []
         for event in components.chart_types:
             if self.earliest[event] is not None:
@@ -177,7 +177,7 @@ class Project:
         return Namespace(min=chkmin, max=chkmax)
 
     def list(self, chart='all', sortby=['begins', 'date', 'name', 'ends']):
-        for sortkey in self._sort_(chart, sortby):
+        for sortkey in self.sort(chart, sortby):
             print(self.all_entries[sortkey])
 
     def chart(self, chart='all', sortby=['begins', 'date', 'name', 'ends'], **kwargs):
@@ -202,14 +202,14 @@ class Project:
         plotpars = []
         ykeys = []  # keys lists the keys used, used to make the vertical axis including colinear
 
-        extrema = self._get_event_extrema()
+        extrema = self.get_event_extrema()
         if extrema.min is None or extrema.max is None:
             logger.warning("No entries.")
             return
         duration = extrema.max - extrema.min
 
-        print(f"Duration = {ut.pretty_duration(duration.total_seconds())}")
-        for sortkey in self._sort_(chart, sortby):
+        logger.info(f"Duration = {ut.pretty_duration(duration.total_seconds())}")
+        for sortkey in self.sort(chart, sortby):
             this = self.all_entries[sortkey]
             if this.type == 'milestone':
                 dates.append([copy(this.date).astimezone(self.timezone), None])
@@ -225,7 +225,7 @@ class Project:
             else:
                 labels.append(this.name)
             ykeys.append(this.key)
-        ykeys = self._align_keys(ykeys)
+        ykeys = self.align_keys(ykeys)
         self.gantt.setup(dates=dates, info=plotpars, labels=labels, ykeys=ykeys, extrema=extrema, timezone=self.timezone)
         self.gantt.chart(**kwargs2use)
 
@@ -238,7 +238,7 @@ class Project:
         sortby : list
            fields to sort by, must be unique.  sort_info dicts map if needed
         """
-        extrema = self._get_event_extrema()
+        extrema = self.get_event_extrema()
         dates, status = [], []
         for key in self.milestones + self.tasks:
             this = self.all_entries[key]
@@ -250,7 +250,7 @@ class Project:
             self.cdf.dates.append(this_date)
             ctr = 0.0
             for i in range(len(dates)):
-                if this_date > dates[i] and self._eval_status_complete(status[i]):
+                if this_date > dates[i] and self.eval_status_complete(status[i]):
                     ctr += 1.0
             self.cdf.values.append(ctr)
             this_date += datetime.timedelta(days=step)
@@ -258,13 +258,13 @@ class Project:
             self.cdf.dates.append(extrema.max)
             ctr = 0.0
             for i in range(len(status)):
-                if self._eval_status_complete(status[i]):
+                if self.eval_status_complete(status[i]):
                     ctr += 1.0
             self.cdf.values.append(ctr)
         if show:
             plots.cumulative_graph(self.cdf.dates, self.cdf.values, len(dates))
 
-    def _eval_status_complete(self, status):
+    def eval_status_complete(self, status):
         if isinstance(status.status, str) and status.status.lower() == 'complete':
             return True
         try:
@@ -276,7 +276,7 @@ class Project:
         return False
 
     def show_notes(self, sortby=['date', 'jot']):
-        sorted_keys = self._sort_(['note'], sortby)
+        sorted_keys = self.sort(['note'], sortby)
         for sortkey in sorted_keys:
             this = self.all_entries[sortkey]
             print(f"{this.jot}  {this.date.strftime('%Y-%m-%d %H:%M')}  - ({', '.join(this.reference)})")
@@ -284,7 +284,7 @@ class Project:
     def color_bar(self):
         utils.color_bar()
 
-    def _determine_entry_type(self, header, row):
+    def determine_entry_type(self, header, row):
         kwargs = {}
         for hdr, r in zip(header, row):
             if len(hdr.strip()):
@@ -298,7 +298,7 @@ class Project:
                 return trial
         return False
 
-    def _preproc_val(self, hdr, val):
+    def preproc_val(self, hdr, val):
         """
         Do more later, e.g. check if val=='none' and return None etc...
 
@@ -332,7 +332,7 @@ class Project:
             header = next(reader)
         
         for row in reader:
-            entry_type = self._determine_entry_type(header, row)
+            entry_type = self.determine_entry_type(header, row)
             if not entry_type:
                 logger.error(f"No valid entry_type:  {row}")
                 continue
@@ -344,12 +344,12 @@ class Project:
                     found_valid = False
                     if hdr.strip() in self.empty_classes[entry_type].parameters:
                         found_valid = True
-                        kwargs[hdr] = self._preproc_val(hdr, val)
+                        kwargs[hdr] = self.preproc_val(hdr, val)
                         break
                 if not found_valid:
                     logger.error(f"No valid component:  {entry_type} -- {row}")
             if self.empty_classes[entry_type].valid_request(**kwargs):
-                logger.info(f'Adding {entry_type}  {row}')
+                logger.info(f'Adding {entry_type}  {row[0]}')
                 if entry_type == 'note':
                     jot = copy(kwargs['jot'])
                     del kwargs['jot']

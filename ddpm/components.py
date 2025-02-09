@@ -105,7 +105,6 @@ class Entry:
                 self.complete = float(self.complete)
             except (ValueError, TypeError, AttributeError):
                 pass
-        print(f"Adding {self.type} {self.name}")
 
     def make_key(self, params):
         """Generate the unique hash key"""
@@ -330,8 +329,9 @@ class Timeline(Entry):
         return self._valid_request(**kwargs)
 
     def _valid_request(self, **kwargs):
-        """Check info in a Timelineg"""
+        """Check info in a Timeline"""
         if 'name' not in kwargs or not isinstance(kwargs['name'], str) or not len(kwargs['name'].strip()):
+            print("ERROR in Timeline valid_request: no name")
             return False
         provided_timing = set()
         for key in ['begins', 'ends', 'duration', 'predecessors']:
