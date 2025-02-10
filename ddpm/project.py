@@ -157,8 +157,6 @@ class Project:
                         logger.error(f"Warning - predecessor {pred} not found for {this.name} ({this.key}).")
         for key in self.all_entries.keys():
             this = self.all_entries[key]
-            if this.type == 'note':
-                continue
             this.set_timing()
             early_date = this.date if this.type == 'milestone' else this.begins
             late_date = this.date if this.type == 'milestone' else this.ends

@@ -13,7 +13,7 @@ COLOR_PALETTE = [
         ]
 
 DATE_FIELDS = ['date', 'begins', 'ends', 'updated', 'duration', 'timezone', 'lag']
-LIST_FIELDS = ['note', 'predecessors', 'groups', 'reference']
+LIST_FIELDS = ['predecessors', 'groups', 'reference']
 PAST = datetime.datetime(year=2000, month=1, day=1)
 FUTURE = datetime.datetime(year=2050, month=12, day=31)
 STATUS_COLOR = {
@@ -22,7 +22,8 @@ STATUS_COLOR = {
     'other': 'k',
     'none': 'k',
     'moved': COLOR_PALETTE[1],
-    'removed': COLOR_PALETTE[4]
+    'removed': COLOR_PALETTE[4],
+    'not_started': COLOR_PALETTE[0]
 }
 
 # These are used in plot_proj.py and project.py "chart" 

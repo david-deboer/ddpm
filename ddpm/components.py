@@ -4,6 +4,7 @@ from . import utils_time as ut
 import datetime
 import hashlib, logging
 from copy import copy
+from odsutils.ods_tools import listify
 
 
 logger = logging.getLogger(__name__)  # Just get the logger
@@ -37,8 +38,8 @@ class Entry:
 
         """
         if len(kwargs):
-            self._init_parameters()
-            self._update_parameters(**kwargs)
+            self.init_parameters()
+            self.update_parameters(**kwargs)
 
     def __str__(self):
         s = f"Name: {self.name}\n"
@@ -50,21 +51,17 @@ class Entry:
             except AttributeError:
                 val = 'Not Present'
                 continue
-            if par  == 'colinear':
-                val = 'No' if self.colinear is None else self.colinear.name
-            elif par == 'predecessors':
-                val = 'No' if self.predecessors is None else ', '.join(self.predecessors)
             s += f"\t{par}: {val}\n"
         s += f"\tkey: {self.key}\n"
         return s
 
-    def _init_parameters(self):
+    def init_parameters(self):
         """Set all parameters to None and initialize 'updated' attribute to now."""
         for par in self.parameters:
             setattr(self, par, None)
-        self.predecessor_data = []
         self.updated = datetime.datetime.now().astimezone()
         self.timezone = copy(self.updated.tzinfo)
+        self.predecessor_data = []
 
     def set_lag(self):
         if 'lag' in self.parameters:
@@ -73,7 +70,7 @@ class Entry:
             elif not isinstance(self.lag, datetime.timedelta):
                 self.lag = datetime.timedelta(days=float(self.lag))
 
-    def _update_parameters(self, **kwargs):
+    def update_parameters(self, **kwargs):
         """Update any parameter attributes with some baselevel checking."""
         if 'timezone' in kwargs:
             self.timezone = ut.datetimedelta(kwargs['timezone'], 'timezone')
@@ -90,23 +87,11 @@ class Entry:
                 setattr(self, key, val.strip())
             else:
                 setattr(self, key, val)
-
-        if 'note' in self.parameters:
-            if self.note is None:
-                self.note = []
-            elif isinstance(self.note, str):
-                self.note = [self.note]
-
         if 'color' in self.parameters:
             if isinstance(self.color, str) and self.color.startswith('('):
                 self.color = [float(_x) for _x in self.color.strip('()').split(',')]
             if isinstance(self.color, str) and not len(self.color):
                 self.color = 'k'
-
-        try:
-            self.status = float(self.status.strip('%'))
-        except (ValueError, TypeError, AttributeError):
-            pass
         self.set_lag()
         if 'complete' in self.parameters:
             try:
@@ -119,12 +104,34 @@ class Entry:
         ss = self.type + ''.join([str(getattr(self, par)) for par in params])
         return hashlib.md5(ss.encode('ascii')).hexdigest()[:6]
 
-    def add_note(self, note):
-        """Add a note string to the note list."""
-        self.note.append(note)
-
     def get_color(self):
-        print("Consolidate all of the get_color methods in the components below.")
+        """
+        This is a first attempt to gather the color stuff in one place.
+        """
+        if utils.is_color(self.color):
+            return self.color
+        if self.type in ['timeline', 'note']:
+            return utils.COLOR_PALETTE[0]
+        clrdate = self.date if self.type == 'milestone' else self.ends
+        clrdate2 = None if self.type == 'milestone' else self.begins
+        now = datetime.datetime.now().astimezone()
+        if self.status.lower() != 'complete':
+            if clrdate2 is not None and clrdate2 > now:
+                return settings.STATUS_COLOR['not_started']
+            if now > clrdate:
+                return settings.STATUS_COLOR['late']
+            if self.status in settings.STATUS_COLOR:
+                return settings.STATUS_COLOR[self.status]
+            if clrdate2 is None:
+                return settings.STATUS_COLOR['other']
+            else:
+                pc_elapsed = (now - clrdate2) / self.duration
+                completed = pc_elapsed - self.complete if pc_elapsed > self.complete else 0.0
+                return utils.complete2rgb(100.0*completed-50.0)
+        else:
+            if self.complete is not None and abs(self.complete) > 1.0:
+                return utils.complete2rgb(self.complete)
+            return settings.STATUS_COLOR['complete']
 
     def stringify(self):
         """
@@ -166,7 +173,7 @@ class Entry:
             if par in settings.DATE_FIELDS:
                 val = ut.datedeltastr(val)
             elif par in settings.LIST_FIELDS:
-                val = '|'.join([str(x).strip() for x in val])
+                val = ','.join([str(x).strip() for x in val])
             else:
                 try:
                     val = f"{float(val):.1f}"
@@ -200,8 +207,6 @@ class Milestone(Entry):
             Additional label associated - if not None, this will be used in the chart
         status : str, None
             Status of milestone (see above list in STATUS_COLOR) for milestones, use
-        note : list
-            General note to add
         updated : str, datetime
             Date of the current update
         complete : float, None
@@ -221,7 +226,7 @@ class Milestone(Entry):
 
         """
         self.type = 'milestone'
-        self.parameters = ['name', 'date', 'owner', 'label', 'status', 'note', 'updated', 'complete',
+        self.parameters = ['name', 'date', 'owner', 'label', 'status', 'updated', 'complete',
                            'predecessors', 'lag', 'groups', 'colinear', 'marker', 'color', 'timezone']
         kwargs.update({'name': name})
         if name is None:
@@ -253,25 +258,9 @@ class Milestone(Entry):
         logger.debug(f"Invalid Milestone request -- need date or predecessors, provided {ctrlist}")
         return False
 
-    def get_color(self):
-        ### Move to Entry.get_color...
-        now = datetime.datetime.now().astimezone()
-        if self.color is None or self.color == 'auto':
-            pass
-        else:
-            return self.color
-        if self.status != 'complete' and now > self.date:
-            return settings.STATUS_COLOR['late']
-        if self.status == 'complete' and self.complete is not None:
-            if abs(self.complete) > 1.0:
-                return utils.complete2rgb(self.complete)
-            return settings.STATUS_COLOR['complete']
-        if self.status in settings.STATUS_COLOR:
-            return settings.STATUS_COLOR[self.status]
-        return settings.STATUS_COLOR['other']
 
 class Timeline(Entry):
-    tl_parameters = ['name', 'begins', 'ends', 'owner', 'duration', 'note', 'updated', 'colinear',
+    tl_parameters = ['name', 'begins', 'ends', 'owner', 'duration', 'updated', 'colinear',
                      'predecessors', 'lag', 'groups', 'label', 'color', 'timezone']
     allowed_timing_sets = [{'begins', 'ends'},
                            {'begins', 'duration'},
@@ -322,16 +311,6 @@ class Timeline(Entry):
             return False
         return True
 
-    def get_color(self):
-        ### Move to Entry.get_color...
-        if self.color is None or self.color == 'auto':
-            return utils.COLOR_PALETTE[0]
-        return self.color
-
-    def add_note(self, note):
-        self.note.append(note)
-
-
 class Task(Timeline):
     """
     A Task is just a Timeline with a status and a completion percentage.
@@ -345,54 +324,33 @@ class Task(Timeline):
         if name is not None:
             self.key = self.make_key(['name', 'owner', 'label'])  # And annoyingly you have to do this again
 
-    def valid_request(self, **kwargs):  # This actually just differentiates Task or Timeline
+    def valid_request(self, **kwargs):  # This actually just differentiates Task or Timeline (so just adds these)
         if self._valid_request(**kwargs):
             for par in self.ta_extra:
                 if par in kwargs and isinstance(kwargs[par], (str, float, int)):
                     return True
         return False
 
-    def get_color(self):
-        ### Move to Entry.get_color...
-        if self.color is None or self.color == 'auto':
-            if isinstance(self.status, float):
-                now = datetime.datetime.now().astimezone()
-                if int(self.status) != 100 and now > self.ends:
-                    return settings.STATUS_COLOR['late']
-                if self.begins > now:
-                    return settings.COLOR_PALETTE[0]
-                if self.complete is not None:
-                    return utils.complete2rgb(self.complete)
-                pc_elapsed = 100.0 * (now - self.begins) / self.duration
-                completed = pc_elapsed - self.status if pc_elapsed > self.status else 0.0
-                return utils.complete2rgb((completed-50.0))
-            return settings.COLOR_PALETTE[0]
-        return self.color
-
 
 class Note(Entry):
-    def __init__(self, jot, date='now', reference=None):
+    def __init__(self, jot, **kwargs):
         self.type = 'note'
         self.parameters = ['jot', 'date', 'reference', 'timezone']
+        kwargs.update({'jot': jot})
         if jot is None:  # Just want the parameters
             pass
-        elif self.valid_request(jot=jot):
-            self.date = ut.datetimedelta(date)
-            self.jot = jot
-            if reference is None:
-                self.reference = []
-            elif isinstance(reference, str):
-                self.reference = reference.split(',')
-            elif isinstance(reference, list):
-                self.reference = reference
-            else:
-                logger.error(f"Invalid reference {reference}")
+        elif self.valid_request(**kwargs):
+            super().__init__(**kwargs)
+            self.reference = listify(self.reference)
             self.key = self.make_key(['jot', 'reference'])
         else:
             logger.error("Invalid Note request.")
 
     def valid_request(self, **kwargs):
         return True if 'jot' in kwargs and isinstance(kwargs['jot'], str) and len(kwargs['jot'].strip()) else False
+
+    def set_timing(self):
+        self.date = ut.datetimedelta('now') if self.date is None else self.date
 
     def add_reference(self, key):
         """

@@ -47,6 +47,13 @@ def load_sheet_from_url(url):
     return sheet_info
 
 
+def is_color(clr):
+    if clr == None or clr == 'auto':
+        return False
+    else:
+        return True
+
+
 def complete2rgb(lag):
     s = 255.0
     bs = [[85.0, (255.0 / s, 190.0 / s, 50.0 / s)],
