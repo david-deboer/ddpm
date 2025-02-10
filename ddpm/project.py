@@ -5,7 +5,6 @@ from . import utils_proj as utils
 from . import utils_time as ut
 from . import components
 from odsutils import logger_setup
-from odsutils import ods_timetools as timetools
 import datetime
 from argparse import Namespace
 import csv
@@ -68,7 +67,7 @@ class Project:
             self.earliest[entry] = None
             self.latest[entry] = None
 
-    def __repr__(self):
+    def __str__(self):
         extrema = self.get_event_extrema()
         if extrema.min is None or extrema.max is None:
             duration = 'No entries'
@@ -311,7 +310,7 @@ class Project:
                 return trial
         return False
 
-    def preproc_val(self, hdr, val):
+    def preproc_csv(self, hdr, val):
         """
         Do more later, e.g. check if val=='none' and return None etc...
 
@@ -357,7 +356,7 @@ class Project:
                     found_valid = False
                     if hdr.strip() in self.empty_classes[entry_type].parameters:
                         found_valid = True
-                        kwargs[hdr] = self.preproc_val(hdr, val)
+                        kwargs[hdr] = self.preproc_csv(hdr, val)
                         break
                 if not found_valid:
                     logger.error(f"No valid component:  {entry_type} -- {row}")
@@ -441,6 +440,8 @@ class Project:
         return cols
 
     def csvwrite(self, fn, paired_col=['begins:date', 'note:jot', 'predecessors:reference']):
+        print("CSV write not implemented")
+        return
         logger.info(f"Writing csv file {fn}")
         ccols = self._get_csv_col(paired_col=paired_col)
         return ccols
