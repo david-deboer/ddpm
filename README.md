@@ -13,6 +13,9 @@ The components (in components.py) are all based off an Entry baseclass.  The com
 - Task: a Timeline with an owner, status and complete
 - Note
 
+Status is a string (see STATUS_COLORS in settings_proj.py)
+Complete is a fraction complete (if (|complete|<1)) or days early/late of status is complete.
+
 The component parameters are defined in the component itself (i.e. not in Entry, which has to know them.)
 
 2 - ledger

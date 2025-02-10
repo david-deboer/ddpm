@@ -201,7 +201,8 @@ class Project:
 
         Parameter
         ---------
-        chart : 
+        chart : str or list
+              'all' for all chart_types, or a list of chart_types (groups)
         sortby : list or 'all' (chart_types)
            fields to sort by
         kwargs parameters see settings_proj.CHART_DEFAULTS

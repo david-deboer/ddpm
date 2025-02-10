@@ -136,6 +136,8 @@ class Entry:
             val = getattr(self, par)
             if par in settings.DATE_FIELDS:
                 val = ut.datedeltastr(val)
+            elif par in settings.LIST_FIELDS:
+                val = ','.join([str(x).strip() for x in val])
             d[par] = val
         return d
 
