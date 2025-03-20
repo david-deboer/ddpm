@@ -285,7 +285,7 @@ class Portfolio:
         self.path = path
         self.portfolio = {}
 
-    def get_portfolio(self):
+    def get_portfolio_from_tex(self):
         """
         Read in the portfolio summary files and get the budget, expenditure and balance.
         This is used to create a portfolio summary for the dashboard.
