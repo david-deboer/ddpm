@@ -330,6 +330,7 @@ class Portfolio:
         if '#' in fn:
             ddstr = datetime.now().strftime('%Y%m%d')
             fn = fn.replace('#', ddstr)
+        print(f"Writing portfolio to {fn}")
         with open(fn, 'w') as fp:
             fp.write('Fund Number,Title,Date Range,Budget,Expenditure,Balance\n')
             for fundno in sorted(self.portfolio.keys()):
