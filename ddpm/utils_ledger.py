@@ -25,6 +25,22 @@ def print_money(amt, dollar_sign=False, cents=False, pad=False):
         money = money.split('.')[0]
     return money
 
+def tex2num(val):
+    """
+    Convert a string with commas to a number
+    """
+    ok_chars = '-0123456789'
+    if isinstance(val, str):
+        for c in val:
+            if c not in ok_chars:
+                val = val.replace(c, '')
+        val = val.replace(',', '')
+        try:
+            val = float(val)
+        except ValueError:
+            pass
+    return val
+
 def get_amount_list(amounts, amount_types=None, chart_amounts=None):
     """
     Find the amounts to use for charts etc
@@ -104,17 +120,17 @@ def scrub_csv(fn, legend_starts_with='Accounting Period', data_ends_with='Grand 
 
 def get_fund_directories(path=None):
     fund_to_dir = {}
-    files = os.listdir(path)
+    contents = os.listdir(path)
     if path is None:
         path = os.getcwd()
     print(f"Checking {path} for fund directories.")
-    for this_dir in files:
+    for this_dir in contents:
         try:
             fundno = int(this_dir.split('_')[0])
         except ValueError:
             continue
         print(f"\t Found {this_dir}")
-        fund_to_dir[fundno] = this_dir
+        fund_to_dir[fundno] = os.path.join(path, this_dir)
     return fund_to_dir
 
 

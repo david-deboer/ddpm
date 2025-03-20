@@ -142,6 +142,7 @@ class Manager:
             self.project.add(ledger_earliest, attrname='ledger_earliest')
             ledger_latest = components.Milestone(name='Latest ledger entry', date=self.ledger.last_date, updated=now)
             self.project.add(ledger_latest, attrname='ledger_latest')
+        self.project.postproc()
 
     def _can_skip(self, cat, amounts):
         if abs(self.budget.budget[cat]) < 1.0 and abs(self.ledger.totaling(cat, amounts)) < 1.0:
@@ -266,3 +267,72 @@ class Manager:
         self.audit = audit.Audit(self.ledger, chart_amounts=self.chart_amounts)
 
 
+class Portfolio:
+    def __init__(self, path=None):
+        """
+        This sets up the portfolio manager
+
+        Parameter
+        ---------
+        path : str
+            Path to the portfolio yaml file
+
+        Attributes
+        ----------
+        path : str
+            Same as Parameter
+        """
+        self.path = path
+        self.portfolio = {}
+
+    def get_portfolio(self):
+        """
+        Read in the portfolio summary files and get the budget, expenditure and balance.
+        This is used to create a portfolio summary for the dashboard.
+        The portfolio is a dictionary with the fund number as the key and a dictionary of values
+        """
+        paths_to_check = ul.get_fund_directories(self.path)
+        for fundno, path2chk in paths_to_check.items():
+            contents = ul.os.listdir(path2chk)
+            for this_file in contents:
+                if this_file.endswith('.tex'):
+                    self.portfolio.setdefault(fundno, {'tex': []})
+                    self.portfolio[fundno]['tex'].append(this_file)
+            if fundno in self.portfolio and 'tex' in self.portfolio[fundno]:
+                tex_file = sorted(self.portfolio[fundno]['tex'])[-1]
+                print(f"Using {tex_file}")
+                self.portfolio[fundno]['tex'] = tex_file
+                file_date = tex_file.split('_')[-1].split('.')[0].split('T')[0]
+                file_date = datetime.strptime(file_date, '%Y-%m-%d')
+                self.portfolio[fundno]['date'] = file_date
+                with open(ul.os.path.join(path2chk, tex_file), 'r') as fp:
+                    for line in fp:
+                        if line.startswith('Grand Total'):
+                            grand = line.split('\\')[0].split('&')[1:]
+                            self.portfolio[fundno]['budget'] = ul.tex2num(grand[0])
+                            self.portfolio[fundno]['expenditure'] = ul.tex2num(grand[1])
+                            self.portfolio[fundno]['balance'] = ul.tex2num(grand[2])
+                        elif line.startswith('\\title'):
+                            self.portfolio[fundno]['title'] = line.strip().strip('%').strip('}')[7:].replace('{', '').replace('}', '')
+                        elif line.startswith('\\author'):
+                            self.portfolio[fundno]['date_range'] = line.strip().strip('%').strip('}')[8:].replace('{', '').replace('}', '')
+
+    def write_csv(self, fn='portfolio_#.csv'):
+        """
+        Write the portfolio to a csv file.
+
+        Parameter
+        ---------
+        fn : str
+            Name of the output csv file
+
+        """
+        if '#' in fn:
+            ddstr = datetime.now().strftime('%Y%m%d')
+            fn = fn.replace('#', ddstr)
+        with open(fn, 'w') as fp:
+            fp.write('Fund Number,Title,Date Range,Budget,Expenditure,Balance\n')
+            for fundno in sorted(self.portfolio.keys()):
+                fp.write(f"{fundno},{self.portfolio[fundno]['title']},{self.portfolio[fundno]['date_range']},"
+                         f"{self.portfolio[fundno]['budget']},{self.portfolio[fundno]['expenditure']},"
+                         f"{self.portfolio[fundno]['balance']}\n")

@@ -53,6 +53,10 @@ class Entry:
                 continue
             s += f"\t{par}: {val}\n"
         s += f"\tkey: {self.key}\n"
+        if hasattr(self, 'attrname'):
+            s += f"\tattrname: {self.attrname}\n"
+        else:
+            s += f"\tattrname: None\n"
         return s
 
     def init_parameters(self):
@@ -115,6 +119,9 @@ class Entry:
         clrdate = self.date if self.type == 'milestone' else self.ends
         clrdate2 = None if self.type == 'milestone' else self.begins
         now = datetime.datetime.now().astimezone()
+        if not isinstance(self.status, str):
+            print(f"DDPM:component:123 -- non-string status {self.status}  ({type(self.status)})")
+            return 'k'
         if self.status.lower() != 'complete':
             if clrdate2 is not None and clrdate2 > now:
                 return settings.STATUS_COLOR['not_started']
@@ -189,6 +196,8 @@ class Entry:
         s += f"{projectname}.add_entry({self.type}{ctr})"
         return s
 
+    def set_attrname(self, attrname):
+        self.attrname = attrname
 
 class Milestone(Entry):
     """

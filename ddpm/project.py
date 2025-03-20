@@ -113,6 +113,7 @@ class Project:
             pass
         getattr(self, f"{entry.type}s").append(entry.key)
         if attrname is not None:
+            entry.set_attrname(attrname)
             setattr(self, attrname, copy(entry))
             self.listed_component_names.append(attrname)
 
