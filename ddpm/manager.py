@@ -285,7 +285,7 @@ class Portfolio:
         self.path = path
         self.portfolio = {}
 
-    def get_portfolio_from_tex(self):
+    def get_portfolio_summary_from_tex(self):
         """
         Read in the portfolio summary files and get the budget, expenditure and balance.
         This is used to create a portfolio summary for the dashboard.
@@ -312,6 +312,9 @@ class Portfolio:
                             self.portfolio[fundno]['budget'] = ul.tex2num(grand[0])
                             self.portfolio[fundno]['expenditure'] = ul.tex2num(grand[1])
                             self.portfolio[fundno]['balance'] = ul.tex2num(grand[2])
+                        elif line.startswith('department'):
+                            dept = line.split('&')[3]
+                            self.portfolio[fundno]['deptbal'] = ul.tex2num(dept)
                         elif line.startswith('\\title'):
                             self.portfolio[fundno]['title'] = line.strip().strip('%').strip('}')[7:].replace('{', '').replace('}', '')
                         elif line.startswith('\\author'):
@@ -332,8 +335,8 @@ class Portfolio:
             fn = fn.replace('#', ddstr)
         print(f"Writing portfolio to {fn}")
         with open(fn, 'w') as fp:
-            fp.write('Fund Number,Title,Date Range,Budget,Expenditure,Balance\n')
+            fp.write('Fund Number,Title,Date Range,Budget,Expenditure,Balance,DeptBal\n')
             for fundno in sorted(self.portfolio.keys()):
                 fp.write(f"{fundno},{self.portfolio[fundno]['title']},{self.portfolio[fundno]['date_range']},"
                          f"{self.portfolio[fundno]['budget']},{self.portfolio[fundno]['expenditure']},"
-                         f"{self.portfolio[fundno]['balance']}\n")
+                         f"{self.portfolio[fundno]['balance']},{self.portfolio[fundno]['deptbal']}\n")

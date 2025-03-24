@@ -11,7 +11,7 @@ def print_money(amt, dollar_sign=False, cents=False, pad=False):
         money = '$0.00'
     else:
         try:
-            amt = float(amt)
+            amt = float(tex2num(amt))
         except ValueError:
             return amt
         money = locale.currency(amt, grouping=True)
@@ -29,7 +29,7 @@ def tex2num(val):
     """
     Convert a string with commas to a number
     """
-    ok_chars = '-0123456789'
+    ok_chars = '-.0123456789'
     if isinstance(val, str):
         for c in val:
             if c not in ok_chars:

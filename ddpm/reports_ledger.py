@@ -32,7 +32,7 @@ def tex_dashboard(dashboard, name_date_format='%Y-%m-%d'):
                 for row in dashboard.table_data:
                     tabular.add_row((row[0],
                                     ul.print_money(row[1]),
-                                    ul.print_money(row[3]),
+                                    ul.print_money(ul.tex2num(row[5])+ul.tex2num(row[4])),
                                     ul.print_money(row[2])))
                     tabular.add_hline()
     with doc.create(Figure(position='h!')) as bar_chart:
